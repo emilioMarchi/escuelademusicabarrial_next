@@ -46,3 +46,9 @@ export const getItemBySlug = async <T>(collectionName: string, slug: string): Pr
   const doc = querySnapshot.docs[0];
   return { id: doc.id, ...doc.data() } as T;
 };
+
+export const getAllPagesForMenu = async (): Promise<PageContent[]> => {
+  const q = query(collection(db, "pages")); // Podrías filtrar por where("show_in_menu", "==", true)
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PageContent));
+};

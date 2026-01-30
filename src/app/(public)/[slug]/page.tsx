@@ -2,6 +2,7 @@
 import { getPageConfig } from "@/services/pages-services";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import SectionRenderer from "@/components/SectionRenderer";
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const { slug } = await params;
@@ -26,11 +27,8 @@ export default async function DynamicPage({ params }: { params: { slug: string }
       </header>
 
       <div className="space-y-12">
-        {pageData.sections.map((section) => (
-          <section key={section}>
-             {/* Lógica para decidir qué componente renderizar */}
-             Contenido de: {section}
-          </section>
+        {pageData.sections.map((sectionId) => (
+          <SectionRenderer key={sectionId} sectionId={sectionId} pageData={pageData} />
         ))}
       </div>
     </article>

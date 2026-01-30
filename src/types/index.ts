@@ -43,3 +43,51 @@ export interface PaymentOrder {
   mp_preference_id: string; // ID de la transacción en Mercado Pago
   created_at: any;
 }
+
+export interface News {
+  id: string;
+  category: 'noticias';
+  title: string;
+  excerpt: string;      // Resumen para la tarjetita
+  content: string;      // Cuerpo de la noticia
+  date: any;            // Timestamp de Firebase
+  image_url: string;
+  image_alt: string;
+  is_active: boolean;
+}
+
+// Interfaz "Puente" solo para los componentes visuales
+export interface UniversalCardData {
+  id: string;
+  title: string;
+  description: string;
+  label: string;        // "Guitarra", "Cultura", "Evento"
+  slug: string;
+  color?: 'green' | 'orange' | 'purple' | 'blue' | 'yellow';
+  image?: string;
+}
+
+export interface ContactSubmission {
+  id?: string;
+  type: 'contacto';
+  fullname: string;
+  email: string;
+  phone?: string;
+  message: string;
+  created_at: any; // Timestamp de Firebase
+  status: 'nuevo' | 'contactado' | 'archivado';
+}
+
+// Para inscripciones de alumnos o postulaciones de profes
+export interface EnrollmentSubmission {
+  id?: string;
+  type: 'clases';
+  role: 'estudiante' | 'docente';
+  fullname: string;
+  email: string;
+  phone?: string;
+  instrument: string;
+  level_or_experience: string; // "Principiante" o "5 años", etc.
+  created_at: any;
+  status: 'pendiente' | 'entrevistado' | 'aceptado' | 'rechazado';
+}
