@@ -3,7 +3,7 @@
 export type CategoryType = 'inicio' | 'nosotros' | 'clases' | 'noticias' | 'donaciones' | 'contacto';
 export type PaymentType = 'one-time' | 'monthly'; // Donación única o suscripción mensual
 export type OrderStatus = 'pending' | 'approved' | 'rejected';
-
+export type SectionType = 'hero' | 'clases' | 'noticias' | 'contacto' | 'donaciones' | 'texto-plano';
 export interface PageContent {
   id: string;
   slug: string;             // La URL (ej: /clases)
@@ -91,3 +91,38 @@ export interface EnrollmentSubmission {
   created_at: any;
   status: 'pendiente' | 'entrevistado' | 'aceptado' | 'rechazado';
 }
+
+// Secciones de página dinámicas
+
+export interface SectionData {
+  id: string;               
+  type: SectionType;        
+  page_category?: CategoryType; // Opcional: para filtrar si hiciera falta
+  content: {
+    // Campos flexibles según el tipo de sección
+    title?: string;
+    subtitle?: string;
+    description?: string;
+    // Para el Hero Carrusel:
+    slides?: { 
+        image_url: string; 
+        image_alt: string;
+        title?: string; 
+        description?: string; 
+    }[]; 
+    // Para botones de acción:
+    button_text?: string;
+    button_link?: string;
+  };
+  settings?: {
+    theme?: 'light' | 'dark' | 'brand'; // Para cambiar fondo (blanco/negro/naranja)
+    layout?: 'grid' | 'slider';          // Para las listas de clases/noticias
+  };
+  order?: number;           
+  is_active: boolean;
+}
+
+// Un tipo auxiliar para cuando la página viene con sus secciones ya "infladas"
+export interface PageWithSections extends PageContent {
+  renderedSections: SectionData[];
+} 
