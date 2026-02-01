@@ -255,3 +255,56 @@ export const seedPageNosotrosHybrid = async () => {
     return { success: false, error };
   }
 };
+
+export const seedPageInicioConSlider = async () => {
+  try {
+    const pageData = {
+      slug: "inicio",
+      category: "inicio" as CategoryType,
+      header_title: "Escuela de Música Barrial",
+      header_description: "Cultura y música en el corazón del barrio.",
+      meta_title: "Escuela de Música Barrial - Inicio",
+      meta_description: "Aprendé música en tu barrio con los mejores profesores.",
+      has_form: true,
+      sections: [
+        {
+          id: "hero-main",
+          type: "hero",
+          is_active: true,
+          content: {
+            title: "Escuela de Música Barrial",
+            subtitle: "Un espacio para aprender, compartir y crear cultura desde nuestro barrio.",
+            slides: [
+              { 
+                // Piano - Alta calidad
+                image_url: "https://images.unsplash.com/photo-1520527057852-44c0e5f43d41?auto=format&fit=crop&q=80&w=2000", 
+                image_alt: "Estudiante de música practicando" 
+              },
+              { 
+                // Guitarra - Alta calidad
+                image_url: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&q=80&w=2000", 
+                image_alt: "Clase de guitarra" 
+              },
+              { 
+                // Niños/Orquesta
+                image_url: "https://images.unsplash.com/photo-1459749411177-042180ce673c?auto=format&fit=crop&q=80&w=2000", 
+                image_alt: "Concierto barrial" 
+              }
+            ]
+          }
+        },
+        "clases",
+        "noticias",
+        "contacto"
+      ]
+    };
+
+    const docRef = adminDb.collection("pages").doc("inicio");
+    await docRef.set({ ...pageData, last_updated: new Date() });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error resubiendo inicio:", error);
+    return { success: false, error };
+  }
+};

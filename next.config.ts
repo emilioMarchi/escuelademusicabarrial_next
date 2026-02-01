@@ -14,6 +14,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'firebasestorage.googleapis.com', // Clave para cuando subas tus propias fotos
       },
+      {
+        protocol: 'https',
+        hostname: 'encrypted-tbn0.gstatic.com', // Clave para cuando subas tus propias fotos
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.adobe.com', // Clave para cuando subas tus propias fotos
+      },
     ],
   },
 };
