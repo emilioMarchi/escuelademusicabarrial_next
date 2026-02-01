@@ -14,7 +14,7 @@ export default function DynamicSection({ title, items, layout, basePath }: Props
     <section className="py-16 px-4 overflow-hidden">
       <div className="container mx-auto">
         <div className="mb-12 relative">
-          <h2 className="text-4xl font-black text-slate-900">{title}</h2>
+          <h2 className="text-4xl font-black tesxt-white ">{title}</h2>
           <div className="h-2 w-20 bg-orange-400 mt-2 rounded-full"></div>
         </div>
         

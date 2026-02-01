@@ -1,50 +1,34 @@
 // src/app/(admin)/dashboard/page.tsx
 "use client";
 import { useState } from "react";
-import { savePageConfigAdmin, seedSectionsAdmin } from "@/services/admin-services";
+import { savePageConfigAdmin, seedSectionsAdmin, seedClassesAdmin, seedNewsAdmin } from "@/services/admin-services";
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
 
-  const handleInitPage = async () => {
+  const runAction = async (action: () => Promise<{success: boolean, error?: any}>, msg: string) => {
     setLoading(true);
-    const result = await savePageConfigAdmin("inicio", {
-      header_title: "Escuela de Música Barrial",
-      header_description: "Cultura y música en el corazón del barrio.",
-      sections: ["hero", "noticias", "contacto"]
-    });
+    const res = await action();
     setLoading(false);
-    if (result.success) alert("Página 'inicio' vinculada.");
-  };
-
-  const handleFixSections = async () => {
-    setLoading(true);
-    const result = await seedSectionsAdmin();
-    setLoading(false);
-    if (result.success) alert("Secciones resubidas con el tipado correcto.");
-    else alert("Error al resubir.");
+    if (res.success) alert(msg);
   };
 
   return (
-    <div className="p-10">
-      <h1 className="text-2xl font-black mb-8 uppercase tracking-tighter">Admin Panel</h1>
+    <div className="p-10 space-y-8">
+      <h1 className="text-3xl font-black uppercase tracking-tighter">Admin Panel</h1>
       
-      <div className="flex flex-col gap-4 max-w-sm">
-        <button 
-          onClick={handleInitPage}
-          disabled={loading}
-          className="bg-slate-900 text-white px-6 py-4 rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-slate-800 disabled:opacity-50 transition-all"
-        >
-          1. Vincular IDs en 'Pages'
-        </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+        <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-4">
+          <h2 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Estructura Web</h2>
+          <button onClick={() => runAction(() => savePageConfigAdmin("inicio", { /* data */ }), "Inicio Creado")} disabled={loading} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest">1. Configurar Inicio</button>
+          <button onClick={() => runAction(seedSectionsAdmin, "Secciones Creadas")} disabled={loading} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest">2. Cargar Secciones</button>
+        </div>
 
-        <button 
-          onClick={handleFixSections}
-          disabled={loading}
-          className="bg-orange-500 text-white px-6 py-4 rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-orange-600 disabled:opacity-50 transition-all shadow-lg shadow-orange-100"
-        >
-          2. Corregir y Resubir 'Sections'
-        </button>
+        <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-4">
+          <h2 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Contenido de Muestra</h2>
+          <button onClick={() => runAction(seedClassesAdmin, "Clases Cargadas")} disabled={loading} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest">Cargar Clases (Real)</button>
+          <button onClick={() => runAction(seedNewsAdmin, "Noticias Cargadas")} disabled={loading} className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest">Cargar Noticias (Real)</button>
+        </div>
       </div>
     </div>
   );

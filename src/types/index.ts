@@ -4,6 +4,7 @@ export type CategoryType = 'inicio' | 'nosotros' | 'clases' | 'noticias' | 'dona
 export type PaymentType = 'one-time' | 'monthly'; // Donación única o suscripción mensual
 export type OrderStatus = 'pending' | 'approved' | 'rejected';
 export type SectionType = 'hero' | 'clases' | 'noticias' | 'contacto' | 'donaciones' | 'texto-plano';
+
 export interface PageContent {
   id: string;
   slug: string;             // La URL (ej: /clases)

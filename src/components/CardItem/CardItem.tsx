@@ -20,7 +20,7 @@ export default function CardItem({ data, basePath }: Props) {
   const colorStyle = data.color ? colors[data.color] : colors.green;
 
   return (
-    <div className={`min-w-[300px] md:min-w-[340px] p-8 rounded-[2.5rem] border-2 transition-all hover:-translate-y-2 hover:shadow-xl ${colorStyle}`}>
+    <div className={`min-w-[300px] md:min-w-[340px] p-8 rounded-[2.5rem] border-2 transition-all hover:-translate-y-2 ${colorStyle}`}>
       {data.label && (
         <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-3 block">
           {data.label}
