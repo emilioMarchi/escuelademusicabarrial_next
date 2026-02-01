@@ -41,20 +41,22 @@ export default function Hero({ title = "", description = "", slides = [] }: Hero
               transition={{ duration: 1.5 }}
               className="absolute inset-0 w-full h-full"
             >
-              {/* Contenedor con zoom suave */}
+              {/* Contenedor del zoom */}
               <motion.div
-                initial={{ scale: 1 }}
-                animate={{ scale: 1.1 }}
+                initial={{ scale: 1.2 }}
+                animate={{ scale: 1 }}
                 transition={{ duration: 10, ease: "linear" }}
-                className="absolute inset-0 w-full h-full" // Usamos absolute inset-0 para asegurar altura
+                className="absolute inset-0 w-full h-full"
               >
                 <Image
                   src={slides[current].image_url}
                   alt={slides[current].image_alt || "Banner"}
                   fill
                   priority
-                  unoptimized // Esto ayuda con las imágenes locales y quita advertencias
-                  className="object-cover"
+                  unoptimized
+                  /* --- ESTO SOLUCIONA EL ESTIRAMIENTO --- */
+                  style={{ objectFit: "cover", objectPosition: "center" }}
+                  /* -------------------------------------- */
                   sizes="100vw"
                 />
               </motion.div>
@@ -69,7 +71,7 @@ export default function Hero({ title = "", description = "", slides = [] }: Hero
         </AnimatePresence>
       </div>
 
-      {/* CONTENIDO (Z-10) - Mantenemos tu p-10 */}
+      {/* CONTENIDO (Z-10) */}
       <div className="relative z-10 w-full h-full flex items-center justify-center p-10">
         <div className="max-w-5xl mx-auto text-center">
           <motion.span 

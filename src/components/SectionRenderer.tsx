@@ -32,6 +32,7 @@ export default function SectionRenderer({
         <Hero 
           title={sectionData.content?.title || "Escuela de Música"} 
           description={sectionData.content?.subtitle || ""} 
+          // CONECTOR VITAL: Pasa las imágenes desde Firebase al Hero
           slides={sectionData.content?.slides || []} 
         />
       );
