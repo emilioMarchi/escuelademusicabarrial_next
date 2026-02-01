@@ -3,7 +3,7 @@
 export type CategoryType = 'inicio' | 'nosotros' | 'clases' | 'noticias' | 'donaciones' | 'contacto';
 export type PaymentType = 'one-time' | 'monthly'; // Donación única o suscripción mensual
 export type OrderStatus = 'pending' | 'approved' | 'rejected';
-export type SectionType = 'hero' | 'clases' | 'noticias' | 'contacto' | 'donaciones' | 'texto-plano';
+export type SectionType = 'hero' | 'clases' | 'noticias' | 'contacto' | 'donaciones' | 'texto-bloque';
 
 export interface PageContent {
   id: string;
@@ -13,7 +13,7 @@ export interface PageContent {
   header_description: string;
   header_image_url: string;
   header_image_alt: string;
-  sections: string[];       
+  sections: (string | SectionData)[]      
   meta_title: string;
   meta_description: string;
   has_form: boolean;
@@ -98,29 +98,25 @@ export interface EnrollmentSubmission {
 export interface SectionData {
   id: string;               
   type: SectionType;        
-  page_category?: CategoryType; // Opcional: para filtrar si hiciera falta
+  page_category?: CategoryType; 
   content: {
-    // Campos flexibles según el tipo de sección
     title?: string;
     subtitle?: string;
     description?: string;
-    // Para el Hero Carrusel:
+    image_url?: string; // <--- Agregado
     slides?: { 
         image_url: string; 
         image_alt: string;
         title?: string; 
         description?: string; 
     }[]; 
-    // Para botones de acción:
     button_text?: string;
     button_link?: string;
   };
   settings?: {
-    theme?: 'light' | 'dark' | 'brand'; // Para cambiar fondo (blanco/negro/naranja)
-    layout?: 'grid' | 'slider';          // Para las listas de clases/noticias
+    theme?: 'light' | 'dark' | 'brand';
+    layout?: 'slider' | 'grid' | 'image-left' | 'image-right' | string; // <--- Agregado
   };
-  order?: number;           
-  is_active: boolean;
 }
 
 // Un tipo auxiliar para cuando la página viene con sus secciones ya "infladas"

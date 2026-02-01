@@ -1,48 +1,61 @@
-// src/components/SectionRenderer.tsx
 import Hero from "./sections/hero/Hero";
 import DynamicSection from "./DynamicSection/DynamicSection";
 import Contact from "./sections/contact/Contact";
-import { Class, News, UniversalCardData, SectionData, CategoryType } from "@/types";
+import TextBlock from "./sections/textBlock/TextBlock"; 
+import { 
+  Class, 
+  News, 
+  UniversalCardData, 
+  SectionData, 
+  CategoryType 
+} from "@/types";
 
 interface SectionRendererProps {
   sectionData: SectionData; 
   pageCategory?: CategoryType; 
-  rawItems?: any[]; 
+  // Definimos que puede ser un array de clases o noticias
+  rawItems?: (Class | News)[]; 
 }
 
-export default function SectionRenderer({ sectionData, pageCategory, rawItems = [] }: SectionRendererProps) {
-  // --- ESCUDO DE SEGURIDAD ---
-  // Si por alguna razón la data no llega (porque no existe en la DB todavía),
-  // cortamos acá y no renderizamos nada. Así evitamos el error "reading 'type'".
+export default function SectionRenderer({ 
+  sectionData, 
+  pageCategory, 
+  rawItems = [] 
+}: SectionRendererProps) {
+
   if (!sectionData) {
-    console.warn("⚠️ SectionRenderer recibió data vacía. Revisar servicio o DB.");
+    console.warn("⚠️ SectionRenderer recibió data vacía.");
     return null;
   }
-  // ---------------------------
 
   const isHome = pageCategory === "inicio";
 
-  // Ahora sí, es seguro leer .type porque sabemos que sectionData existe
   switch (sectionData.type) {
+    
     case "hero":
       return (
         <Hero 
-          // Usamos encadenamiento opcional (?.) por si content viene vacío
-          title={sectionData.content?.title || ""} 
+          title={sectionData.content?.title || "Escuela de Música"} 
           description={sectionData.content?.subtitle || ""} 
         />
       );
 
-    case "contacto":
+    case "texto-bloque":
       return (
-        <Contact 
-          category={pageCategory || 'contacto'}
-          hasForm={true} 
+        <TextBlock
+          title={sectionData.content?.title}
+          text={sectionData.content?.description || ""}
+          // Usamos "as any" o actualizamos la interfaz SectionData (ver nota abajo)
+          imageUrl={(sectionData.content as any).image_url}
+          imagePosition={sectionData.settings?.layout === 'image-left' ? 'left' : 'right'}
         />
       );
 
     case "clases": {
-      const classesData: UniversalCardData[] = rawItems.map((c: Class) => ({
+      // 1. Forzamos el tipo: le decimos a TS que aquí rawItems es Class[]
+      const classes = rawItems as Class[];
+
+      const classesData: UniversalCardData[] = classes.map((c) => ({
         id: c.id,
         title: c.name,
         description: c.description,
@@ -55,14 +68,18 @@ export default function SectionRenderer({ sectionData, pageCategory, rawItems = 
         <DynamicSection 
           title={sectionData.content?.title || "Nuestras Clases"} 
           items={classesData} 
-          layout={sectionData.settings?.layout || (isHome ? "slider" : "grid")} 
+          // Casting para el layout para que coincida con lo que espera DynamicSection
+          layout={(sectionData.settings?.layout as "slider" | "grid") || (isHome ? "slider" : "grid")} 
           basePath="/clases"
         />
       );
     }
 
     case "noticias": {
-      const newsData: UniversalCardData[] = rawItems.map((n: News) => ({
+      // 2. Forzamos el tipo: le decimos a TS que aquí rawItems es News[]
+      const news = rawItems as News[];
+
+      const newsData: UniversalCardData[] = news.map((n) => ({
         id: n.id,
         title: n.title,
         description: n.excerpt,
@@ -75,13 +92,22 @@ export default function SectionRenderer({ sectionData, pageCategory, rawItems = 
         <DynamicSection 
           title={sectionData.content?.title || "Noticias del Barrio"} 
           items={newsData} 
-          layout={sectionData.settings?.layout || (isHome ? "slider" : "grid")} 
+          layout={(sectionData.settings?.layout as "slider" | "grid") || (isHome ? "slider" : "grid")} 
           basePath="/noticias"
         />
       );
     }
 
+    case "contacto":
+      return (
+        <Contact 
+          category={pageCategory || 'contacto'}
+          hasForm={true} 
+        />
+      );
+
     default:
+      console.warn(`Type "${sectionData.type}" no reconocido en SectionRenderer`);
       return null;
   }
 }

@@ -3,7 +3,7 @@
 
 import { adminDb } from "@/lib/firebase-admin";
 import { PageContent, SectionData } from "@/types";
-import { Class, News } from "@/types";
+import { Class, News, CategoryType } from "@/types";
 /**
  * Guarda o actualiza una página usando privilegios de Admin.
  */
@@ -167,6 +167,91 @@ export const seedNewsAdmin = async () => {
     await batch.commit();
     return { success: true };
   } catch (error) {
+    return { success: false, error };
+  }
+};
+
+// Agrega esto a src/services/admin-services.ts
+
+export const seedPageNosotrosCustom = async () => {
+  try {
+    const pageData = {
+      slug: "nosotros",
+      category: "nosotros" as CategoryType,
+      header_title: "Nuestra Historia",
+      header_description: "Conoce más sobre la Escuela de Música Barrial",
+      meta_title: "Nosotros - Escuela de Música",
+      meta_description: "La historia de nuestro proyecto cultural.",
+      has_form: false,
+      // AQUÍ ESTÁ EL CAMBIO: El primero es un objeto, el segundo un string (ID global)
+      sections: [
+        {
+          id: "hero-nosotros", // ID único para esta instancia
+          type: "hero",
+          is_active: true,
+          content: {
+            title: "Nuestra Historia Musical",
+            subtitle: "Desde 2010 transformando el barrio a través del arte."
+          }
+        },
+        "clases" // Esta sigue siendo global, traerá lo mismo que en Inicio
+      ]
+    };
+
+    const docRef = adminDb.collection("pages").doc("nosotros");
+    await docRef.set({ ...pageData, last_updated: new Date() });
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+export const seedPageNosotrosHybrid = async () => {
+  try {
+    const pageData = {
+      // ... resto de campos (slug, header, etc)
+      slug: "nosotros",
+      header_title: "Nuestra Historia",
+      // ...
+      has_form: false,
+      sections: [
+        // 1. El Hero (Objeto)
+        {
+          type: "hero",
+          is_active: true,
+          content: {
+            title: "Nuestra Historia Musical",
+            subtitle: "Desde 2010 transformando el barrio a través del arte.",
+          }
+        },
+        // 2. NUEVO: Bloque de Texto con Imagen a la izquierda (Objeto)
+        {
+          type: "texto-bloque",
+          is_active: true,
+          settings: { layout: "image-left" }, // Configuración visual
+          content: {
+            title: "Los Orígenes del Proyecto",
+            description: "Todo comenzó en un pequeño garaje con dos guitarras prestadas y muchas ganas de enseñar.\n\nCon el apoyo de los vecinos, fuimos creciendo poco a poco hasta conseguir nuestro espacio actual. Hoy somos más de 20 profesores y 300 alumnos compartiendo la pasión por la música.",
+            // Usamos una imagen de placeholder random para probar
+            image_url: "https://picsum.photos/seed/musicahistoria/800/600" 
+          }
+        },
+        // 3. Las clases (Referencia global)
+        "clases",
+        "contacto" // ID de la sección global
+      ]
+    };
+
+    const docRef = adminDb.collection("pages").doc("nosotros");
+    await docRef.set({ 
+      ...pageData, 
+      last_updated: new Date() 
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error en seedPageNosotrosHybrid:", error);
     return { success: false, error };
   }
 };

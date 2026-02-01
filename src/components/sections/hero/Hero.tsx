@@ -6,7 +6,7 @@ interface HeroProps {
   description: string;
 }
 
-export default function Hero({ title, description }: HeroProps) {
+export default function Hero({ title = "", description = "" }: HeroProps) {
   return (
     <section className="relative overflow-hidden bg-white py-20 px-6">
       {/* Detalle Multi-color de fondo para Diversidad */}
