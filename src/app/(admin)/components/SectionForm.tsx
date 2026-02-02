@@ -1,147 +1,125 @@
 "use client";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { SectionData } from "@/types";
 import { Reorder, AnimatePresence } from "framer-motion";
 import { 
-  Plus, 
-  Trash2, 
-  GripVertical, 
-  Image as ImageIcon, 
-  AlignLeft, 
-  AlignRight,
-  Upload
+  Plus, Trash2, GripVertical, Image as ImageIcon, AlignLeft, AlignRight, 
+  Upload, LayoutGrid, SquarePlay, Palette, Mail, UserPlus, X, Edit3 
 } from "lucide-react";
 
 interface Props {
   section: SectionData;
+  items?: any[];
   onChange: (updatedContent: any, updatedSettings?: any) => void;
+  onUpsertItem?: (item: any) => void;
+  onDeleteItem?: (id: string) => void;
 }
 
-export default function SectionForm({ section, onChange }: Props) {
+export default function SectionForm({ section, items = [], onChange, onUpsertItem, onDeleteItem }: Props) {
   const mainFileRef = useRef<HTMLInputElement>(null);
   const slideFileRef = useRef<HTMLInputElement>(null);
-  const activeSlideIdx = useRef<number | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
 
   if (typeof section === 'string') return null;
-  
   const { type, content, settings } = section;
-  const currentLayout = settings?.layout || 'image-left';
 
-  const updateField = (field: string, value: any) => {
-    onChange({ ...content, [field]: value }, settings);
-  };
+  const updateField = (field: string, value: any) => onChange({ ...content, [field]: value }, settings);
+  const updateSettings = (field: string, value: any) => onChange(content, { ...settings, [field]: value });
 
-  const updateSettings = (field: string, value: any) => {
-    onChange(content, { ...settings, [field]: value });
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, isHero: boolean, index?: number) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const localUrl = URL.createObjectURL(file);
-
-    if (isHero && index !== undefined) {
-      const newSlides = [...(content.slides || [])];
-      newSlides[index].image_url = localUrl;
-      updateField('slides', newSlides);
-    } else if (isHero && index === undefined) {
-      const newSlides = [...(content.slides || []), { image_url: localUrl, image_alt: file.name }];
-      updateField('slides', newSlides);
-    } else {
-      updateField('image_url', localUrl);
-    }
+  const openModal = (item: any = null) => {
+    setEditingItem(item || { name: "", title: "", teacher_name: "", instrument: "", date: "", image_url: "" });
+    setShowModal(true);
   };
 
   return (
-    <div className="space-y-10">
-      <input type="file" ref={mainFileRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, false)} />
-      <input type="file" ref={slideFileRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, true, activeSlideIdx.current ?? undefined)} />
+    <div className="space-y-6">
+      <input type="file" ref={mainFileRef} className="hidden" accept="image/*" />
+      <input type="file" ref={slideFileRef} className="hidden" accept="image/*" />
 
-      <div className="grid grid-cols-1 gap-6">
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-slate-400 ml-4 tracking-widest">Título</label>
-          <input 
-            type="text"
-            value={content.title || ""}
-            onChange={(e) => updateField('title', e.target.value)}
-            className="w-full p-5 bg-slate-50 rounded-[2rem] border-none font-bold text-slate-900 focus:ring-2 focus:ring-green-500 shadow-inner"
-          />
+      {/* CABECERA */}
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-1">
+          <label className="text-[9px] font-black uppercase text-slate-400 ml-4 italic">Título de la Sección</label>
+          <input type="text" value={content.title || ""} onChange={(e) => updateField('title', e.target.value)} className="w-full p-3.5 bg-slate-50 rounded-xl border-none font-bold text-slate-900 focus:ring-1 focus:ring-green-500 shadow-inner text-sm" />
         </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-slate-400 ml-4 tracking-widest">Descripción</label>
-          <textarea 
-            rows={4}
-            value={content.description || content.subtitle || ""}
-            onChange={(e) => updateField(type === 'hero' ? 'subtitle' : 'description', e.target.value)}
-            className="w-full p-5 bg-slate-50 rounded-[2rem] border-none font-medium text-slate-700 focus:ring-2 focus:ring-green-500 shadow-inner"
-          />
-        </div>
+        {type !== 'contacto' && (
+          <div className="space-y-1">
+            <label className="text-[9px] font-black uppercase text-slate-400 ml-4 italic">Bajada / Descripción</label>
+            <textarea rows={2} value={content.description || content.subtitle || ""} onChange={(e) => updateField(type === 'hero' ? 'subtitle' : 'description', e.target.value)} className="w-full p-3.5 bg-slate-50 rounded-xl border-none font-medium text-slate-700 focus:ring-1 focus:ring-green-500 shadow-inner text-sm" />
+          </div>
+        )}
       </div>
 
-      {type === 'hero' && (
-        <div className="p-8 bg-slate-100/50 rounded-[3rem] border border-slate-200/60 space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-900">Galería del Banner</h4>
-            <button 
-              onClick={() => { activeSlideIdx.current = undefined; slideFileRef.current?.click(); }}
-              className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all shadow-lg"
-            >
-              <Upload size={14} /> Cargar Foto
-            </button>
+      {/* GESTIÓN DE CONTENIDO DINÁMICO */}
+      {(type === 'clases' || type === 'noticias') && (
+        <div className="space-y-4">
+          <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <h4 className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Contenido Registrado ({items.length})</h4>
+            <button onClick={() => openModal()} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-[8px] font-black uppercase flex items-center gap-1.5 hover:bg-green-700 transition-all shadow-md"><Plus size={12} /> Agregar</button>
           </div>
-
-          <Reorder.Group axis="y" values={content.slides || []} onReorder={(newOrder) => updateField('slides', newOrder)} className="space-y-3">
-            <AnimatePresence>
-              {content.slides?.map((slide, idx) => (
-                <Reorder.Item key={slide.image_url + idx} value={slide} className="flex items-center gap-4 p-3 bg-white rounded-3xl border border-slate-200 shadow-sm cursor-grab active:cursor-grabbing">
-                  <GripVertical className="text-slate-300" size={20} />
-                  <div className="relative w-24 h-16 rounded-2xl overflow-hidden bg-slate-100 border border-slate-100 flex-shrink-0">
-                    <img src={slide.image_url} className="object-cover w-full h-full" alt="Preview" />
-                  </div>
-                  <div className="flex-1 truncate text-[10px] font-mono text-slate-400">{slide.image_url}</div>
-                  <button onClick={() => { activeSlideIdx.current = idx; slideFileRef.current?.click(); }} className="p-3 text-slate-400 hover:text-black transition-all">
-                    <Plus size={16} />
-                  </button>
-                  <button onClick={() => updateField('slides', content.slides?.filter((_, i) => i !== idx))} className="p-3 text-slate-300 hover:text-red-500 transition-all">
-                    <Trash2 size={18} />
-                  </button>
-                </Reorder.Item>
-              ))}
-            </AnimatePresence>
-          </Reorder.Group>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {items.map((item) => (
+              <div key={item.id} className="bg-white border border-slate-200 p-2 rounded-xl flex items-center gap-3 group">
+                <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+                  {item.image_url && <img src={item.image_url} className="object-cover w-full h-full" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-black uppercase truncate leading-none mb-1">{item.name || item.title}</p>
+                  <p className="text-[7px] text-slate-400 font-bold truncate">{type === 'clases' ? item.teacher_name : item.date?.split('T')[0]}</p>
+                </div>
+                <div className="flex opacity-0 group-hover:opacity-100">
+                  <button onClick={() => openModal(item)} className="p-1 text-slate-400 hover:text-blue-600"><Edit3 size={12}/></button>
+                  <button onClick={() => onDeleteItem?.(item.id)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 size={12}/></button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {type === 'texto-bloque' && (
-        <div className="p-8 bg-slate-50 rounded-[3rem] border border-slate-100 space-y-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex flex-col items-center gap-4 w-full md:w-auto">
-              <div className="relative w-full md:w-56 h-36 rounded-[2.5rem] overflow-hidden bg-slate-200 border-4 border-white shadow-2xl">
-                {content.image_url ? <img src={content.image_url} className="object-cover w-full h-full" /> : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={32} className="text-slate-400"/></div>}
+      {/* MODAL */}
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl space-y-6 relative">
+              <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-all"><X size={20}/></button>
+              <h3 className="text-sm font-black uppercase tracking-tighter">{editingItem?.id ? 'Editar' : 'Agregar'} {type}</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 space-y-1">
+                  <label className="text-[9px] font-black uppercase text-slate-400 ml-2">Nombre / Título</label>
+                  <input type="text" value={editingItem?.name || editingItem?.title || ""} onChange={(e) => setEditingItem({...editingItem, [type === 'clases' ? 'name' : 'title']: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl border-none font-bold text-sm" />
+                </div>
+                {type === 'clases' ? (
+                  <>
+                    <input type="text" placeholder="Profesor" value={editingItem?.teacher_name || ""} onChange={(e) => setEditingItem({...editingItem, teacher_name: e.target.value})} className="p-3 bg-slate-50 rounded-xl border-none text-xs" />
+                    <input type="text" placeholder="Instrumento" value={editingItem?.instrument || ""} onChange={(e) => setEditingItem({...editingItem, instrument: e.target.value})} className="p-3 bg-slate-50 rounded-xl border-none text-xs" />
+                  </>
+                ) : (
+                  <input type="date" value={editingItem?.date ? editingItem.date.split('T')[0] : ""} onChange={(e) => setEditingItem({...editingItem, date: e.target.value})} className="col-span-2 p-3 bg-slate-50 rounded-xl border-none text-xs" />
+                )}
               </div>
-              <button onClick={() => mainFileRef.current?.click()} className="w-full flex items-center justify-center gap-2 bg-black text-white py-4 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all">
-                <Upload size={14} /> {content.image_url ? 'Cambiar Foto' : 'Agregar Foto'}
-              </button>
-            </div>
-
-            <div className="flex-1 w-full space-y-4">
-              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Alineación de Imagen</label>
-              <div className="flex p-2 bg-white rounded-3xl border border-slate-200 w-full md:w-fit gap-2 shadow-sm">
-                <button 
-                  onClick={() => updateSettings('layout', 'image-left')}
-                  className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase transition-all duration-300 ${currentLayout === 'image-left' ? 'bg-slate-900 text-white shadow-xl scale-105' : 'text-slate-400 hover:bg-slate-50'}`}
-                >
-                  <AlignLeft size={16} /> Izquierda
-                </button>
-                <button 
-                  onClick={() => updateSettings('layout', 'image-right')}
-                  className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase transition-all duration-300 ${currentLayout === 'image-right' ? 'bg-slate-900 text-white shadow-xl scale-105' : 'text-slate-400 hover:bg-slate-50'}`}
-                >
-                  <AlignRight size={16} /> Derecha
-                </button>
-              </div>
+              <button onClick={() => { onUpsertItem?.(editingItem); setShowModal(false); }} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-green-600 transition-all shadow-xl">Guardar en Base de Datos</button>
             </div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* LAYOUT & THEME (Solo dinámicos) */}
+      {(type === 'clases' || type === 'noticias') && (
+        <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col md:flex-row gap-8 items-start">
+          <div className="flex p-1 bg-white rounded-xl border border-slate-200 gap-1 shadow-sm">
+            <button onClick={() => updateSettings('layout', 'grid')} className={`px-4 py-2 rounded-lg text-[8px] font-black uppercase flex items-center gap-2 ${(settings?.layout || 'grid') === 'grid' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400'}`}><LayoutGrid size={12} /> Grid</button>
+            <button onClick={() => updateSettings('layout', 'slider')} className={`px-4 py-2 rounded-lg text-[8px] font-black uppercase flex items-center gap-2 ${settings?.layout === 'slider' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400'}`}><SquarePlay size={12} /> Slider</button>
+          </div>
+        </div>
+      )}
+
+      {/* CONTACTO */}
+      {type === 'contacto' && (
+        <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex p-1 bg-white rounded-xl border border-blue-200 w-fit gap-1 shadow-sm">
+          <button onClick={() => updateSettings('form_type', 'general')} className={`px-6 py-3 rounded-lg text-[8px] font-black uppercase flex items-center gap-2 ${(settings?.form_type || 'general') === 'general' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-400'}`}><Mail size={12} /> Contacto</button>
+          <button onClick={() => updateSettings('form_type', 'inscripcion')} className={`px-6 py-3 rounded-lg text-[8px] font-black uppercase flex items-center gap-2 ${settings?.form_type === 'inscripcion' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-400'}`}><UserPlus size={12} /> Inscripción</button>
         </div>
       )}
     </div>

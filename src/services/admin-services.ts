@@ -1,26 +1,33 @@
-// src/services/admin-services.ts
 "use server";
 
 import { adminDb } from "@/lib/firebase-admin";
-import { PageContent, SectionData } from "@/types";
-import { Class, News, CategoryType } from "@/types";
-
-// src/services/admin-services.ts
+import { PageContent, SectionData, Class, News } from "@/types";
 import { revalidatePath } from "next/cache";
+
+// Función para convertir Timestamps de Firebase en strings ISO legibles por el cliente
+const serializeData = (data: any) => {
+  return JSON.parse(JSON.stringify(data, (key, value) => {
+    if (value && typeof value === 'object' && '_seconds' in value) {
+      return new Date(value._seconds * 1000).toISOString();
+    }
+    return value;
+  }));
+};
+
+/** --- GESTIÓN DE PÁGINAS --- **/
 
 export const getPageAdmin = async (slug: string) => {
   try {
     const doc = await adminDb.collection("pages").doc(slug).get();
-    if (!doc.exists) return { success: false, error: "No existe" };
+    if (!doc.exists) return { success: false, error: "No existe la página" };
     const data = doc.data();
     return { 
       success: true, 
-      data: { 
-        ...data, 
-        last_updated: data?.last_updated?.toDate ? data.last_updated.toDate().toISOString() : null 
-      } as PageContent 
+      data: serializeData({ ...data, id: doc.id }) as PageContent 
     };
-  } catch (error) { return { success: false, error }; }
+  } catch (error) { 
+    return { success: false, error }; 
+  }
 };
 
 export const savePageConfigAdmin = async (slug: string, data: Partial<PageContent>) => {
@@ -30,416 +37,101 @@ export const savePageConfigAdmin = async (slug: string, data: Partial<PageConten
       last_updated: new Date(),
     }, { merge: true });
 
-    // Limpiamos la caché del sitio público
     revalidatePath(`/${slug}`);
     revalidatePath(`/`);
 
     return { success: true };
+  } catch (error) { 
+    return { success: false, error }; 
+  }
+};
+
+/** --- GESTIÓN DE COLECCIONES (CLASES/NOTICIAS) --- **/
+
+export const getCollectionAdmin = async (col: "clases" | "noticias") => {
+  try {
+    const snapshot = await adminDb.collection(col).get();
+    const rawData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return { success: true, data: serializeData(rawData) };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+export const upsertItemAdmin = async (col: "clases" | "noticias", item: any) => {
+  try {
+    const { id, ...rest } = item;
+    const docRef = id 
+      ? adminDb.collection(col).doc(id) 
+      : adminDb.collection(col).doc();
+
+    await docRef.set({
+      ...rest,
+      last_updated: new Date()
+    }, { merge: true });
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+export const deleteItemAdmin = async (col: "clases" | "noticias", id: string) => {
+  try {
+    await adminDb.collection(col).doc(id).delete();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+/** --- FUNCIONES DE SINCRONIZACIÓN (SEED) --- **/
+
+export const seedSectionsAdmin = async () => {
+  try {
+    const sections = [
+      { id: "hero-home", type: "hero", content: { title: "Cultura en el Barrio", subtitle: "Música y comunidad." } },
+      { id: "grid-clases", type: "clases", content: { title: "Nuestras Clases" }, settings: { layout: 'grid' } }
+    ];
+    for (const section of sections) {
+      await adminDb.collection("sections").doc(section.id).set(section);
+    }
+    return { success: true };
   } catch (error) { return { success: false, error }; }
 };
 
-/**
- * Resube las secciones con el tipado correcto de SectionData
- */
-export const seedSectionsAdmin = async () => {
-  try {
-    // Definimos los objetos siguiendo estrictamente la interfaz SectionData
-    const sections: SectionData[] = [
-      
-      {
-        id: "hero",
-        type: "hero",
-        is_active: true,
-        content: {
-          title: "Escuela de Música Barrial",
-          subtitle: "Cultura y música en el corazón del barrio.",
-          slides: [] // Estructura requerida por la interfaz
-        }
-      },
-      {
-        id: "noticias",
-        type: "noticias",
-        is_active: true,
-        content: {
-          title: "Últimas Novedades",
-        },
-        settings: {
-          layout: "grid" // Para que SectionRenderer sepa cómo dibujarlo
-        }
-      },
-      {
-        id: "contacto",
-        type: "contacto",
-        is_active: true,
-        content: {
-          title: "Contactanos",
-          description: "Dejanos tu consulta y te responderemos a la brevedad."
-        }
-      },
-      {
-          id: "clases", // El ID que pusiste en el array de la página
-          type: "clases",
-          is_active: true,
-          content: {
-            title: "Nuestros Talleres",
-          },
-          settings: {
-            layout: "slider"
-          }
-        }
-      
-    ];
-
-    const batch = adminDb.batch();
-
-    sections.forEach((section) => {
-      const docRef = adminDb.collection("sections").doc(section.id);
-      // Usamos set sin merge para asegurar que limpie la estructura vieja "mala"
-      batch.set(docRef, {
-        ...section,
-        last_updated: new Date(),
-      });
-    });
-
-    await batch.commit();
-    return { success: true };
-  } catch (error) {
-    console.error("Error en seedSectionsAdmin:", error);
-    return { success: false, error: "No se pudieron corregir las secciones" };
-  }
-};
-
-
 export const seedClassesAdmin = async () => {
   try {
-    const classes: Class[] = [
-      {
-        id: "guitarra-inicial",
-        category: 'clases',
-        name: "Guitarra Eléctrica",
-        teacher_name: "Carlos Santana",
-        schedule: "Lunes y Miércoles 18:00hs",
-        description: "Aprende las bases del rock y el blues desde cero.",
-        instrument: "Guitarra",
-        image_url: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?q=80&w=500",
-        image_alt: "Clase de guitarra",
-        max_capacity: 10,
-        is_active: true
-      },
-      {
-        id: "percusion-barrial",
-        category: 'clases',
-        name: "Ensamble de Percusión",
-        teacher_name: "Mariana Enríquez",
-        schedule: "Sábados 11:00hs",
-        description: "Ritmos latinoamericanos en grupo. No hace falta experiencia.",
-        instrument: "Percusión",
-        image_url: "https://images.unsplash.com/photo-1524230659192-35f3458f4f70?q=80&w=500",
-        image_alt: "Tambores de percusión",
-        max_capacity: 15,
-        is_active: true
-      }
+    const classes = [
+      { name: "Piano", teacher_name: "García", instrument: "Piano", is_active: true },
+      { name: "Guitarra", teacher_name: "Pérez", instrument: "Guitarra", is_active: true }
     ];
-
-    const batch = adminDb.batch();
-    classes.forEach((c) => {
-      const docRef = adminDb.collection("clases").doc(c.id);
-      batch.set(docRef, { ...c, last_updated: new Date() });
-    });
-
-    await batch.commit();
+    for (const c of classes) {
+      await adminDb.collection("clases").add(c);
+    }
     return { success: true };
-  } catch (error) {
-    return { success: false, error };
-  }
+  } catch (error) { return { success: false, error }; }
 };
 
-/**
- * Carga noticias de prueba en la colección 'noticias'
- */
 export const seedNewsAdmin = async () => {
   try {
-    const news: News[] = [
-      {
-        id: "festival-barrio-2026",
-        category: 'noticias',
-        title: "Gran Festival de Invierno",
-        excerpt: "Se viene el cierre de semestre con todas las orquestas en la plaza.",
-        content: "Cuerpo completo de la noticia sobre el festival...",
-        date: new Date(),
-        image_url: "https://images.unsplash.com/photo-1459749411177-042180ce673c?q=80&w=500",
-        image_alt: "Escenario de festival",
-        is_active: true
-      }
-    ];
-
-    const batch = adminDb.batch();
-    news.forEach((n) => {
-      const docRef = adminDb.collection("noticias").doc(n.id);
-      batch.set(docRef, { ...n });
-    });
-
-    await batch.commit();
+    const news = [{ title: "Gran Concierto", date: "2026-05-20", is_active: true }];
+    for (const n of news) {
+      await adminDb.collection("noticias").add(n);
+    }
     return { success: true };
-  } catch (error) {
-    return { success: false, error };
-  }
+  } catch (error) { return { success: false, error }; }
 };
 
-// Agrega esto a src/services/admin-services.ts
-
-export const seedPageNosotrosCustom = async () => {
-  try {
-    const pageData = {
-      slug: "nosotros",
-      category: "nosotros" as CategoryType,
-      header_title: "Nuestra Historia",
-      header_description: "Conoce más sobre la Escuela de Música Barrial",
-      meta_title: "Nosotros - Escuela de Música",
-      meta_description: "La historia de nuestro proyecto cultural.",
-      has_form: false,
-      // AQUÍ ESTÁ EL CAMBIO: El primero es un objeto, el segundo un string (ID global)
-      sections: [
-        {
-          id: "hero-nosotros", // ID único para esta instancia
-          type: "hero",
-          is_active: true,
-          content: {
-            title: "Nuestra Historia Musical",
-            subtitle: "Desde 2010 transformando el barrio a través del arte."
-          }
-        },
-        "clases" // Esta sigue siendo global, traerá lo mismo que en Inicio
-      ]
-    };
-
-    const docRef = adminDb.collection("pages").doc("nosotros");
-    await docRef.set({ ...pageData, last_updated: new Date() });
-
-    return { success: true };
-  } catch (error) {
-    return { success: false, error };
-  }
-};
-
-export const seedPageNosotrosHybrid = async () => {
-  try {
-    const pageData = {
-      // ... resto de campos (slug, header, etc)
-      slug: "nosotros",
-      header_title: "Nuestra Historia",
-      // ...
-      has_form: false,
-      sections: [
-        // 1. El Hero (Objeto)
-        {
-          type: "hero",
-          is_active: true,
-          content: {
-            title: "Nuestra Historia Musical",
-            subtitle: "Desde 2010 transformando el barrio a través del arte.",
-          }
-        },
-        // 2. NUEVO: Bloque de Texto con Imagen a la izquierda (Objeto)
-        {
-          type: "texto-bloque",
-          is_active: true,
-          settings: { layout: "image-left" }, // Configuración visual
-          content: {
-            title: "Los Orígenes del Proyecto",
-            description: "Todo comenzó en un pequeño garaje con dos guitarras prestadas y muchas ganas de enseñar.\n\nCon el apoyo de los vecinos, fuimos creciendo poco a poco hasta conseguir nuestro espacio actual. Hoy somos más de 20 profesores y 300 alumnos compartiendo la pasión por la música.",
-            // Usamos una imagen de placeholder random para probar
-            image_url: "https://picsum.photos/seed/musicahistoria/800/600" 
-          }
-        },
-        // 3. Las clases (Referencia global)
-        "clases",
-        "contacto" // ID de la sección global
-      ]
-    };
-
-    const docRef = adminDb.collection("pages").doc("nosotros");
-    await docRef.set({ 
-      ...pageData, 
-      last_updated: new Date() 
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error("Error en seedPageNosotrosHybrid:", error);
-    return { success: false, error };
-  }
-};
-
-export const seedPageInicioConSlider = async () => {
-  try {
-    const pageData = {
-      slug: "inicio",
-      category: "inicio" as CategoryType,
-      header_title: "Escuela de Música Barrial",
-      header_description: "Cultura y música en el corazón del barrio.",
-      meta_title: "Escuela de Música Barrial - Inicio",
-      meta_description: "Aprendé música en tu barrio con los mejores profesores.",
-      has_form: true,
-      sections: [
-        {
-          id: "hero-main",
-          type: "hero",
-          is_active: true,
-          content: {
-            title: "Escuela de Música Barrial",
-            subtitle: "Un espacio para aprender, compartir y crear cultura desde nuestro barrio.",
-            slides: [
-              { 
-                // Piano - Alta calidad
-                image_url: "https://images.unsplash.com/photo-1520527057852-44c0e5f43d41?auto=format&fit=crop&q=80&w=2000", 
-                image_alt: "Estudiante de música practicando" 
-              },
-              { 
-                // Guitarra - Alta calidad
-                image_url: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&q=80&w=2000", 
-                image_alt: "Clase de guitarra" 
-              },
-              { 
-                // Niños/Orquesta
-                image_url: "https://images.unsplash.com/photo-1459749411177-042180ce673c?auto=format&fit=crop&q=80&w=2000", 
-                image_alt: "Concierto barrial" 
-              }
-            ]
-          }
-        },
-        "clases",
-        "noticias",
-        "contacto"
-      ]
-    };
-
-    const docRef = adminDb.collection("pages").doc("inicio");
-    await docRef.set({ ...pageData, last_updated: new Date() });
-
-    return { success: true };
-  } catch (error) {
-    console.error("Error resubiendo inicio:", error);
-    return { success: false, error };
-  }
-};
-
-
-export const updatePageSectionsAdmin = async (slug: string, sections: any[]) => {
-  try {
-    const docRef = adminDb.collection("pages").doc(slug);
-    await docRef.update({ 
-      sections,
-      last_updated: new Date() 
-    });
-    return { success: true };
-  } catch (error) {
-    return { success: false, error };
-  }
-};
-
-/**
- * RE-ESTRUCTURACIÓN COMPLETA: 
- * Convierte todas las secciones string en objetos editables y define todas las páginas.
- */
 export const seedAllPagesProfessional = async () => {
   const pages = [
-    {
-      slug: "inicio",
-      category: "inicio",
-      header_title: "Escuela de Música Barrial",
-      header_description: "Cultura y música en el corazón del barrio.",
-      sections: [
-        {
-          id: "hero-inicio",
-          type: "hero",
-          is_active: true,
-          content: {
-            title: "Escuela de Música Barrial",
-            subtitle: "Un espacio para aprender, compartir y crear cultura desde nuestro barrio.",
-            slides: [
-              { image_url: "/escuela.jpg", image_alt: "Estudiante de música practicando" },
-              { image_url: "/escuela1.jpg", image_alt: "Clase de guitarra" }
-            ]
-          }
-        },
-        { id: "sec-clases", type: "clases", content: { title: "Nuestras Clases", description: "Explorá los instrumentos que podés aprender con nosotros." } },
-        { id: "sec-noticias", type: "noticias", content: { title: "Novedades del Barrio", description: "Enterate de los últimos eventos y conciertos." } },
-        { id: "sec-contacto", type: "contacto", content: { title: "Inscribite Ahora", description: "No pierdas la oportunidad de empezar tu camino musical." } }
-      ]
-    },
-    {
-      slug: "nosotros",
-      category: "nosotros",
-      header_title: "Nuestra Historia",
-      sections: [
-        {
-          id: "hero-nosotros",
-          type: "hero",
-          content: { title: "Nuestra Historia Musical", subtitle: "Desde 2010 transformando el barrio a través del arte." }
-        },
-        {
-          id: "bloque-historia",
-          type: "texto-bloque",
-          content: {
-            title: "Sobre la Escuela",
-            description: "Todo comenzó en un pequeño garaje con dos guitarras prestadas... Hoy somos más de 20 profesores y 300 alumnos.",
-            image_url: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=1000"
-          },
-          settings: { layout: "image-left" }
-        },
-        { id: "sec-clases-nos", type: "clases", content: { title: "Formación Integral" } },
-        { id: "sec-contacto-nos", type: "contacto", content: { title: "Vení a conocernos" } }
-      ]
-    },
-    {
-      slug: "novedades",
-      category: "noticias",
-      header_title: "Noticias y Eventos",
-      sections: [
-        { id: "hero-noticias", type: "hero", content: { title: "Blog Musical", subtitle: "Crónicas de nuestros conciertos y novedades." } },
-        { id: "listado-noticias", type: "noticias", content: { title: "Últimas Publicaciones" } }
-      ]
-    },
-    {
-      slug: "clases",
-      category: "clases",
-      header_title: "Nuestras Clases",
-      sections: [
-        { id: "hero-clases", type: "hero", content: { title: "Aprendé con Profesionales", subtitle: "Clases individuales y grupales para todas las edades." } },
-        { id: "grid-clases", type: "clases", content: { title: "Elegí tu instrumento" } }
-      ]
-    },
-    {
-      slug: "contacto",
-      category: "contacto",
-      header_title: "Contacto",
-      sections: [
-        { id: "hero-contacto", type: "hero", content: { title: "Estamos para ayudarte", subtitle: "Dejanos tu consulta o vení a visitarnos." } },
-        { id: "form-contacto", type: "contacto", content: { title: "Envianos un mensaje", description: "Respondemos en menos de 24hs." } }
-      ]
-    },
-    {
-      slug: "como-ayudar",
-      category: "donaciones",
-      header_title: "Apoyá el Proyecto",
-      sections: [
-        { id: "hero-donar", type: "hero", content: { title: "Tu ayuda hace la diferencia", subtitle: "Mantené viva la música en el barrio." } },
-        { id: "bloque-donar", type: "donaciones", content: { title: "Formas de colaborar", description: "Donaciones únicas o suscripciones mensuales." } }
-      ]
-    }
+    { slug: "inicio", category: "inicio", meta_title: "Escuela de Música", sections: ["hero-home", "grid-clases"] },
+    { slug: "nosotros", category: "nosotros", meta_title: "Sobre Nosotros", sections: [] }
   ];
-
   try {
     for (const page of pages) {
-      await adminDb.collection("pages").doc(page.slug).set({
-        ...page,
-        last_updated: new Date(),
-        has_form: page.slug === "contacto" || page.slug === "inicio"
-      }, { merge: true });
+      await adminDb.collection("pages").doc(page.slug).set(page, { merge: true });
     }
     return { success: true };
-  } catch (error) {
-    return { success: false, error };
-  }
+  } catch (error) { return { success: false, error }; }
 };
