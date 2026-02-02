@@ -308,3 +308,44 @@ export const seedPageInicioConSlider = async () => {
     return { success: false, error };
   }
 };
+
+/**
+ * Obtiene la configuración completa de una página por su slug
+ */
+/**
+ * Obtiene la configuración completa de una página por su slug
+ * Serializa los Timestamps de Firebase para evitar errores de Next.js
+ */
+export const getPageAdmin = async (slug: string) => {
+  try {
+    const docRef = adminDb.collection("pages").doc(slug);
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) return { success: false, error: "No existe" };
+
+    const data = docSnap.data();
+    
+    // Convertimos Timestamps a Strings para que el Cliente los entienda
+    const serializedData = {
+      ...data,
+      last_updated: data?.last_updated?.toDate ? data.last_updated.toDate().toISOString() : null,
+    };
+
+    return { success: true, data: serializedData as PageContent };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+export const updatePageSectionsAdmin = async (slug: string, sections: any[]) => {
+  try {
+    const docRef = adminDb.collection("pages").doc(slug);
+    await docRef.update({ 
+      sections,
+      last_updated: new Date() 
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
