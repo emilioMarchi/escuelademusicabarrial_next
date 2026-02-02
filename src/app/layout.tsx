@@ -12,15 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Metadatos base para SEO según el Blueprint
-export const metadata: Metadata = {
-  title: {
-    template: "%s | Escuela de Música Barrial",
-    default: "Escuela de Música Barrial - Educación Musical Comunitaria",
-  },
-  description: "Sitio oficial de la Escuela de Música Barrial. Clases, talleres y cultura para la comunidad.",
-  keywords: ["música", "escuela barrial", "clases de música", "talleres musicales"],
-};
+
 
 export default function RootLayout({
   children,

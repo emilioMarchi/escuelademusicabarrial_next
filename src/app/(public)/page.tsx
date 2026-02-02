@@ -8,7 +8,7 @@ import { Metadata } from "next";
 export async function generateMetadata(): Promise<Metadata> {
   const pageData = await getPageBySlug("inicio");
   return {
-    title: pageData?.meta_title || "Escuela de Música Barrial",
+    title: pageData?.meta_title,
     description: pageData?.meta_description || "",
   };
 }

@@ -4,23 +4,38 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { PageContent, SectionData } from "@/types";
 import { Class, News, CategoryType } from "@/types";
-/**
- * Guarda o actualiza una página usando privilegios de Admin.
- */
+
+// src/services/admin-services.ts
+import { revalidatePath } from "next/cache";
+
+export const getPageAdmin = async (slug: string) => {
+  try {
+    const doc = await adminDb.collection("pages").doc(slug).get();
+    if (!doc.exists) return { success: false, error: "No existe" };
+    const data = doc.data();
+    return { 
+      success: true, 
+      data: { 
+        ...data, 
+        last_updated: data?.last_updated?.toDate ? data.last_updated.toDate().toISOString() : null 
+      } as PageContent 
+    };
+  } catch (error) { return { success: false, error }; }
+};
+
 export const savePageConfigAdmin = async (slug: string, data: Partial<PageContent>) => {
   try {
-    const docRef = adminDb.collection("pages").doc(slug);
-    // Guardamos TODO el objeto (sections, meta_title, meta_description, etc.)
-    await docRef.set({
+    await adminDb.collection("pages").doc(slug).set({
       ...data,
       last_updated: new Date(),
     }, { merge: true });
 
+    // Limpiamos la caché del sitio público
+    revalidatePath(`/${slug}`);
+    revalidatePath(`/`);
+
     return { success: true };
-  } catch (error) {
-    console.error("Error al guardar página:", error);
-    return { success: false, error };
-  }
+  } catch (error) { return { success: false, error }; }
 };
 
 /**
@@ -309,33 +324,6 @@ export const seedPageInicioConSlider = async () => {
   }
 };
 
-/**
- * Obtiene la configuración completa de una página por su slug
- */
-/**
- * Obtiene la configuración completa de una página por su slug
- * Serializa los Timestamps de Firebase para evitar errores de Next.js
- */
-export const getPageAdmin = async (slug: string) => {
-  try {
-    const docRef = adminDb.collection("pages").doc(slug);
-    const docSnap = await docRef.get();
-
-    if (!docSnap.exists) return { success: false, error: "No existe" };
-
-    const data = docSnap.data();
-    
-    // Convertimos Timestamps a Strings para que el Cliente los entienda
-    const serializedData = {
-      ...data,
-      last_updated: data?.last_updated?.toDate ? data.last_updated.toDate().toISOString() : null,
-    };
-
-    return { success: true, data: serializedData as PageContent };
-  } catch (error) {
-    return { success: false, error };
-  }
-};
 
 export const updatePageSectionsAdmin = async (slug: string, sections: any[]) => {
   try {
