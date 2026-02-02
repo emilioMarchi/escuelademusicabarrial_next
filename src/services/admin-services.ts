@@ -10,16 +10,16 @@ import { Class, News, CategoryType } from "@/types";
 export const savePageConfigAdmin = async (slug: string, data: Partial<PageContent>) => {
   try {
     const docRef = adminDb.collection("pages").doc(slug);
+    // Guardamos TODO el objeto (sections, meta_title, meta_description, etc.)
     await docRef.set({
       ...data,
-      slug,
       last_updated: new Date(),
     }, { merge: true });
 
     return { success: true };
   } catch (error) {
-    console.error("Error en savePageConfigAdmin:", error);
-    return { success: false, error: "No se pudo guardar la página" };
+    console.error("Error al guardar página:", error);
+    return { success: false, error };
   }
 };
 
@@ -344,6 +344,112 @@ export const updatePageSectionsAdmin = async (slug: string, sections: any[]) => 
       sections,
       last_updated: new Date() 
     });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error };
+  }
+};
+
+/**
+ * RE-ESTRUCTURACIÓN COMPLETA: 
+ * Convierte todas las secciones string en objetos editables y define todas las páginas.
+ */
+export const seedAllPagesProfessional = async () => {
+  const pages = [
+    {
+      slug: "inicio",
+      category: "inicio",
+      header_title: "Escuela de Música Barrial",
+      header_description: "Cultura y música en el corazón del barrio.",
+      sections: [
+        {
+          id: "hero-inicio",
+          type: "hero",
+          is_active: true,
+          content: {
+            title: "Escuela de Música Barrial",
+            subtitle: "Un espacio para aprender, compartir y crear cultura desde nuestro barrio.",
+            slides: [
+              { image_url: "/escuela.jpg", image_alt: "Estudiante de música practicando" },
+              { image_url: "/escuela1.jpg", image_alt: "Clase de guitarra" }
+            ]
+          }
+        },
+        { id: "sec-clases", type: "clases", content: { title: "Nuestras Clases", description: "Explorá los instrumentos que podés aprender con nosotros." } },
+        { id: "sec-noticias", type: "noticias", content: { title: "Novedades del Barrio", description: "Enterate de los últimos eventos y conciertos." } },
+        { id: "sec-contacto", type: "contacto", content: { title: "Inscribite Ahora", description: "No pierdas la oportunidad de empezar tu camino musical." } }
+      ]
+    },
+    {
+      slug: "nosotros",
+      category: "nosotros",
+      header_title: "Nuestra Historia",
+      sections: [
+        {
+          id: "hero-nosotros",
+          type: "hero",
+          content: { title: "Nuestra Historia Musical", subtitle: "Desde 2010 transformando el barrio a través del arte." }
+        },
+        {
+          id: "bloque-historia",
+          type: "texto-bloque",
+          content: {
+            title: "Sobre la Escuela",
+            description: "Todo comenzó en un pequeño garaje con dos guitarras prestadas... Hoy somos más de 20 profesores y 300 alumnos.",
+            image_url: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=1000"
+          },
+          settings: { layout: "image-left" }
+        },
+        { id: "sec-clases-nos", type: "clases", content: { title: "Formación Integral" } },
+        { id: "sec-contacto-nos", type: "contacto", content: { title: "Vení a conocernos" } }
+      ]
+    },
+    {
+      slug: "novedades",
+      category: "noticias",
+      header_title: "Noticias y Eventos",
+      sections: [
+        { id: "hero-noticias", type: "hero", content: { title: "Blog Musical", subtitle: "Crónicas de nuestros conciertos y novedades." } },
+        { id: "listado-noticias", type: "noticias", content: { title: "Últimas Publicaciones" } }
+      ]
+    },
+    {
+      slug: "clases",
+      category: "clases",
+      header_title: "Nuestras Clases",
+      sections: [
+        { id: "hero-clases", type: "hero", content: { title: "Aprendé con Profesionales", subtitle: "Clases individuales y grupales para todas las edades." } },
+        { id: "grid-clases", type: "clases", content: { title: "Elegí tu instrumento" } }
+      ]
+    },
+    {
+      slug: "contacto",
+      category: "contacto",
+      header_title: "Contacto",
+      sections: [
+        { id: "hero-contacto", type: "hero", content: { title: "Estamos para ayudarte", subtitle: "Dejanos tu consulta o vení a visitarnos." } },
+        { id: "form-contacto", type: "contacto", content: { title: "Envianos un mensaje", description: "Respondemos en menos de 24hs." } }
+      ]
+    },
+    {
+      slug: "como-ayudar",
+      category: "donaciones",
+      header_title: "Apoyá el Proyecto",
+      sections: [
+        { id: "hero-donar", type: "hero", content: { title: "Tu ayuda hace la diferencia", subtitle: "Mantené viva la música en el barrio." } },
+        { id: "bloque-donar", type: "donaciones", content: { title: "Formas de colaborar", description: "Donaciones únicas o suscripciones mensuales." } }
+      ]
+    }
+  ];
+
+  try {
+    for (const page of pages) {
+      await adminDb.collection("pages").doc(page.slug).set({
+        ...page,
+        last_updated: new Date(),
+        has_form: page.slug === "contacto" || page.slug === "inicio"
+      }, { merge: true });
+    }
     return { success: true };
   } catch (error) {
     return { success: false, error };
