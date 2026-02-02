@@ -1,3 +1,4 @@
+"use client";
 import Image from "next/image";
 
 export interface TextBlockProps {
@@ -16,55 +17,63 @@ export default function TextBlock({
   imagePosition = "right",
 }: TextBlockProps) {
   
-  // Estructuramos por párrafos reales
+  console.log("Posición recibida en TextBlock:", imagePosition);
+
   const paragraphs = text.split("\n").filter(p => p.trim() !== "");
 
-  const textOrder = imagePosition === "left" ? "md:order-2" : "md:order-1";
-  const imageOrder = imagePosition === "left" ? "md:order-1" : "md:order-2";
+  const TextContent = (
+    <div className="w-full">
+      {title && (
+        <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-8 tracking-tighter leading-[0.9] text-center md:text-left">
+          {title}
+        </h2>
+      )}
+      <div className="space-y-6">
+        {paragraphs.map((paragraph, index) => (
+          <p key={index} className="text-slate-700 text-lg md:text-xl leading-relaxed font-normal text-center md:text-left">
+            {paragraph}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+
+  const ImageContent = imageUrl ? (
+    /* Agregamos padding (p-4 o p-8) para achicar la imagen visualmente */
+    <div className="w-full flex justify-center items-center p-4 md:p-10">
+      <div 
+        className="relative w-full rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200" 
+        style={{ height: '500px' }} // Bajamos un pelín la altura para que sea más contenida
+      >
+        <Image
+          src={imageUrl}
+          alt={imageAlt}
+          fill
+          priority
+          unoptimized
+          style={{ objectFit: "cover", objectPosition: "center" }}
+          sizes="(max-width: 768px) 100vw, 50vw"
+        />
+      </div>
+    </div>
+  ) : null;
 
   return (
-    <section className="py-20  bg-white overflow-hidden">
-      <div className="max-w-[1400px] mx-auto">
-        
-        <div className="flex flex-col md:flex-row gap-12 lg:gap-20 items-center">
-          
-          {/* BLOQUE DE TEXTO: Con contraste alto y espaciado de párrafos */}
-          <div className={`flex-[1.2] p-6 w-full ${imageUrl ? textOrder : ""}`}>
-            {title && (
-              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-3 tracking-tighter leading-none text-center md:text-left">
-                {title}
-              </h2>
-            )}
-
-            <div className="space-y-6">
-              {paragraphs.map((paragraph, index) => (
-                <p 
-                  key={index} 
-                  className="text-slate-800 text-lg md:text-xl leading-relaxed font-normal"
-                >
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          {/* BLOQUE DE IMAGEN: Sin bordes, sin marcos, altura fija asegurada */}
-          {imageUrl && (
-            <div className={`flex-1 w-full ${imageOrder}`}>
-              {/* Contenedor relativo con altura explícita para que 'fill' funcione */}
-              <div className="relative h-80 md:h-[550px] w-full rounded-[2rem] overflow-hidden shadow-xl">
-                <Image
-                  src={imageUrl}
-                  alt={imageAlt}
-                  fill
-                  priority
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
-              </div>
-            </div>
+    <section className="py-20 bg-white overflow-hidden">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+        {/* Mantenemos el grid-cols-2 que NO fallaba */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16 items-center">
+          {imagePosition === "left" ? (
+            <>
+              {ImageContent}
+              {TextContent}
+            </>
+          ) : (
+            <>
+              {TextContent}
+              {ImageContent}
+            </>
           )}
-          
         </div>
       </div>
     </section>

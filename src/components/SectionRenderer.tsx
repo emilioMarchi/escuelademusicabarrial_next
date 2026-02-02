@@ -36,16 +36,19 @@ export default function SectionRenderer({
           slides={sectionData.content?.slides || []} 
         />
       );
+      case "texto-bloque":
+  // Debug para ver qué saca de la base de datos
+  console.log("Layout desde DB:", sectionData.settings?.layout);
 
-    case "texto-bloque":
-      return (
-        <TextBlock
-          title={sectionData.content?.title}
-          text={sectionData.content?.description || ""}
-          imageUrl={sectionData.content?.image_url}
-          imagePosition={sectionData.settings?.layout === 'image-left' ? 'left' : 'right'}
-        />
-      );
+  return (
+    <TextBlock
+      title={sectionData.content?.title}
+      text={sectionData.content?.description || ""}
+      imageUrl={sectionData.content?.image_url}
+      // Asegúrate de que en Firebase esté escrito así: "image-left"
+      imagePosition={sectionData.settings?.layout === "image-left" ? "left" : "right"}
+    />
+  );
 
     case "clases": {
       const classes = rawItems as Class[];
