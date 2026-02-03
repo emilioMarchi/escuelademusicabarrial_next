@@ -33,6 +33,7 @@ export interface Class {
   max_capacity: number;
   is_active: boolean;
   last_updated?: any;
+  slug?: string;
 }
 
 export interface News {
@@ -45,6 +46,8 @@ export interface News {
   image_alt: string;
   is_active: boolean;
   last_updated?: any;
+  excerpt?: string;
+  slug?: string;
 }
 
 export interface PaymentOrder {

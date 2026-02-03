@@ -33,7 +33,7 @@ export default function SectionRenderer({
       return (
         <Hero 
           title={sectionData.content?.title} 
-          description={sectionData.content?.description} // <--- Corregido: Ahora usa la propiedad correcta
+          description={sectionData.content?.description} 
           slides={sectionData.content?.slides || []} 
         />
       );
@@ -55,7 +55,8 @@ export default function SectionRenderer({
         title: c.name,
         description: c.teacher_name || c.description,
         label: c.instrument,
-        slug: c.slug || slugify(c.name), 
+        // (c as any) evita el error de "slug does not exist"
+        slug: (c as any).slug || slugify(c.name), 
         color: "green",
       }));
 
@@ -74,9 +75,10 @@ export default function SectionRenderer({
       const newsData: UniversalCardData[] = news.map((n) => ({
         id: n.id,
         title: n.title,
-        description: n.excerpt || n.description,
+        // (n as any) evita el error de "excerpt does not exist"
+        description: (n as any).excerpt || n.description,
         label: "Novedades",
-        slug: n.slug || slugify(n.title), 
+        slug: (n as any).slug || slugify(n.title), 
         color: "orange",
       }));
 
