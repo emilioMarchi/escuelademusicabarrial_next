@@ -4,6 +4,44 @@ import { adminDb } from "@/lib/firebase-admin";
 import { PageContent } from "@/types";
 import { revalidatePath } from "next/cache";
 
+// En src/services/admin-services.ts
+
+export const getGlobalSettingsAdmin = async () => {
+  try {
+    const doc = await adminDb.collection("settings").doc("general").get();
+    
+    if (!doc.exists) {
+      return { 
+        success: true, 
+        data: { 
+          email: "", phone: "", address: "", 
+          instagram: "", facebook: "", youtube: "" 
+        } 
+      };
+    }
+
+    // APLICAMOS serializeData AQUÍ para limpiar el campo last_updated
+    const rawData = doc.data();
+    return { 
+      success: true, 
+      data: serializeData(rawData) 
+    };
+    
+  } catch (error) { 
+    return { success: false, error }; 
+  }
+};
+
+  export const updateGlobalSettingsAdmin = async (data: any) => {
+    try {
+      await adminDb.collection("settings").doc("general").set({ 
+        ...data, 
+        last_updated: new Date() 
+      }, { merge: true });
+      return { success: true };
+    } catch (error) { return { success: false, error }; }
+  };
+
 const serializeData = (data: any) => {
   return JSON.parse(JSON.stringify(data, (key, value) => {
     if (value && typeof value === 'object' && '_seconds' in value) {

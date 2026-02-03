@@ -19,29 +19,53 @@ interface Slide {
 }
 
 interface HeroProps {
-  title?: string;        // Título Global (ej: Inscripciones Abiertas)
-  description?: string;  // Subtítulo Global (ej: Formate con los mejores...)
+  title?: string;        
+  subtitle?: string;     
+  description?: string;  
   slides?: Slide[];
+  header_title?: string;
+  header_description?: string;
 }
 
-export default function Hero({ title, description, slides = [] }: HeroProps) {
+export default function Hero({ 
+  title, 
+  subtitle, 
+  description, 
+  slides = [], 
+  header_title, 
+  header_description 
+}: HeroProps) {
+  
+  const validSlides = slides.filter(s => s.image_url && s.image_url.trim() !== "");
   const [current, setCurrent] = useState(0);
-  const hasImages = slides && slides.length > 0;
+  const hasImages = validSlides.length > 0;
+  const currentSlide = hasImages ? validSlides[current] : null;
+
+  // --- LÓGICA DE PRIORIDAD CORREGIDA ---
+  
+  // 1. Título Principal: Página > Sección > Slide > Fallback final
+  const mainTitle = header_title || title || currentSlide?.title || "Escuela de Música";
+  
+  // 2. Descripción: Página > Subtitle Sección > Description Sección > Slide
+  const mainDescription = header_description || subtitle || description || currentSlide?.description || "";
+
+  // 3. Lógica del "Tag" (la etiqueta verde):
+  // Solo la mostramos si el título que estamos usando NO es el del slide.
+  // Así evitamos que el mismo texto aparezca repetido arriba y abajo.
+  const showTag = currentSlide?.title && mainTitle !== currentSlide.title;
 
   useEffect(() => {
-    if (!hasImages || slides.length <= 1) return;
+    if (!hasImages || validSlides.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % slides.length);
+      setCurrent((prev) => (prev + 1) % validSlides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, [hasImages, slides.length]);
-
-  const currentSlide = hasImages ? slides[current] : null;
+  }, [hasImages, validSlides.length]);
 
   return (
     <section className="relative w-full h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-slate-900">
       
-      {/* CAPA DE IMÁGENES (Fondo) */}
+      {/* CAPA DE IMÁGENES */}
       <div className="absolute inset-0 z-0 w-full h-full">
         <AnimatePresence mode="wait">
           {hasImages ? (
@@ -53,13 +77,16 @@ export default function Hero({ title, description, slides = [] }: HeroProps) {
               transition={{ duration: 1.5 }}
               className="absolute inset-0"
             >
-              <Image
-                src={slides[current].image_url}
-                alt={slides[current].image_alt || "Hero image"}
-                fill
-                className="object-cover opacity-50"
-                priority
-              />
+              {validSlides[current]?.image_url && (
+                <Image
+                  src={validSlides[current].image_url}
+                  alt={validSlides[current].image_alt || "Hero image"}
+                  fill
+                  className="object-cover opacity-50"
+                  priority
+                  unoptimized
+                />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
             </motion.div>
           ) : (
@@ -68,13 +95,13 @@ export default function Hero({ title, description, slides = [] }: HeroProps) {
         </AnimatePresence>
       </div>
 
-      {/* CONTENIDO (Textos y Botones) */}
+      {/* CONTENIDO */}
       <div className="relative z-10 container mx-auto px-4 text-center text-white">
         <div className="max-w-4xl mx-auto">
           
-          {/* 1. Etiqueta del Slide (Opcional, aparece arriba del título principal) */}
+          {/* Tag dinámico: Solo aparece si no se está usando como título principal */}
           <AnimatePresence mode="wait">
-            {currentSlide?.title && (
+            {showTag && (
               <motion.span
                 key={`st-${current}`}
                 initial={{ opacity: 0, y: 10 }}
@@ -82,41 +109,34 @@ export default function Hero({ title, description, slides = [] }: HeroProps) {
                 exit={{ opacity: 0, y: -10 }}
                 className="inline-block bg-green-600 text-[10px] font-black uppercase tracking-[0.3em] px-4 py-2 rounded-full mb-6 shadow-xl"
               >
-                {currentSlide.title}
+                {currentSlide?.title}
               </motion.span>
             )}
           </AnimatePresence>
 
-          {/* 2. Título Principal (Global) */}
+          {/* Título Principal */}
           <motion.h1 
+            key={`title-${mainTitle}`} // Para que anime si cambia el texto entre slides
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             className="text-5xl md:text-7xl lg:text-8xl font-black mb-6 tracking-tighter leading-[0.85] uppercase"
           >
-            {title || "Escuela de Música"}
+            {mainTitle}
           </motion.h1>
 
-          {/* 3. Descripción (Prioriza la del slide, si no, usa la global) */}
-          <AnimatePresence mode="wait">
-            <motion.p 
-              key={`sd-${current}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-lg md:text-2xl text-slate-200 mb-10 max-w-2xl mx-auto leading-relaxed font-medium"
-            >
-              {description || ""}
-            </motion.p>
-          </AnimatePresence>
-
-          {/* 4. Botones Dinámicos (Específicos de cada slide) */}
-          <motion.div 
-            key={`sb-${current}`}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="flex flex-col sm:flex-row justify-center gap-4"
+          {/* Subtítulo / Descripción */}
+          <motion.p 
+            key={`desc-${mainDescription}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-lg md:text-2xl text-slate-200 mb-10 max-w-2xl mx-auto leading-relaxed font-medium"
           >
-            {currentSlide?.buttons && currentSlide.buttons.length > 0 ? (
+            {mainDescription}
+          </motion.p>
+
+          {/* Botones */}
+          <motion.div key={`sb-${current}`} className="flex flex-col sm:flex-row justify-center gap-4">
+            {currentSlide?.buttons && currentSlide.buttons.length > 0 && (
               currentSlide.buttons.map((btn, idx) => (
                 <Link 
                   key={idx} 
@@ -130,16 +150,16 @@ export default function Hero({ title, description, slides = [] }: HeroProps) {
                   {btn.text}
                 </Link>
               ))
-            ) : ''}
+            )}
           </motion.div>
 
         </div>
       </div>
 
-      {/* INDICADORES (DOTS) */}
-      {hasImages && slides.length > 1 && (
+      {/* Dots */}
+      {hasImages && validSlides.length > 1 && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-20">
-          {slides.map((_, idx) => (
+          {validSlides.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrent(idx)}

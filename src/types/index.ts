@@ -22,7 +22,7 @@ export interface PageContent {
 
 export interface Class {
   id: string;
-  category: 'clases';       // Vinculación directa
+  category: 'clases';
   name: string;
   teacher_name: string;
   schedule: string;
@@ -32,6 +32,19 @@ export interface Class {
   image_alt: string;
   max_capacity: number;
   is_active: boolean;
+  last_updated?: any;
+}
+
+export interface News {
+  id: string;
+  category: 'noticias';
+  title: string;
+  description: string; // El cuerpo de la noticia
+  date: string;        // Fecha de publicación
+  image_url: string;
+  image_alt: string;
+  is_active: boolean;
+  last_updated?: any;
 }
 
 export interface PaymentOrder {
@@ -43,18 +56,6 @@ export interface PaymentOrder {
   concept: string;          
   mp_preference_id: string; // ID de la transacción en Mercado Pago
   created_at: any;
-}
-
-export interface News {
-  id: string;
-  category: 'noticias';
-  title: string;
-  excerpt: string;      // Resumen para la tarjetita
-  content: string;      // Cuerpo de la noticia
-  date: any;            // Timestamp de Firebase
-  image_url: string;
-  image_alt: string;
-  is_active: boolean;
 }
 
 // Interfaz "Puente" solo para los componentes visuales
