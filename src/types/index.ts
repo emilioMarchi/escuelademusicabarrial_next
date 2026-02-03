@@ -100,22 +100,25 @@ export interface SectionData {
   type: SectionType;        
   page_category?: CategoryType; 
   content: {
-    title?: string;
-    subtitle?: string;
-    description?: string;
-    image_url?: string; // <--- Agregado
-    slides?: { 
+    title?: string;         // Título Global (Header, Hero, Contacto)
+    subtitle?: string;      // Subtítulo Global (Hero)
+    description?: string;   // Descripción Global
+    image_url?: string;     
+    slides?: {              // Array de Slides
         image_url: string; 
-        image_alt: string;
+        image_alt?: string;
         title?: string; 
         description?: string; 
+        buttons?: {         // <--- AQUÍ ESTÁ LA CORRECCIÓN IMPORTANTE
+          text: string;
+          link: string;
+          style: string;
+        }[];
     }[]; 
-    button_text?: string;
-    button_link?: string;
   };
   settings?: {
-    theme?: 'light' | 'dark' | 'brand';
-    layout?: 'slider' | 'grid' | 'image-left' | 'image-right' | string; // <--- Agregado
+    layout?: 'slider' | 'grid' | 'image-left' | 'image-right' | string;
+    form_type?: 'general' | 'inscripcion';
   };
 }
 
