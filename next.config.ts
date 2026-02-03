@@ -2,26 +2,16 @@
 const nextConfig = {
   images: {
     remotePatterns: [
-     {
-      protocol: 'https',
-      hostname: 'picsum.photos', // Solo el dominio
-    },
       {
         protocol: 'https',
-        hostname: 'images.unsplash.com',
+        hostname: 'firebasestorage.googleapis.com',
+        port: '',
+        pathname: '/v0/b/**', // Esto permite cualquier archivo de cualquier bucket
       },
       {
         protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com', // Clave para cuando subas tus propias fotos
-      },
-      {
-        protocol: 'https',
-        hostname: 'encrypted-tbn0.gstatic.com', // Clave para cuando subas tus propias fotos
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.adobe.com', // Clave para cuando subas tus propias fotos
-      },
+        hostname: 'images.unsplash.com', // Por si sigues usando fotos de prueba
+      }
     ],
   },
 };

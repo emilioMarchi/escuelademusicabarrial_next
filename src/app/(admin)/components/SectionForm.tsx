@@ -1,11 +1,13 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import { SectionData } from "@/types";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, Reorder } from "framer-motion"; 
 import { useDirtyState } from "@/context/DirtyStateContext";
+import { uploadImageToStorage } from "@/lib/StoreUtils";
 import { 
   Plus, Trash2, Image as ImageIcon, Camera, Settings2, 
-  Music, Newspaper, FileText, Save, AlertCircle, Loader2, Heading
+  Music, Newspaper, FileText, Save, AlertCircle, Loader2, 
+  Heading, GripVertical, AlignLeft, AlignRight, ExternalLink
 } from "lucide-react";
 
 interface Props {
@@ -17,10 +19,22 @@ interface Props {
 
 export default function SectionForm({ section, items = [], onChange, onSave }: Props) {
   const { setDirty } = useDirtyState();
-  const [isSaving, setIsSaving] = useState(false);
+  const slideFileRef = useRef<HTMLInputElement>(null);
+  const blockFileRef = useRef<HTMLInputElement>(null);
+  
+  const [activeSlideIdx, setActiveSlideIdx] = useState<number | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => { setHasChanges(false); }, [section.id]);
+  // Evita el error "Cannot read properties of undefined (reading 'id')"
+  useEffect(() => { 
+    if (section?.id) {
+      setHasChanges(false); 
+    }
+  }, [section?.id]);
+
+  if (!section) return null;
 
   const handleLocalChange = (newContent: any, newSettings?: any) => {
     setHasChanges(true);
@@ -37,11 +51,35 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
     setIsSaving(false);
   };
 
+  const handleImageUpload = async (file: File, isSlide: boolean = false) => {
+    setUploading(true);
+    try {
+      const url = await uploadImageToStorage(file);
+      if (isSlide && activeSlideIdx !== null) {
+        const ns = [...(section.content.slides || [])];
+        ns[activeSlideIdx] = { ...ns[activeSlideIdx], image_url: url };
+        handleLocalChange({ ...section.content, slides: ns });
+      } else {
+        handleLocalChange({ ...section.content, image_url: url });
+      }
+    } catch (e) { 
+      alert("Error al subir imagen"); 
+    } finally { 
+      setUploading(false); 
+      setActiveSlideIdx(null); 
+    }
+  };
+
   return (
     <div className="space-y-6 relative group">
       <AnimatePresence>
         {hasChanges && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute -right-4 top-0 z-20 flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-full shadow-xl">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }} 
+            animate={{ opacity: 1, x: 0 }} 
+            exit={{ opacity: 0, x: 20 }} 
+            className="absolute -right-4 top-0 z-20 flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-full shadow-xl"
+          >
             <AlertCircle size={14} className="animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-widest">Cambios pendientes</span>
           </motion.div>
@@ -50,10 +88,9 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
 
       <div className={`p-10 bg-white rounded-[3rem] border-2 transition-all duration-500 ${hasChanges ? 'border-orange-400 shadow-2xl shadow-orange-100' : 'border-slate-100 shadow-sm'}`}>
         
-        {/* Header */}
         <div className="flex justify-between items-center mb-10 pb-6 border-b border-slate-50">
           <div className="flex items-center gap-4">
-            <div className={`p-4 rounded-2xl transition-colors ${hasChanges ? 'bg-orange-500 text-white' : 'bg-slate-900 text-white'}`}>
+            <div className={`p-4 rounded-2xl ${hasChanges ? 'bg-orange-500 text-white' : 'bg-slate-900 text-white'}`}>
               <Settings2 size={20} />
             </div>
             <div>
@@ -61,121 +98,268 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ID: {section.id}</p>
             </div>
           </div>
-
           {hasChanges && (
-            <button onClick={handleIndividualSave} disabled={isSaving} className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95">
-              {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar Sección
+            <button 
+              onClick={handleIndividualSave} 
+              disabled={isSaving} 
+              className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95"
+            >
+              {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar Bloque
             </button>
           )}
         </div>
 
-        {/* --- FORMULARIO --- */}
         <div className="space-y-10">
-          {/* Títulos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título Principal</label>
-              <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border-2 border-transparent focus-within:border-slate-900 transition-all">
-                <Heading size={18} className="text-slate-400" />
-                <input type="text" value={section.content.title || ""} onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} className="bg-transparent border-none outline-none text-sm w-full font-bold text-slate-900 placeholder:text-slate-300" placeholder="Título de la sección..." />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Subtítulo / Bajada</label>
-              <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-2xl border-2 border-transparent focus-within:border-slate-900 transition-all">
-                <FileText size={18} className="text-slate-400" />
-                <input type="text" value={section.content.subtitle || section.content.description || ""} onChange={(e) => handleLocalChange({ ...section.content, subtitle: e.target.value, description: e.target.value })} className="bg-transparent border-none outline-none text-sm w-full font-bold text-slate-900 placeholder:text-slate-300" placeholder="Descripción corta..." />
-              </div>
-            </div>
-          </div>
-
-          {/* EDITOR HERO */}
+          {/* HERO SECTION */}
           {section.type === 'hero' && (
             <div className="space-y-8">
-              <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Slides del Banner</label>
-              <div className="grid grid-cols-1 gap-6">
+              <Reorder.Group 
+                axis="y" 
+                values={section.content.slides || []} 
+                onReorder={(ns) => handleLocalChange({...section.content, slides: ns})} 
+                className="space-y-6"
+              >
                 {section.content.slides?.map((slide, sIdx) => (
-                  <div key={sIdx} className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-6">
-                    <div className="flex flex-col md:flex-row gap-8">
-                      <div className="w-40 h-40 bg-slate-200 rounded-[2rem] overflow-hidden shrink-0 relative group/img shadow-inner">
-                        {slide.image_url ? <img src={slide.image_url} className="w-full h-full object-cover" /> : <ImageIcon size={32} className="m-auto mt-14 text-slate-400" />}
-                        <button className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-all flex items-center justify-center text-white"><Camera size={20}/></button>
+                  <Reorder.Item key={slide.image_url + sIdx} value={slide}>
+                    <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-6 relative group/slide">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-900">
+                        <GripVertical size={20} />
                       </div>
-                      <div className="flex-1 space-y-4">
-                        <input type="text" placeholder="Título Slide (ej: Inscripciones)" value={slide.title || ""} onChange={(e) => {
-                          const newSlides = [...section.content.slides!];
-                          newSlides[sIdx].title = e.target.value;
-                          handleLocalChange({ ...section.content, slides: newSlides });
-                        }} className="w-full p-4 bg-white rounded-xl text-xs font-bold text-slate-900 outline-none border border-slate-100" />
-                        <textarea placeholder="Descripción Slide" value={slide.description || ""} onChange={(e) => {
-                          const newSlides = [...section.content.slides!];
-                          newSlides[sIdx].description = e.target.value;
-                          handleLocalChange({ ...section.content, slides: newSlides });
-                        }} className="w-full p-4 bg-white rounded-xl text-xs font-bold text-slate-900 outline-none border border-slate-100" />
+                      
+                      <div className="flex gap-8 pl-6">
+                        <div className="w-44 h-44 bg-slate-200 rounded-[2rem] overflow-hidden shrink-0 flex items-center justify-center relative group/img shadow-inner">
+                          {slide.image_url ? (
+                            <img src={slide.image_url} className="w-full h-full object-cover object-center" />
+                          ) : (
+                            <ImageIcon size={32} className="text-slate-400" />
+                          )}
+                          <button 
+                            onClick={() => { setActiveSlideIdx(sIdx); slideFileRef.current?.click(); }} 
+                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-white"
+                          >
+                            <Camera size={24} />
+                          </button>
+                        </div>
+                        <div className="flex-1 space-y-4">
+                          <input 
+                            type="text" 
+                            placeholder="Título del Slide" 
+                            value={slide.title || ""} 
+                            onChange={(e) => { 
+                              const ns = [...section.content.slides!]; 
+                              ns[sIdx].title = e.target.value; 
+                              handleLocalChange({...section.content, slides: ns}); 
+                            }} 
+                            className="w-full p-4 bg-white rounded-xl text-sm font-bold text-slate-900 border border-slate-200 outline-none" 
+                          />
+                          <textarea 
+                            placeholder="Descripción" 
+                            rows={2} 
+                            value={slide.description || ""} 
+                            onChange={(e) => { 
+                              const ns = [...section.content.slides!]; 
+                              ns[sIdx].description = e.target.value; 
+                              handleLocalChange({...section.content, slides: ns}); 
+                            }} 
+                            className="w-full p-4 bg-white rounded-xl text-xs font-bold text-slate-900 border border-slate-200 outline-none" 
+                          />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Botones del Slide */}
-                    <div className="pt-6 border-t border-slate-200">
-                      <label className="text-[9px] font-black uppercase text-slate-400 mb-4 block tracking-widest">Botones de Acción</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {slide.buttons?.map((btn, bIdx) => (
-                          <div key={bIdx} className="bg-white p-4 rounded-2xl flex gap-3 items-center border border-slate-100 shadow-sm">
-                            <input type="text" placeholder="Texto" value={btn.text} onChange={(e) => {
-                              const newSlides = [...section.content.slides!];
-                              newSlides[sIdx].buttons![bIdx].text = e.target.value;
-                              handleLocalChange({ ...section.content, slides: newSlides });
-                            }} className="w-24 text-[10px] font-black text-slate-900 uppercase bg-slate-50 p-2 rounded-lg" />
-                            <input type="text" placeholder="Link" value={btn.link} onChange={(e) => {
-                              const newSlides = [...section.content.slides!];
-                              newSlides[sIdx].buttons![bIdx].link = e.target.value;
-                              handleLocalChange({ ...section.content, slides: newSlides });
-                            }} className="flex-1 text-[10px] text-slate-600 bg-slate-50 p-2 rounded-lg font-bold" />
-                            <button onClick={() => {
-                              const newSlides = [...section.content.slides!];
-                              newSlides[sIdx].buttons!.splice(bIdx, 1);
-                              handleLocalChange({ ...section.content, slides: newSlides });
-                            }} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
-                          </div>
-                        ))}
-                        <button onClick={() => {
-                          const newSlides = [...section.content.slides!];
-                          if(!newSlides[sIdx].buttons) newSlides[sIdx].buttons = [];
-                          newSlides[sIdx].buttons!.push({ text: "Botón", link: "/", style: "solid" });
-                          handleLocalChange({ ...section.content, slides: newSlides });
-                        }} className="p-4 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black uppercase text-slate-400 hover:border-slate-900 hover:text-slate-900 transition-all">+ Añadir Botón</button>
+                      {/* BOTONES DEL SLIDE */}
+                      <div className="pl-6 space-y-4">
+                         <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Botones</span>
+                            <button 
+                              onClick={() => { 
+                                const ns = [...section.content.slides!];
+                                if(!ns[sIdx].buttons) ns[sIdx].buttons = [];
+                                ns[sIdx].buttons.push({text: "Nuevo Botón", link: "/", style: "solid"});
+                                handleLocalChange({...section.content, slides: ns});
+                              }} 
+                              className="text-[9px] font-black uppercase bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 transition-all"
+                            >
+                              + Añadir
+                            </button>
+                         </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {slide.buttons?.map((btn, bIdx) => (
+                              <div key={bIdx} className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col gap-3 shadow-sm">
+                                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-slate-900">
+                                   <span className="text-[9px] font-black text-slate-400 uppercase w-12 shrink-0">Texto:</span>
+                                   <input 
+                                     type="text" 
+                                     value={btn.text} 
+                                     onChange={(e) => { 
+                                       const ns = [...section.content.slides!]; 
+                                       ns[sIdx].buttons![bIdx].text = e.target.value; 
+                                       handleLocalChange({...section.content, slides: ns}); 
+                                     }} 
+                                     className="w-full bg-transparent text-[10px] font-black uppercase outline-none" 
+                                   />
+                                </div>
+                                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-slate-900">
+                                   <span className="text-[9px] font-black text-slate-400 uppercase w-12 shrink-0">Link:</span>
+                                   <input 
+                                     type="text" 
+                                     value={btn.link} 
+                                     onChange={(e) => { 
+                                       const ns = [...section.content.slides!]; 
+                                       ns[sIdx].buttons![bIdx].link = e.target.value; 
+                                       handleLocalChange({...section.content, slides: ns}); 
+                                     }} 
+                                     className="w-full bg-transparent text-[10px] font-bold outline-none" 
+                                   />
+                                   <ExternalLink size={12} className="text-slate-300"/>
+                                </div>
+                                <button 
+                                  onClick={() => { 
+                                    const ns = [...section.content.slides!]; 
+                                    ns[sIdx].buttons!.splice(bIdx, 1); 
+                                    handleLocalChange({...section.content, slides: ns}); 
+                                  }} 
+                                  className="text-[9px] font-black text-red-400 hover:text-red-600 text-right uppercase"
+                                >
+                                  Eliminar Botón
+                                </button>
+                              </div>
+                            ))}
+                         </div>
                       </div>
+                      
+                      <button 
+                        onClick={() => { if(confirm("¿Borrar slide completo?")) { const ns = [...section.content.slides!]; ns.splice(sIdx, 1); handleLocalChange({...section.content, slides: ns}); }}} 
+                        className="absolute right-8 bottom-8 text-red-300 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
-                  </div>
+                  </Reorder.Item>
                 ))}
-                <button onClick={() => {
-                    const newSlides = [...(section.content.slides || []), { image_url: "", title: "", description: "", buttons: [] }];
-                    handleLocalChange({ ...section.content, slides: newSlides });
-                  }} className="w-full py-5 border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400 font-black text-xs uppercase tracking-widest hover:border-slate-900 hover:text-slate-900 transition-all bg-slate-50/50">+ Nueva Diapositiva</button>
+              </Reorder.Group>
+              <button 
+                onClick={() => { 
+                  const ns = [...(section.content.slides || []), { image_url: "", title: "Nuevo Slide", description: "", buttons: [] }]; 
+                  handleLocalChange({...section.content, slides: ns}); 
+                }} 
+                className="w-full py-8 border-2 border-dashed border-slate-200 rounded-[2.5rem] text-slate-400 font-black text-xs uppercase tracking-widest hover:border-slate-900 transition-all bg-slate-50/30"
+              >
+                + Diapositiva
+              </button>
+            </div>
+          )}
+
+          {/* TEXTO BLOQUE */}
+          {section.type === 'texto-bloque' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título</label>
+                  <input 
+                    type="text" 
+                    value={section.content.title || ""} 
+                    onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
+                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción</label>
+                  <textarea 
+                    rows={6} 
+                    value={section.content.description || ""} 
+                    onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
+                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none" 
+                  />
+                </div>
+                <div className="flex gap-4">
+                   <button 
+                    onClick={() => handleLocalChange(section.content, { ...section.settings, layout: 'image-left' })} 
+                    className={`flex-1 p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${section.settings?.layout === 'image-left' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-100 text-slate-400 hover:border-slate-300'}`}
+                   >
+                    <AlignLeft size={20}/><span className="text-[9px] font-black uppercase">Imagen Izquierda</span>
+                   </button>
+                   <button 
+                    onClick={() => handleLocalChange(section.content, { ...section.settings, layout: 'image-right' })} 
+                    className={`flex-1 p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${section.settings?.layout === 'image-right' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-100 text-slate-400 hover:border-slate-300'}`}
+                   >
+                    <AlignRight size={20}/><span className="text-[9px] font-black uppercase">Imagen Derecha</span>
+                   </button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Imagen</label>
+                <div className="aspect-square bg-slate-100 rounded-[3rem] overflow-hidden relative group/img shadow-inner flex items-center justify-center">
+                  {section.content.image_url ? (
+                    <img src={section.content.image_url} className="w-full h-full object-cover object-center" />
+                  ) : (
+                    <ImageIcon size={48} className="text-slate-300" />
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Loader2 className="animate-spin text-white" />
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => blockFileRef.current?.click()} 
+                    className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-all flex items-center justify-center text-white font-black text-[10px] uppercase tracking-widest"
+                  >
+                    Subir Imagen
+                  </button>
+                </div>
+                <input type="file" ref={blockFileRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} />
               </div>
             </div>
           )}
 
-          {/* INDICADORES CLASES / NOTICIAS */}
+          {/* CONTACTO */}
+          {section.type === 'contacto' && (
+            <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
+              <div className="flex gap-4 items-center">
+                <div className="p-4 bg-white rounded-2xl shadow-sm text-slate-900"><FileText size={24}/></div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 uppercase">Tipo de Formulario</h4>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Actual: {section.settings?.form_type || 'general'}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {['general', 'inscripcion'].map((type) => (
+                  <button 
+                    key={type} 
+                    onClick={() => handleLocalChange(section.content, { ...section.settings, form_type: type })} 
+                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${ (section.settings?.form_type === type || (!section.settings?.form_type && type === 'general')) ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-400'}`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* INDICADORES DINÁMICOS */}
           {(section.type === 'clases' || section.type === 'noticias') && (
-            <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex justify-between items-center overflow-hidden relative shadow-2xl">
+            <div className="bg-slate-900 p-10 rounded-[3.5rem] text-white flex justify-between items-center relative overflow-hidden shadow-2xl">
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-2">
                   {section.type === 'clases' ? <Music className="text-green-400" /> : <Newspaper className="text-orange-400" />}
-                  <h4 className="text-2xl font-black uppercase tracking-tighter">Contenido del Sitio</h4>
+                  <h4 className="text-2xl font-black uppercase tracking-tighter">Bloque de {section.type}</h4>
                 </div>
-                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest max-w-xs">Este bloque consume la data global cargada en el Panel.</p>
+                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest max-w-xs leading-relaxed">Sincronizado con el Panel Principal.</p>
               </div>
               <div className="text-right relative z-10">
-                <span className="text-6xl font-black block leading-none">{items.length}</span>
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">{section.type === 'clases' ? 'Clases Activas' : 'Noticias'}</span>
+                <span className="text-7xl font-black block leading-none">{items.length}</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Items</span>
               </div>
-              <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full blur-[80px] -mr-24 -mt-24"></div>
             </div>
           )}
-
         </div>
       </div>
+      <input 
+        type="file" 
+        ref={slideFileRef} 
+        className="hidden" 
+        accept="image/*" 
+        onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], true)} 
+      />
     </div>
   );
 }
