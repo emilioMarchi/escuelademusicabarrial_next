@@ -26,7 +26,8 @@ export default function PageEditor() {
       getInstrumentsAdmin(),
       getTeachersAdmin()
     ]);
-    if (pageRes.success) setPage(pageRes.data);
+    // Línea corregida
+if (pageRes.success) setPage(pageRes.data ?? null);
     setDbItems({
       clases: clasesRes.success ? clasesRes.data : [],
       noticias: newsRes.success ? newsRes.data : [],
