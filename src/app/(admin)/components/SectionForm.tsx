@@ -112,140 +112,169 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
         <div className="space-y-10">
           {/* HERO SECTION */}
           {section.type === 'hero' && (
-            <div className="space-y-8">
-              <Reorder.Group 
-                axis="y" 
-                values={section.content.slides || []} 
-                onReorder={(ns) => handleLocalChange({...section.content, slides: ns})} 
-                className="space-y-6"
-              >
-                {section.content.slides?.map((slide, sIdx) => (
-                  <Reorder.Item key={slide.image_url + sIdx} value={slide}>
-                    <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-6 relative group/slide">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-900">
-                        <GripVertical size={20} />
-                      </div>
-                      
-                      <div className="flex gap-8 pl-6">
-                        <div className="w-44 h-44 bg-slate-200 rounded-[2rem] overflow-hidden shrink-0 flex items-center justify-center relative group/img shadow-inner">
-                          {slide.image_url ? (
-                            <img src={slide.image_url} className="w-full h-full object-cover object-center" />
-                          ) : (
-                            <ImageIcon size={32} className="text-slate-400" />
-                          )}
-                          <button 
-                            onClick={() => { setActiveSlideIdx(sIdx); slideFileRef.current?.click(); }} 
-                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-white"
-                          >
-                            <Camera size={24} />
-                          </button>
-                        </div>
-                        <div className="flex-1 space-y-4">
-                          <input 
-                            type="text" 
-                            placeholder="Título del Slide" 
-                            value={slide.title || ""} 
-                            onChange={(e) => { 
-                              const ns = [...section.content.slides!]; 
-                              ns[sIdx].title = e.target.value; 
-                              handleLocalChange({...section.content, slides: ns}); 
-                            }} 
-                            className="w-full p-4 bg-white rounded-xl text-sm font-bold text-slate-900 border border-slate-200 outline-none" 
-                          />
-                          <textarea 
-                            placeholder="Descripción" 
-                            rows={2} 
-                            value={slide.description || ""} 
-                            onChange={(e) => { 
-                              const ns = [...section.content.slides!]; 
-                              ns[sIdx].description = e.target.value; 
-                              handleLocalChange({...section.content, slides: ns}); 
-                            }} 
-                            className="w-full p-4 bg-white rounded-xl text-xs font-bold text-slate-900 border border-slate-200 outline-none" 
-                          />
-                        </div>
-                      </div>
+            <div className="space-y-12">
+              {/* Campos para Título y Descripción del Bloque Hero */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-10 border-b border-slate-50">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título de la Sección Hero</label>
+                  <input 
+                    type="text" 
+                    value={section.content.title || ""} 
+                    onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
+                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
+                    placeholder="Ej: Bienvenidos a La Escuela"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción General</label>
+                  <textarea 
+                    rows={2} 
+                    value={section.content.description || ""} 
+                    onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
+                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
+                    placeholder="Breve texto introductorio..."
+                  />
+                </div>
+              </div>
 
-                      {/* BOTONES DEL SLIDE */}
-                      <div className="pl-6 space-y-4">
-                         <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Botones</span>
+              {/* LISTADO DE SLIDES */}
+              <div className="space-y-6">
+                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Diapositivas / Slides</label>
+                <Reorder.Group 
+                  axis="y" 
+                  values={section.content.slides || []} 
+                  onReorder={(ns) => handleLocalChange({...section.content, slides: ns})} 
+                  className="space-y-6"
+                >
+                  {section.content.slides?.map((slide, sIdx) => (
+                    <Reorder.Item key={slide.image_url + sIdx} value={slide}>
+                      <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-6 relative group/slide">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-900">
+                          <GripVertical size={20} />
+                        </div>
+                        
+                        <div className="flex gap-8 pl-6">
+                          <div className="w-44 h-44 bg-slate-200 rounded-[2rem] overflow-hidden shrink-0 flex items-center justify-center relative group/img shadow-inner">
+                            {slide.image_url ? (
+                              <img src={slide.image_url} className="w-full h-full object-cover object-center" />
+                            ) : (
+                              <ImageIcon size={32} className="text-slate-400" />
+                            )}
                             <button 
-                              onClick={() => { 
-                                const ns = [...section.content.slides!];
-                                if(!ns[sIdx].buttons) ns[sIdx].buttons = [];
-                                ns[sIdx].buttons.push({text: "Nuevo Botón", link: "/", style: "solid"});
-                                handleLocalChange({...section.content, slides: ns});
-                              }} 
-                              className="text-[9px] font-black uppercase bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 transition-all"
+                              onClick={() => { setActiveSlideIdx(sIdx); slideFileRef.current?.click(); }} 
+                              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-white"
                             >
-                              + Añadir
+                              <Camera size={24} />
                             </button>
-                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {slide.buttons?.map((btn, bIdx) => (
-                              <div key={bIdx} className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col gap-3 shadow-sm">
-                                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-slate-900">
-                                   <span className="text-[9px] font-black text-slate-400 uppercase w-12 shrink-0">Texto:</span>
-                                   <input 
-                                     type="text" 
-                                     value={btn.text} 
-                                     onChange={(e) => { 
-                                       const ns = [...section.content.slides!]; 
-                                       ns[sIdx].buttons![bIdx].text = e.target.value; 
-                                       handleLocalChange({...section.content, slides: ns}); 
-                                     }} 
-                                     className="w-full bg-transparent text-[10px] font-black uppercase outline-none" 
-                                   />
+                          </div>
+                          <div className="flex-1 space-y-4">
+                            <input 
+                              type="text" 
+                              placeholder="Título del Slide" 
+                              value={slide.title || ""} 
+                              onChange={(e) => { 
+                                const ns = [...section.content.slides!]; 
+                                ns[sIdx].title = e.target.value; 
+                                handleLocalChange({...section.content, slides: ns}); 
+                              }} 
+                              className="w-full p-4 bg-white rounded-xl text-sm font-bold text-slate-900 border border-slate-200 outline-none" 
+                            />
+                            <textarea 
+                              placeholder="Descripción" 
+                              rows={2} 
+                              value={slide.description || ""} 
+                              onChange={(e) => { 
+                                const ns = [...section.content.slides!]; 
+                                ns[sIdx].description = e.target.value; 
+                                handleLocalChange({...section.content, slides: ns}); 
+                              }} 
+                              className="w-full p-4 bg-white rounded-xl text-xs font-bold text-slate-900 border border-slate-200 outline-none" 
+                            />
+                          </div>
+                        </div>
+
+                        {/* BOTONES DEL SLIDE */}
+                        <div className="pl-6 space-y-4">
+                           <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Botones</span>
+                              <button 
+                                onClick={() => { 
+                                  const ns = [...section.content.slides!];
+                                  if(!ns[sIdx].buttons) ns[sIdx].buttons = [];
+                                  ns[sIdx].buttons.push({text: "Nuevo Botón", link: "/", style: "solid"});
+                                  handleLocalChange({...section.content, slides: ns});
+                                }} 
+                                className="text-[9px] font-black uppercase bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 transition-all"
+                              >
+                                + Añadir
+                              </button>
+                           </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {slide.buttons?.map((btn, bIdx) => (
+                                <div key={bIdx} className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col gap-3 shadow-sm">
+                                  <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-slate-900">
+                                     <span className="text-[9px] font-black text-slate-400 uppercase w-12 shrink-0">Texto:</span>
+                                     <input 
+                                       type="text" 
+                                       value={btn.text} 
+                                       onChange={(e) => { 
+                                         const ns = [...section.content.slides!]; 
+                                         ns[sIdx].buttons![bIdx].text = e.target.value; 
+                                         handleLocalChange({...section.content, slides: ns}); 
+                                       }} 
+                                       className="w-full bg-transparent text-[10px] font-black uppercase outline-none" 
+                                     />
+                                  </div>
+                                  <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-slate-900">
+                                     <span className="text-[9px] font-black text-slate-400 uppercase w-12 shrink-0">Link:</span>
+                                     <input 
+                                       type="text" 
+                                       value={btn.link} 
+                                       onChange={(e) => { 
+                                         const ns = [...section.content.slides!]; 
+                                         ns[sIdx].buttons![bIdx].link = e.target.value; 
+                                         handleLocalChange({...section.content, slides: ns}); 
+                                       }} 
+                                       className="w-full bg-transparent text-[10px] font-bold outline-none" 
+                                     />
+                                     <ExternalLink size={12} className="text-slate-300"/>
+                                  </div>
+                                  <button 
+                                    onClick={() => { 
+                                      const ns = [...section.content.slides!]; 
+                                      ns[sIdx].buttons!.splice(bIdx, 1); 
+                                      handleLocalChange({...section.content, slides: ns}); 
+                                    }} 
+                                    className="text-[9px] font-black text-red-400 hover:text-red-600 text-right uppercase"
+                                  >
+                                    Eliminar Botón
+                                  </button>
                                 </div>
-                                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-slate-900">
-                                   <span className="text-[9px] font-black text-slate-400 uppercase w-12 shrink-0">Link:</span>
-                                   <input 
-                                     type="text" 
-                                     value={btn.link} 
-                                     onChange={(e) => { 
-                                       const ns = [...section.content.slides!]; 
-                                       ns[sIdx].buttons![bIdx].link = e.target.value; 
-                                       handleLocalChange({...section.content, slides: ns}); 
-                                     }} 
-                                     className="w-full bg-transparent text-[10px] font-bold outline-none" 
-                                   />
-                                   <ExternalLink size={12} className="text-slate-300"/>
-                                </div>
-                                <button 
-                                  onClick={() => { 
-                                    const ns = [...section.content.slides!]; 
-                                    ns[sIdx].buttons!.splice(bIdx, 1); 
-                                    handleLocalChange({...section.content, slides: ns}); 
-                                  }} 
-                                  className="text-[9px] font-black text-red-400 hover:text-red-600 text-right uppercase"
-                                >
-                                  Eliminar Botón
-                                </button>
-                              </div>
-                            ))}
-                         </div>
+                              ))}
+                           </div>
+                        </div>
+                        
+                        <button 
+                          onClick={() => { if(confirm("¿Borrar slide completo?")) { const ns = [...section.content.slides!]; ns.splice(sIdx, 1); handleLocalChange({...section.content, slides: ns}); }}} 
+                          className="absolute right-8 bottom-8 text-red-300 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
-                      
-                      <button 
-                        onClick={() => { if(confirm("¿Borrar slide completo?")) { const ns = [...section.content.slides!]; ns.splice(sIdx, 1); handleLocalChange({...section.content, slides: ns}); }}} 
-                        className="absolute right-8 bottom-8 text-red-300 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </Reorder.Item>
-                ))}
-              </Reorder.Group>
-              <button 
-                onClick={() => { 
-                  const ns = [...(section.content.slides || []), { image_url: "", title: "Nuevo Slide", description: "", buttons: [] }]; 
-                  handleLocalChange({...section.content, slides: ns}); 
-                }} 
-                className="w-full py-8 border-2 border-dashed border-slate-200 rounded-[2.5rem] text-slate-400 font-black text-xs uppercase tracking-widest hover:border-slate-900 transition-all bg-slate-50/30"
-              >
-                + Diapositiva
-              </button>
+                    </Reorder.Item>
+                  ))}
+                </Reorder.Group>
+                
+                <button 
+                  onClick={() => { 
+                    const ns = [...(section.content.slides || []), { image_url: "", title: "Nuevo Slide", description: "", buttons: [] }]; 
+                    handleLocalChange({...section.content, slides: ns}); 
+                  }} 
+                  className="w-full py-8 border-2 border-dashed border-slate-200 rounded-[2.5rem] text-slate-400 font-black text-xs uppercase tracking-widest hover:border-slate-900 transition-all bg-slate-50/30"
+                >
+                  + Diapositiva
+                </button>
+              </div>
             </div>
           )}
 
@@ -313,24 +342,49 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
 
           {/* CONTACTO */}
           {section.type === 'contacto' && (
-            <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
-              <div className="flex gap-4 items-center">
-                <div className="p-4 bg-white rounded-2xl shadow-sm text-slate-900"><FileText size={24}/></div>
-                <div>
-                  <h4 className="text-sm font-black text-slate-900 uppercase">Tipo de Formulario</h4>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Actual: {section.settings?.form_type || 'general'}</p>
+            <div className="space-y-8">
+              {/* Campos para Título y Descripción */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título de la Sección</label>
+                  <input 
+                    type="text" 
+                    value={section.content.title || ""} 
+                    onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
+                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción / Bajada</label>
+                  <textarea 
+                    rows={2} 
+                    value={section.content.description || ""} 
+                    onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
+                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
+                  />
                 </div>
               </div>
-              <div className="flex gap-2">
-                {['general', 'inscripcion'].map((type) => (
-                  <button 
-                    key={type} 
-                    onClick={() => handleLocalChange(section.content, { ...section.settings, form_type: type })} 
-                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${ (section.settings?.form_type === type || (!section.settings?.form_type && type === 'general')) ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-400'}`}
-                  >
-                    {type}
-                  </button>
-                ))}
+
+              {/* Selector de tipo de formulario existente */}
+              <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
+                <div className="flex gap-4 items-center">
+                  <div className="p-4 bg-white rounded-2xl shadow-sm text-slate-900"><FileText size={24}/></div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 uppercase">Tipo de Formulario</h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Actual: {section.settings?.form_type || 'general'}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {['general', 'inscripcion'].map((type) => (
+                    <button 
+                      key={type} 
+                      onClick={() => handleLocalChange(section.content, { ...section.settings, form_type: type })} 
+                      className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${ (section.settings?.form_type === type || (!section.settings?.form_type && type === 'general')) ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-400'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

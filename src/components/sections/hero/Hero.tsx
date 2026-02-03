@@ -19,21 +19,15 @@ interface Slide {
 }
 
 interface HeroProps {
-  title?: string;        
-  subtitle?: string;     
-  description?: string;  
+  title?: string;        // Título de la sección (del admin)
+  description?: string;  // Descripción de la sección (del admin)
   slides?: Slide[];
-  header_title?: string;
-  header_description?: string;
 }
 
 export default function Hero({ 
   title, 
-  subtitle, 
   description, 
-  slides = [], 
-  header_title, 
-  header_description 
+  slides = [] 
 }: HeroProps) {
   
   const validSlides = slides.filter(s => s.image_url && s.image_url.trim() !== "");
@@ -41,18 +35,21 @@ export default function Hero({
   const hasImages = validSlides.length > 0;
   const currentSlide = hasImages ? validSlides[current] : null;
 
-  // --- LÓGICA DE PRIORIDAD CORREGIDA ---
+  // --- NUEVA LÓGICA DE PRIORIDADES ---
   
-  // 1. Título Principal: Página > Sección > Slide > Fallback final
-  const mainTitle = header_title || title || currentSlide?.title || "Escuela de Música";
-  
-  // 2. Descripción: Página > Subtitle Sección > Description Sección > Slide
-  const mainDescription = header_description || subtitle || description || currentSlide?.description || "";
+  // Verificamos si la sección tiene contenido propio
+  const hasSectionTitle = Boolean(title && title.trim() !== "");
+  const hasSectionDesc = Boolean(description && description.trim() !== "");
 
-  // 3. Lógica del "Tag" (la etiqueta verde):
-  // Solo la mostramos si el título que estamos usando NO es el del slide.
-  // Así evitamos que el mismo texto aparezca repetido arriba y abajo.
-  const showTag = currentSlide?.title && mainTitle !== currentSlide.title;
+  // 1. Título: Si hay de sección, se usa ese. Si no, el del slide.
+  const mainTitle = hasSectionTitle ? title : (currentSlide?.title || "Escuela de Música");
+  
+  // 2. Descripción: Si hay de sección, se usa esa. Si no, la del slide.
+  const mainDescription = hasSectionDesc ? description : (currentSlide?.description || "");
+
+  // 3. Etiqueta (Tag): Solo se muestra si el título principal es el de la SECCIÓN
+  // y el slide tiene su propio título que ahora es "secundario".
+  const tagContent = hasSectionTitle ? currentSlide?.title : null;
 
   useEffect(() => {
     if (!hasImages || validSlides.length <= 1) return;
@@ -77,16 +74,14 @@ export default function Hero({
               transition={{ duration: 1.5 }}
               className="absolute inset-0"
             >
-              {validSlides[current]?.image_url && (
-                <Image
-                  src={validSlides[current].image_url}
-                  alt={validSlides[current].image_alt || "Hero image"}
-                  fill
-                  className="object-cover opacity-50"
-                  priority
-                  unoptimized
-                />
-              )}
+              <Image
+                src={validSlides[current].image_url}
+                alt={validSlides[current].image_alt || "Hero image"}
+                fill
+                className="object-cover opacity-50"
+                priority
+                unoptimized
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
             </motion.div>
           ) : (
@@ -95,28 +90,26 @@ export default function Hero({
         </AnimatePresence>
       </div>
 
-      {/* CONTENIDO */}
+      {/* CONTENIDO CENTRAL */}
       <div className="relative z-10 container mx-auto px-4 text-center text-white">
         <div className="max-w-4xl mx-auto">
           
-          {/* Tag dinámico: Solo aparece si no se está usando como título principal */}
           <AnimatePresence mode="wait">
-            {showTag && (
+            {tagContent && (
               <motion.span
-                key={`st-${current}`}
+                key={`tag-${current}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 className="inline-block bg-green-600 text-[10px] font-black uppercase tracking-[0.3em] px-4 py-2 rounded-full mb-6 shadow-xl"
               >
-                {currentSlide?.title}
+                {tagContent}
               </motion.span>
             )}
           </AnimatePresence>
 
-          {/* Título Principal */}
           <motion.h1 
-            key={`title-${mainTitle}`} // Para que anime si cambia el texto entre slides
+            key={`title-${mainTitle}`}
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             className="text-5xl md:text-7xl lg:text-8xl font-black mb-6 tracking-tighter leading-[0.85] uppercase"
@@ -124,7 +117,6 @@ export default function Hero({
             {mainTitle}
           </motion.h1>
 
-          {/* Subtítulo / Descripción */}
           <motion.p 
             key={`desc-${mainDescription}`}
             initial={{ opacity: 0 }}
@@ -134,29 +126,27 @@ export default function Hero({
             {mainDescription}
           </motion.p>
 
-          {/* Botones */}
-          <motion.div key={`sb-${current}`} className="flex flex-col sm:flex-row justify-center gap-4">
-            {currentSlide?.buttons && currentSlide.buttons.length > 0 && (
-              currentSlide.buttons.map((btn, idx) => (
-                <Link 
-                  key={idx} 
-                  href={btn.link || "#"}
-                  className={`px-10 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all hover:scale-105 active:scale-95 ${
-                    btn.style === 'outline' 
-                      ? "border-2 border-white text-white hover:bg-white hover:text-slate-900" 
-                      : "bg-white text-slate-900 hover:bg-green-500 hover:text-white shadow-2xl border-2 border-transparent"
-                  }`}
-                >
-                  {btn.text}
-                </Link>
-              ))
-            )}
+          {/* Botones del Slide actual */}
+          <motion.div key={`btns-${current}`} className="flex flex-col sm:flex-row justify-center gap-4">
+            {currentSlide?.buttons?.map((btn, idx) => (
+              <Link 
+                key={idx} 
+                href={btn.link || "#"}
+                className={`px-10 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all hover:scale-105 active:scale-95 ${
+                  btn.style === 'outline' 
+                    ? "border-2 border-white text-white hover:bg-white hover:text-slate-900" 
+                    : "bg-white text-slate-900 hover:bg-green-500 hover:text-white shadow-2xl border-2 border-transparent"
+                }`}
+              >
+                {btn.text}
+              </Link>
+            ))}
           </motion.div>
 
         </div>
       </div>
 
-      {/* Dots */}
+      {/* Navegación por puntos */}
       {hasImages && validSlides.length > 1 && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-20">
           {validSlides.map((_, idx) => (

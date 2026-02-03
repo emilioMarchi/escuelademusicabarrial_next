@@ -2,6 +2,8 @@ import Hero from "./sections/hero/Hero";
 import DynamicSection from "./DynamicSection/DynamicSection";
 import Contact from "./sections/contact/Contact";
 import TextBlock from "./sections/textBlock/TextBlock"; 
+import { slugify } from "@/lib/utils";  
+
 import { 
   Class, 
   News, 
@@ -31,7 +33,7 @@ export default function SectionRenderer({
       return (
         <Hero 
           title={sectionData.content?.title} 
-          description={sectionData.content?.subtitle} 
+          description={sectionData.content?.description} // <--- Corregido: Ahora usa la propiedad correcta
           slides={sectionData.content?.slides || []} 
         />
       );
@@ -51,9 +53,9 @@ export default function SectionRenderer({
       const classesData: UniversalCardData[] = classes.map((c) => ({
         id: c.id,
         title: c.name,
-        description: c.description,
+        description: c.teacher_name || c.description,
         label: c.instrument,
-        slug: c.id,
+        slug: c.slug || slugify(c.name), 
         color: "green",
       }));
 
@@ -61,7 +63,7 @@ export default function SectionRenderer({
         <DynamicSection 
           title={sectionData.content?.title || "Nuestras Clases"} 
           items={classesData} 
-          layout={(sectionData.settings?.layout as "slider" | "grid") || (isHome ? "slider" : "grid")} 
+          layout={(sectionData.settings?.layout as any) || (isHome ? "slider" : "grid")} 
           basePath="/clases"
         />
       );
@@ -72,9 +74,9 @@ export default function SectionRenderer({
       const newsData: UniversalCardData[] = news.map((n) => ({
         id: n.id,
         title: n.title,
-        description: n.excerpt,
+        description: n.excerpt || n.description,
         label: "Novedades",
-        slug: n.id,
+        slug: n.slug || slugify(n.title), 
         color: "orange",
       }));
 
@@ -82,18 +84,14 @@ export default function SectionRenderer({
         <DynamicSection 
           title={sectionData.content?.title || "Noticias del Barrio"} 
           items={newsData} 
-          layout={(sectionData.settings?.layout as "slider" | "grid") || (isHome ? "slider" : "grid")} 
+          layout={(sectionData.settings?.layout as any) || (isHome ? "slider" : "grid")} 
           basePath="/novedades"
         />
       );
     }
 
     case "contacto": {
-      // LÓGICA DE MAPEO:
-      // Si en el admin elegiste "Inscripción", forzamos la categoría "clases".
-      // Si elegiste "General" (o nada), usamos "contacto" o la categoría de la página.
       const adminSelection = sectionData.settings?.form_type;
-      
       let effectiveCategory = pageCategory || "contacto";
       
       if (adminSelection === 'inscripcion') effectiveCategory = 'clases';

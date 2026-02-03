@@ -3,7 +3,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { PageContent } from "@/types";
 import { revalidatePath } from "next/cache";
-
+import { slugify } from "@/lib/utils";
 // En src/services/admin-services.ts
 
 export const getGlobalSettingsAdmin = async () => {
@@ -204,10 +204,25 @@ export const getCollectionAdmin = async (col: "clases" | "noticias") => {
 export const upsertItemAdmin = async (col: "clases" | "noticias", item: any) => {
   try {
     const { id, ...rest } = item;
+    
+    // Generamos el slug automáticamente
+    const generatedSlug = col === "clases" 
+      ? slugify(rest.name || "") 
+      : slugify(rest.title || "");
+
+    const dataToSave = { 
+      ...rest, 
+      slug: generatedSlug, // <--- Aquí forzamos la propiedad slug
+      last_updated: new Date() 
+    };
+
     const docRef = id ? adminDb.collection(col).doc(id) : adminDb.collection(col).doc();
-    await docRef.set({ ...rest, last_updated: new Date() }, { merge: true });
+    await docRef.set(dataToSave, { merge: true });
+    
     return { success: true };
-  } catch (error) { return { success: false, error }; }
+  } catch (error) { 
+    return { success: false, error }; 
+  }
 };
 
 export const deleteItemAdmin = async (col: "clases" | "noticias", id: string) => {

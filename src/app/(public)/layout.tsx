@@ -15,7 +15,7 @@ export default function PublicLayout({
       <Navbar />
 
       {/* Contenido Dinámico */}
-      <main className="flex-grow">
+      <main className="w-full min-h-screen">
         {children}
       </main>
 

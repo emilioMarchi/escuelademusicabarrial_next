@@ -8,13 +8,12 @@ import { Metadata } from "next";
 export async function generateMetadata(): Promise<Metadata> {
   const pageData = await getPageBySlug("inicio");
   return {
-    title: pageData?.meta_title,
-    description: pageData?.meta_description || "",
+    title: pageData?.meta_title || "Inicio | Escuela de Música Barrial",
+    description: pageData?.meta_description || "Bienvenidos a la Escuela de Música del barrio.",
   };
 }
 
 export default async function HomePage() {
-  // La Home siempre solicita el slug "inicio"
   const pageData = await getPageBySlug("inicio");
   
   if (!pageData) return notFound();
