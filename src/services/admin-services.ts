@@ -4,7 +4,6 @@ import { adminDb } from "@/lib/firebase-admin";
 import { PageContent } from "@/types";
 import { revalidatePath } from "next/cache";
 
-// Helper para convertir Timestamps de Firebase a Strings (evita errores en Client Components)
 const serializeData = (data: any) => {
   return JSON.parse(JSON.stringify(data, (key, value) => {
     if (value && typeof value === 'object' && '_seconds' in value) {
@@ -14,10 +13,7 @@ const serializeData = (data: any) => {
   }));
 };
 
-/** ==============================================================================
- * GESTIÓN DE PÁGINAS (ESTRUCTURA Y SECCIONES)
- * ============================================================================== */
-
+/** --- GESTIÓN DE PÁGINAS --- **/
 export const getPageAdmin = async (slug: string) => {
   try {
     const doc = await adminDb.collection("pages").doc(slug).get();
@@ -35,6 +31,126 @@ export const savePageConfigAdmin = async (slug: string, data: Partial<PageConten
   } catch (error) { return { success: false, error }; }
 };
 
+/** --- SEEDS NORMALIZADOS --- **/
+
+export const seedAllPagesProfessional = async () => {
+  try {
+    const pages = [
+      {
+        slug: "inicio",
+        category: "inicio",
+        meta_title: "Escuela de Música del Barrio",
+        meta_description: "Aprende música en comunidad.",
+        sections: [
+          {
+            id: "hero-inicio",
+            type: "hero",
+            content: { 
+              title: "Inscripciones Abiertas", 
+              subtitle: "Formate con los mejores profesores del país.", 
+              slides: [
+                {
+                  image_url: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=1200",
+                  title: "Clases de Verano",
+                  description: "Aprovecha enero y febrero.",
+                  buttons: [
+                    { text: "Ver Horarios", link: "/clases", style: "solid" },
+                    { text: "Contacto", link: "/contacto", style: "outline" }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            id: "clases-grid-home",
+            type: "clases",
+            content: { title: "Nuestros Talleres" },
+            settings: { layout: 'grid' }
+          },
+          {
+            id: "contacto-home",
+            type: "contacto",
+            content: { title: "¿Tienes dudas?", description: "Escríbenos y te responderemos a la brevedad." },
+            settings: { form_type: 'general' }
+          }
+        ]
+      },
+      {
+        slug: "nosotros",
+        category: "nosotros",
+        meta_title: "Nuestra Historia | EMB",
+        meta_description: "Conocé quiénes somos.",
+        sections: [
+          {
+            id: "hero-nosotros",
+            type: "hero",
+            content: { 
+              title: "Nuestra Comunidad", 
+              subtitle: "Más de 10 años compartiendo cultura en el barrio.", 
+              slides: [
+                {
+                  image_url: "https://images.unsplash.com/photo-1520522139391-26daee275104?q=80&w=1200",
+                  title: "Desde 2015",
+                  description: "Un espacio de encuentro para todas las edades.",
+                  buttons: [] // Sin botones para probar la rigidez del componente
+                }
+              ]
+            }
+          },
+          {
+            id: "texto-nosotros",
+            type: "texto-bloque",
+            content: { 
+              title: "Un sueño colectivo", 
+              description: "La escuela nació de la necesidad de tener un espacio propio donde la música fuera el puente..." 
+            },
+            settings: { layout: 'image-right' }
+          }
+        ]
+      },
+      {
+        slug: "clases",
+        category: "clases",
+        meta_title: "Talleres e Instrumentos",
+        meta_description: "Toda nuestra oferta académica.",
+        sections: [
+          {
+            id: "hero-clases",
+            type: "hero",
+            content: { 
+              title: "Elegí tu Instrumento", 
+              subtitle: "Clases personalizadas para todos los niveles.", 
+              slides: [
+                {
+                  image_url: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?q=80&w=1200",
+                  title: "Ciclo 2026",
+                  description: "Inscribite antes del 15 de marzo.",
+                  buttons: [{ text: "Inscribirme", link: "/contacto", style: "solid" }]
+                }
+              ]
+            }
+          },
+          {
+            id: "grid-clases",
+            type: "clases",
+            content: { title: "Nuestras Clases" },
+            settings: { layout: 'grid' }
+          }
+        ]
+      }
+    ];
+
+    for (const page of pages) {
+      await adminDb.collection("pages").doc(page.slug).set({
+        ...page,
+        last_updated: new Date()
+      }, { merge: true });
+    }
+    
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) { return { success: false, error }; }
+};
 /** ==============================================================================
  * GESTIÓN DE COLECCIONES (CLASES, NOTICIAS)
  * ============================================================================== */
@@ -141,68 +257,3 @@ export const seedSectionsAdmin = async () => {
   return { success: true }; 
 };
 
-/**
- * SEED PRINCIPAL: Restaura la estructura completa de la página de INICIO.
- * Incluye: Header independiente + Hero con Subtítulos y Botones dentro de Slides + Grid de Clases.
- */
-export const seedAllPagesProfessional = async () => {
-  try {
-    const pages = [
-      {
-        slug: "inicio",
-        category: "inicio",
-        meta_title: "Escuela de Música del Barrio",
-        meta_description: "Aprende música en comunidad.",
-        sections: [
-          // BORRAMOS EL HEADER DE ACÁ. LA HOME ARRANCA CON EL HERO.
-          
-          // 1. HERO (Slider Promocional)
-          {
-            id: "hero-slider",
-            type: "hero",
-            content: { 
-              title: "Inscripciones Abiertas", 
-              subtitle: "Formate con los mejores profesores del país.", 
-              slides: [
-                {
-                  image_url: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=1200",
-                  title: "Clases de Verano",
-                  description: "Aprovecha enero y febrero.",
-                  buttons: [
-                    { text: "Ver Horarios", link: "/clases", style: "solid" },
-                    { text: "Contacto", link: "/contacto", style: "outline" }
-                  ]
-                }
-              ]
-            },
-            settings: { layout: 'slider' }
-          },
-          // 2. CLASES
-          {
-            id: "clases-grid",
-            type: "clases",
-            content: { title: "Nuestros Talleres" },
-            settings: { layout: 'grid' }
-          },
-          // 3. CONTACTO
-          {
-            id: "contacto-home",
-            type: "contacto",
-            content: { 
-              title: "¿Tienes dudas?", 
-              description: "Escríbenos y te responderemos a la brevedad." 
-            },
-            settings: { form_type: 'general' }
-          }
-        ]
-      }
-    ];
-    
-    for (const page of pages) {
-      await adminDb.collection("pages").doc(page.slug).set(page, { merge: true });
-    }
-    
-    revalidatePath("/dashboard/inicio");
-    return { success: true };
-  } catch (error) { return { success: false, error }; }
-};

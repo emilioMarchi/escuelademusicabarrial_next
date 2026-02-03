@@ -273,7 +273,6 @@ export default function SectionForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            <div className="space-y-3">
               <input type="text" value={content.title||""} onChange={(e)=>handleUpdateContent('title',e.target.value)} placeholder="Título Principal" className="w-full p-3 bg-slate-50 rounded-xl font-bold text-slate-900 border-none" />
-              <textarea value={content.subtitle||""} onChange={(e)=>handleUpdateContent('subtitle',e.target.value)} placeholder="Bajada corta" className="w-full p-3 bg-slate-50 rounded-xl text-xs text-slate-700 border-none" rows={2}/>
               <textarea value={content.description||""} onChange={(e)=>handleUpdateContent('description',e.target.value)} placeholder="Texto completo..." className="w-full p-3 bg-slate-50 rounded-xl text-xs text-slate-700 border-none" rows={6}/>
            </div>
            <div className="space-y-4">

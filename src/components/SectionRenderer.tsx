@@ -30,25 +30,21 @@ export default function SectionRenderer({
     case "hero":
       return (
         <Hero 
-          title={sectionData.content?.title || "Escuela de Música"} 
-          description={sectionData.content?.subtitle || ""} 
-          // CONECTOR VITAL: Pasa las imágenes desde Firebase al Hero
+          title={sectionData.content?.title} 
+          description={sectionData.content?.subtitle} 
           slides={sectionData.content?.slides || []} 
         />
       );
-      case "texto-bloque":
-  // Debug para ver qué saca de la base de datos
-  console.log("Layout desde DB:", sectionData.settings?.layout);
 
-  return (
-    <TextBlock
-      title={sectionData.content?.title}
-      text={sectionData.content?.description || ""}
-      imageUrl={sectionData.content?.image_url}
-      // Asegúrate de que en Firebase esté escrito así: "image-left"
-      imagePosition={sectionData.settings?.layout === "image-left" ? "left" : "right"}
-    />
-  );
+    case "texto-bloque":
+      return (
+        <TextBlock
+          title={sectionData.content?.title}
+          text={sectionData.content?.description || ""}
+          imageUrl={sectionData.content?.image_url}
+          imagePosition={sectionData.settings?.layout === "image-left" ? "left" : "right"}
+        />
+      );
 
     case "clases": {
       const classes = rawItems as Class[];
@@ -87,13 +83,31 @@ export default function SectionRenderer({
           title={sectionData.content?.title || "Noticias del Barrio"} 
           items={newsData} 
           layout={(sectionData.settings?.layout as "slider" | "grid") || (isHome ? "slider" : "grid")} 
-          basePath="/noticias"
+          basePath="/novedades"
         />
       );
     }
 
-    case "contacto":
-      return <Contact category={pageCategory || 'contacto'} hasForm={true} />;
+    case "contacto": {
+      // LÓGICA DE MAPEO:
+      // Si en el admin elegiste "Inscripción", forzamos la categoría "clases".
+      // Si elegiste "General" (o nada), usamos "contacto" o la categoría de la página.
+      const adminSelection = sectionData.settings?.form_type;
+      
+      let effectiveCategory = pageCategory || "contacto";
+      
+      if (adminSelection === 'inscripcion') effectiveCategory = 'clases';
+      if (adminSelection === 'general') effectiveCategory = 'contacto';
+
+      return (
+        <Contact 
+          category={effectiveCategory} 
+          hasForm={true} 
+          customTitle={sectionData.content?.title}
+          customDescription={sectionData.content?.description}
+        />
+      );
+    }
 
     default:
       return null;
