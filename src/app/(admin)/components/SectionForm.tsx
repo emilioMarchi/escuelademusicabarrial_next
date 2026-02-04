@@ -343,7 +343,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
           {/* CONTACTO */}
           {section.type === 'contacto' && (
             <div className="space-y-8">
-              {/* Campos para Título y Descripción */}
+              {/* Campos para Título y Descripción de la sección de contacto */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título de la Sección</label>
@@ -352,6 +352,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                     value={section.content.title || ""} 
                     onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
                     className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
+                    placeholder="Ej: Contactanos"
                   />
                 </div>
                 <div className="space-y-2">
@@ -361,11 +362,12 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                     value={section.content.description || ""} 
                     onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
                     className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
+                    placeholder="Ej: Dejanos tu mensaje y te responderemos a la brevedad."
                   />
                 </div>
               </div>
 
-              {/* Selector de tipo de formulario existente */}
+              {/* Selector de tipo de formulario (Inscripción o General) */}
               <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
                 <div className="flex gap-4 items-center">
                   <div className="p-4 bg-white rounded-2xl shadow-sm text-slate-900"><FileText size={24}/></div>
@@ -389,20 +391,85 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
             </div>
           )}
 
-          {/* INDICADORES DINÁMICOS */}
+          {/* BLOQUES DINÁMICOS: CLASES Y NOTICIAS */}
           {(section.type === 'clases' || section.type === 'noticias') && (
-            <div className="bg-slate-900 p-10 rounded-[3.5rem] text-white flex justify-between items-center relative overflow-hidden shadow-2xl">
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-2">
-                  {section.type === 'clases' ? <Music className="text-green-400" /> : <Newspaper className="text-orange-400" />}
-                  <h4 className="text-2xl font-black uppercase tracking-tighter">Bloque de {section.type}</h4>
+            <div className="space-y-10">
+              
+              {/* 1. Edición de Textos e Imagen */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2">
+                      Título de la Sección {section.type === 'clases' ? 'Clases' : 'Novedades'}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={section.content.title || ""} 
+                      onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
+                      className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
+                      placeholder={section.type === 'clases' ? "Nuestras Clases" : "Noticias del Barrio"}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción de la Sección</label>
+                    <textarea 
+                      rows={4} 
+                      value={section.content.description || ""} 
+                      onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
+                      className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
+                      placeholder="Escribe una breve introducción para este bloque..."
+                    />
+                  </div>
+
+                  {/* Resumen de Items (Lo que estaba antes, pero más compacto) */}
+                  <div className="bg-slate-900 p-6 rounded-[2rem] text-white flex justify-between items-center shadow-xl">
+                    <div className="flex items-center gap-3">
+                      {section.type === 'clases' ? <Music size={20} className="text-green-400" /> : <Newspaper size={20} className="text-orange-400" />}
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Items Publicados</span>
+                    </div>
+                    <span className="text-3xl font-black">{items.length}</span>
+                  </div>
                 </div>
-                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest max-w-xs leading-relaxed">Sincronizado con el Panel Principal.</p>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2 text-balance">Imagen de Cabecera (Opcional)</label>
+                  <div className="aspect-video lg:aspect-square bg-slate-100 rounded-[3rem] overflow-hidden relative group/img shadow-inner flex items-center justify-center">
+                    {section.content.image_url ? (
+                      <img src={section.content.image_url} className="w-full h-full object-cover object-center" />
+                    ) : (
+                      <div className="text-center p-6">
+                        <ImageIcon size={48} className="text-slate-300 mx-auto mb-2" />
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Sin imagen de portada</p>
+                      </div>
+                    )}
+                    
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                        <Loader2 className="animate-spin text-white" />
+                      </div>
+                    )}
+
+                    <button 
+                      onClick={() => blockFileRef.current?.click()} 
+                      className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2"
+                    >
+                      <Camera size={24} />
+                      <span className="font-black text-[10px] uppercase tracking-widest">Cambiar Imagen</span>
+                    </button>
+                  </div>
+                  <p className="text-[9px] font-bold text-slate-400 text-center uppercase tracking-widest italic">Esta foto se usará como fondo o apoyo visual en la sección.</p>
+                </div>
               </div>
-              <div className="text-right relative z-10">
-                <span className="text-7xl font-black block leading-none">{items.length}</span>
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Items</span>
-              </div>
+              
+              {/* Input oculto para la subida de imagen de bloque */}
+              <input 
+                type="file" 
+                ref={blockFileRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} 
+              />
             </div>
           )}
         </div>
