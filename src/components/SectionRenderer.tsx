@@ -3,6 +3,7 @@ import DynamicSection from "./DynamicSection/DynamicSection";
 import Contact from "./sections/contact/Contact";
 import TextBlock from "./sections/textBlock/TextBlock"; 
 import { slugify } from "@/lib/utils";  
+import DonationForm from "./sections/donations/DonationForm";
 
 import { 
   Class, 
@@ -107,8 +108,25 @@ export default function SectionRenderer({
           customDescription={sectionData.content?.description}
         />
       );
-    }
+      
+    } 
 
+    case "donaciones":
+
+      const defaultAmount = sectionData.settings?.default_amount ? Number(sectionData.settings.default_amount) : undefined;
+
+      return (
+
+        <section> 
+          <DonationForm 
+            title={sectionData.content?.title} 
+            description={sectionData.content?.description}
+            // Pasamos las nuevas props
+            backgroundImage={sectionData.content?.image_url}
+            initialAmount={defaultAmount}
+          />
+        </section>
+      );
     default:
       return null;
   }

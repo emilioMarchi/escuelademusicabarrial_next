@@ -7,7 +7,8 @@ import { uploadImageToStorage } from "@/lib/StoreUtils";
 import { 
   Plus, Trash2, Image as ImageIcon, Camera, Settings2, 
   Music, Newspaper, FileText, Save, AlertCircle, Loader2, 
-  Heading, GripVertical, AlignLeft, AlignRight, ExternalLink
+  Heading, GripVertical, AlignLeft, AlignRight, ExternalLink, Heart, 
+  CreditCard, DollarSign
 } from "lucide-react";
 
 interface Props {
@@ -470,6 +471,104 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                 accept="image/*" 
                 onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} 
               />
+            </div>
+          )}
+         {/* DONACIONES */}
+          {section.type === 'donaciones' && (
+            <div className="space-y-10">
+              {/* CABECERA DEL BLOQUE */}
+              <div className="bg-orange-500 p-8 rounded-[3rem] text-white flex justify-between items-center relative overflow-hidden shadow-xl">
+                <div className="relative z-10 flex items-center gap-4">
+                  <div className="p-3 bg-white/20 rounded-full"><Heart className="text-white" size={24} /></div>
+                  <div>
+                     <h4 className="text-xl font-black uppercase tracking-tighter">Configurar Donaciones</h4>
+                     <p className="text-orange-100 text-[11px] font-bold uppercase tracking-widest">Pasarela de pago de Mercado Pago</p>
+                  </div>
+                </div>
+                <CreditCard size={64} className="relative z-10 opacity-20" />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                {/* COLUMNA IZQUIERDA: Textos y Monto */}
+                <div className="lg:col-span-7 space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título Principal</label>
+                      <input 
+                        type="text" 
+                        value={section.content.title || ""} 
+                        onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
+                        className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none transition-all"
+                        placeholder="Ej: Colabora con la Escuela"
+                      />
+                    </div>
+                    {/* NUEVO INPUT: Monto por defecto */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-green-600 ml-2 flex items-center gap-1">
+                        <DollarSign size={12}/> Monto Inicial Sugerido
+                      </label>
+                      <input 
+                        type="number" 
+                        min="100" 
+                        value={section.settings?.default_amount || 1000} 
+                        onChange={(e) => handleLocalChange(section.content, { ...section.settings, default_amount: parseInt(e.target.value) })} 
+                        className="w-full p-4 bg-green-50 rounded-2xl text-sm font-black text-green-900 border-2 border-transparent focus:border-green-600 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción / Bajada</label>
+                    <textarea 
+                      rows={3} 
+                      value={section.content.description || ""} 
+                      onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
+                      className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none transition-all resize-none"
+                      placeholder="Texto breve explicando el destino de los fondos."
+                    />
+                  </div>
+                </div>
+
+                {/* COLUMNA DERECHA: Imagen de Fondo */}
+                <div className="lg:col-span-5 space-y-4">
+                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2 text-balance">Imagen de Fondo del Formulario (Opcional)</label>
+                  <div className="aspect-video bg-slate-100 rounded-[2.5rem] overflow-hidden relative group/img shadow-inner flex items-center justify-center border-2 border-dashed border-slate-200">
+                    {section.content.image_url ? (
+                      <>
+                        <img src={section.content.image_url} className="w-full h-full object-cover object-center" />
+                        <div className="absolute inset-0 bg-black/50 transition-opacity opacity-0 group-hover/img:opacity-100" />
+                      </>
+                    ) : (
+                      <div className="text-center p-6">
+                        <ImageIcon size={32} className="text-slate-300 mx-auto mb-2" />
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Sin fondo seleccionado</p>
+                      </div>
+                    )}
+                    
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                        <Loader2 className="animate-spin text-white" />
+                      </div>
+                    )}
+
+                    <button 
+                      onClick={() => blockFileRef.current?.click()} 
+                      className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2 z-20"
+                    >
+                      <Camera size={24} />
+                      <span className="font-black text-[9px] uppercase tracking-widest bg-black/50 px-3 py-1 rounded-full">Cambiar Fondo</span>
+                    </button>
+                  </div>
+                   {/* Input oculto para la subida */}
+                  <input 
+                    type="file" 
+                    ref={blockFileRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} 
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>

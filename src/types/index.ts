@@ -59,6 +59,7 @@ export interface PaymentOrder {
   concept: string;          
   mp_preference_id: string; // ID de la transacción en Mercado Pago
   created_at: any;
+
 }
 
 // Interfaz "Puente" solo para los componentes visuales
@@ -112,17 +113,19 @@ export interface SectionData {
         image_url: string; 
         image_alt?: string;
         title?: string; 
-        description?: string; 
+        description?: string;
         buttons?: {         // <--- AQUÍ ESTÁ LA CORRECCIÓN IMPORTANTE
           text: string;
           link: string;
           style: string;
         }[];
-    }[]; 
-  };
-  settings?: {
-    layout?: 'slider' | 'grid' | 'image-left' | 'image-right' | string;
-    form_type?: 'general' | 'inscripcion';
+
+      }[]; 
+    };
+    settings?: {
+      layout?: 'slider' | 'grid' | 'image-left' | 'image-right' | string;
+      form_type?: 'general' | 'inscripcion';
+      default_amount?: number; 
   };
 }
 
