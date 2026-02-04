@@ -1,30 +1,31 @@
 // src/app/(public)/layout.tsx
 import React from "react";
 import Navbar from "@/components/navbar/Navbar";
+import Footer from "@/components/footer/Footer";
+import { fetchGeneralSettings } from "@/services/settings-services";
 
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // 1. Llamamos al fetch dentro de la función (Server Component)
+  const settings = await fetchGeneralSettings();
+  
+  // 2. Limpiamos la data para evitar el error de "Plain Objects" (Timestamps de Firebase)
+  const safeSettings = settings ? JSON.parse(JSON.stringify(settings)) : null;
+
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Este ya es dinámico, responsive y trae los links de la DB. 
-          No hace falta nada más arriba.
-      */}
       <Navbar />
 
       {/* Contenido Dinámico */}
-      <main className="w-full min-h-screen">
+      <main className="w-full flex-grow">
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t bg-slate-50">
-        <div className="container mx-auto py-8 px-4 text-center text-sm text-slate-500">
-          © {new Date().getFullYear()} Escuela de Música Barrial. Todos los derechos reservados.
-        </div>
-      </footer>
+      {/* Footer - Solo pasamos la data si existe, o un objeto vacío para evitar errores */}
+      <Footer data={safeSettings || {}} />
     </div>
   );
 }
