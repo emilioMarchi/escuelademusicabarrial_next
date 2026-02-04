@@ -67,10 +67,10 @@ export interface UniversalCardData {
   id: string;
   title: string;
   description: string;
-  label: string;        // "Guitarra", "Cultura", "Evento"
+  label: string;
   slug: string;
   color?: 'green' | 'orange' | 'purple' | 'blue' | 'yellow';
-  image?: string;
+  image_url?: string;
 }
 
 export interface ContactSubmission {

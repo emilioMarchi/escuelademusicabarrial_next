@@ -1,3 +1,4 @@
+// src/components/sections/hero/Hero.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
@@ -19,8 +20,8 @@ interface Slide {
 }
 
 interface HeroProps {
-  title?: string;        // Título de la sección (del admin)
-  description?: string;  // Descripción de la sección (del admin)
+  title?: string;        // Título de la sección (Raíz)
+  description?: string;  // Descripción de la sección (Raíz)
   slides?: Slide[];
 }
 
@@ -35,21 +36,21 @@ export default function Hero({
   const hasImages = validSlides.length > 0;
   const currentSlide = hasImages ? validSlides[current] : null;
 
-  // --- NUEVA LÓGICA DE PRIORIDADES ---
+  // --- LÓGICA DE PRIORIDADES CORREGIDA ---
   
-  // Verificamos si la sección tiene contenido propio
-  const hasSectionTitle = Boolean(title && title.trim() !== "");
-  const hasSectionDesc = Boolean(description && description.trim() !== "");
-
-  // 1. Título: Si hay de sección, se usa ese. Si no, el del slide.
-  const mainTitle = hasSectionTitle ? title : (currentSlide?.title || "Escuela de Música");
+  // 1. Título Principal: Manda el del slide, si no hay, va el de la raíz.
+  const displayTitle = (currentSlide?.title && currentSlide.title.trim() !== "") 
+    ? currentSlide.title 
+    : (title || "Escuela de Música Barrial");
   
-  // 2. Descripción: Si hay de sección, se usa esa. Si no, la del slide.
-  const mainDescription = hasSectionDesc ? description : (currentSlide?.description || "");
+  // 2. Descripción: Manda la del slide, si no hay, va la de la raíz.
+  const displayDescription = (currentSlide?.description && currentSlide.description.trim() !== "") 
+    ? currentSlide.description 
+    : (description || "");
 
-  // 3. Etiqueta (Tag): Solo se muestra si el título principal es el de la SECCIÓN
-  // y el slide tiene su propio título que ahora es "secundario".
-  const tagContent = hasSectionTitle ? currentSlide?.title : null;
+  // 3. Tag (Opcional): Si estamos usando el título del SLIDE, 
+  // podemos mostrar el nombre de la escuela (título raíz) arriba sutilmente.
+  const showTag = (currentSlide?.title && currentSlide.title.trim() !== "") && title;
 
   useEffect(() => {
     if (!hasImages || validSlides.length <= 1) return;
@@ -60,7 +61,7 @@ export default function Hero({
   }, [hasImages, validSlides.length]);
 
   return (
-    <section className="relative w-full h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-slate-900">
+    <section className="relative w-full h-[75vh] min-h-[500px] flex items-center justify-center overflow-hidden bg-slate-950">
       
       {/* CAPA DE IMÁGENES */}
       <div className="absolute inset-0 z-0 w-full h-full">
@@ -68,74 +69,81 @@ export default function Hero({
           {hasImages ? (
             <motion.div
               key={current}
-              initial={{ opacity: 0, scale: 1.1 }}
+              initial={{ opacity: 0, scale: 1.05 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 1.5 }}
+              transition={{ duration: 2, ease: "easeOut" }}
               className="absolute inset-0"
             >
               <Image
                 src={validSlides[current].image_url}
                 alt={validSlides[current].image_alt || "Hero image"}
                 fill
-                className="object-cover opacity-50"
+                className="object-cover opacity-40 transition-all duration-1000"
                 priority
                 unoptimized
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-slate-950" />
             </motion.div>
           ) : (
-            <div className="w-full h-full bg-slate-900" />
+            <div className="w-full h-full bg-slate-950" />
           )}
         </AnimatePresence>
       </div>
 
       {/* CONTENIDO CENTRAL */}
-      <div className="relative z-10 container mx-auto px-4 text-center text-white">
-        <div className="max-w-4xl mx-auto">
+      <div className="relative z-10 container mx-auto px-6 text-center">
+        <div className="max-w-3xl mx-auto">
           
           <AnimatePresence mode="wait">
-            {tagContent && (
+            {showTag && (
               <motion.span
                 key={`tag-${current}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="inline-block bg-green-600 text-[10px] font-black uppercase tracking-[0.3em] px-4 py-2 rounded-full mb-6 shadow-xl"
+                className="inline-block border border-white/20 backdrop-blur-md text-white text-[8px] md:text-[9px] font-bold uppercase tracking-[0.4em] px-5 py-2 rounded-full mb-6"
               >
-                {tagContent}
+                {title}
               </motion.span>
             )}
           </AnimatePresence>
 
           <motion.h1 
-            key={`title-${mainTitle}`}
+            key={`title-${displayTitle}`}
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black mb-6 tracking-tighter leading-[0.85] uppercase"
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="font-serif italic text-3xl md:text-5xl lg:text-6xl text-white mb-6 tracking-tight leading-[1.2]"
           >
-            {mainTitle}
+            {displayTitle}
           </motion.h1>
 
           <motion.p 
-            key={`desc-${mainDescription}`}
+            key={`desc-${displayDescription}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-lg md:text-2xl text-slate-200 mb-10 max-w-2xl mx-auto leading-relaxed font-medium"
+            transition={{ delay: 0.4, duration: 1 }}
+            className="text-sm md:text-lg text-slate-300 mb-10 max-w-xl mx-auto leading-relaxed font-light tracking-wide"
           >
-            {mainDescription}
+            {displayDescription}
           </motion.p>
 
-          {/* Botones del Slide actual */}
-          <motion.div key={`btns-${current}`} className="flex flex-col sm:flex-row justify-center gap-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="flex flex-col sm:flex-row justify-center gap-4"
+          >
+            {/* Usamos los botones del SLIDE actual */}
             {currentSlide?.buttons?.map((btn, idx) => (
               <Link 
                 key={idx} 
                 href={btn.link || "#"}
-                className={`px-10 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all hover:scale-105 active:scale-95 ${
+                className={`px-8 py-3.5 rounded-full font-bold uppercase text-[9px] tracking-[0.2em] transition-all duration-300 hover:scale-105 active:scale-95 ${
                   btn.style === 'outline' 
-                    ? "border-2 border-white text-white hover:bg-white hover:text-slate-900" 
-                    : "bg-white text-slate-900 hover:bg-green-500 hover:text-white shadow-2xl border-2 border-transparent"
+                    ? "border border-white/40 text-white hover:bg-white hover:text-slate-950 backdrop-blur-sm" 
+                    : "bg-white text-slate-950 hover:bg-green-600 hover:text-white shadow-xl"
                 }`}
               >
                 {btn.text}
@@ -146,15 +154,15 @@ export default function Hero({
         </div>
       </div>
 
-      {/* Navegación por puntos */}
+      {/* NAVEGACIÓN POR PUNTOS */}
       {hasImages && validSlides.length > 1 && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-20">
           {validSlides.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrent(idx)}
-              className={`h-1 rounded-full transition-all duration-500 ${
-                idx === current ? "w-10 bg-green-500" : "w-2 bg-white/20 hover:bg-white/50"
+              className={`h-1 rounded-full transition-all duration-700 ${
+                idx === current ? "w-10 bg-green-500" : "w-2 bg-white/30 hover:bg-white/50"
               }`}
             />
           ))}

@@ -1,47 +1,70 @@
 // src/components/CardItem/CardItem.tsx
 import Link from "next/link";
+import Image from "next/image";
 import { UniversalCardData } from "@/types";
+import { ArrowUpRight } from "lucide-react";
 
 interface Props {
-  data: UniversalCardData;
+  data: UniversalCardData & { image_url?: string };
   basePath: string;
+  hideDescription?: boolean;
 }
 
-export default function CardItem({ data, basePath }: Props) {
-  // Mapeo de colores para representar diversidad
+export default function CardItem({ data, basePath, hideDescription }: Props) {
   const colors = {
-    green: "border-green-500 bg-green-50 text-green-700 shadow-green-100",
-    orange: "border-orange-500 bg-orange-50 text-orange-700 shadow-orange-100",
-    purple: "border-purple-500 bg-purple-50 text-purple-700 shadow-purple-100",
-    blue: "border-blue-500 bg-blue-50 text-blue-700 shadow-blue-100",
-    yellow: "border-yellow-500 bg-yellow-50 text-yellow-700 shadow-yellow-100",
+    green: "bg-green-100 text-green-700",
+    orange: "bg-orange-100 text-orange-700",
+    purple: "bg-purple-100 text-purple-700",
+    blue: "bg-blue-100 text-blue-700",
+    yellow: "bg-yellow-100 text-yellow-700",
   };
 
-  const colorStyle = data.color ? colors[data.color] : colors.green;
+  const tagColor = data.color ? colors[data.color] : colors.green;
 
   return (
-    <div className={`min-w-[300px] md:min-w-[340px] p-8 rounded-[2.5rem] border-2 transition-all hover:-translate-y-2 ${colorStyle}`}>
-      {data.label && (
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-3 block">
-          {data.label}
-        </span>
-      )}
-      
-      <h3 className="text-2xl font-black mb-3 leading-[1.1] text-slate-900">
-        {data.title}
-      </h3>
-      
-      <p className="text-sm font-medium opacity-80 mb-8 line-clamp-2 leading-relaxed">
-        {data.description}
-      </p>
+    <Link href={`${basePath}/${data.slug}`} className="group block relative h-full w-full">
+      {/* bg-white puro para contraste total con el fondo de la sección */}
+      <div className="relative h-full flex flex-col bg-white rounded-[2.5rem] overflow-hidden border border-white shadow-sm transition-all duration-500 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-2">
+        
+        <div className="relative w-full h-52 overflow-hidden bg-slate-50">
+          {data.image_url ? (
+            <Image 
+              src={data.image_url} 
+              alt={data.title} 
+              fill 
+              className="object-cover transition-transform duration-700 group-hover:scale-110"
+              sizes="(max-width: 768px) 100vw, 33vw"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center opacity-20 font-black">EMB</div>
+          )}
+          
+          {data.label && (
+            <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${tagColor} shadow-sm`}>
+              {data.label}
+            </span>
+          )}
+        </div>
 
-      <Link 
-        href={`${basePath}/${data.slug}`} 
-        className="inline-flex items-center font-black text-xs uppercase tracking-tighter group"
-      >
-        <span className="border-b-2 border-current pb-0.5">Saber más</span>
-        <span className="ml-2 text-lg transition-transform group-hover:translate-x-1">→</span>
-      </Link>
-    </div>
+        <div className="p-7 flex flex-col flex-grow">
+          <h3 className="font-serif italic text-2xl text-slate-900 mb-3 group-hover:text-green-600 transition-colors">
+            {data.title}
+          </h3>
+          
+          {!hideDescription && data.description && (
+            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6 line-clamp-2 italic">
+              {data.description}
+            </p>
+          )}
+
+          <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-50">
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Ver más</span>
+            <div className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-900 group-hover:bg-green-600 group-hover:text-white transition-all">
+              <ArrowUpRight size={16} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }

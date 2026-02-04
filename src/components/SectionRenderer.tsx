@@ -1,3 +1,4 @@
+// src/components/sections/SectionRenderer.tsx
 import Hero from "./sections/hero/Hero";
 import DynamicSection from "./DynamicSection/DynamicSection";
 import Contact from "./sections/contact/Contact";
@@ -50,45 +51,45 @@ export default function SectionRenderer({
       );
 
     case "clases": {
-      const classes = rawItems as Class[];
-      const classesData: UniversalCardData[] = classes.map((c) => ({
-        id: c.id,
-        title: c.name,
+      const classesData: UniversalCardData[] = (rawItems as Class[]).map(c => ({
+        id: c.id, 
+        title: c.name, 
         description: c.teacher_name || c.description,
-        label: c.instrument,
-        // (c as any) evita el error de "slug does not exist"
+        label: c.instrument, 
+        image_url: c.image_url, 
         slug: (c as any).slug || slugify(c.name), 
-        color: "green",
+        color: "orange" as const // <--- Clases en Naranja
       }));
 
       return (
         <DynamicSection 
           title={sectionData.content?.title || "Nuestras Clases"} 
+          description={sectionData.content?.description}
           items={classesData} 
           layout={(sectionData.settings?.layout as any) || (isHome ? "slider" : "grid")} 
-          basePath="/clases"
+          basePath="/clases" 
         />
       );
     }
 
     case "noticias": {
-      const news = rawItems as News[];
-      const newsData: UniversalCardData[] = news.map((n) => ({
-        id: n.id,
-        title: n.title,
-        // (n as any) evita el error de "excerpt does not exist"
+      const newsData: UniversalCardData[] = (rawItems as News[]).map(n => ({
+        id: n.id, 
+        title: n.title, 
         description: (n as any).excerpt || n.description,
-        label: "Novedades",
+        label: "Novedades", 
+        image_url: n.image_url, 
         slug: (n as any).slug || slugify(n.title), 
-        color: "orange",
+        color: "green" as const // <--- Noticias en Verde
       }));
 
       return (
         <DynamicSection 
           title={sectionData.content?.title || "Noticias del Barrio"} 
+          description={sectionData.content?.description}
           items={newsData} 
           layout={(sectionData.settings?.layout as any) || (isHome ? "slider" : "grid")} 
-          basePath="/novedades"
+          basePath="/novedades" 
         />
       );
     }
@@ -108,25 +109,23 @@ export default function SectionRenderer({
           customDescription={sectionData.content?.description}
         />
       );
-      
     } 
 
-    case "donaciones":
-
+    case "donaciones": {
       const defaultAmount = sectionData.settings?.default_amount ? Number(sectionData.settings.default_amount) : undefined;
 
       return (
-
         <section> 
           <DonationForm 
             title={sectionData.content?.title} 
             description={sectionData.content?.description}
-            // Pasamos las nuevas props
             backgroundImage={sectionData.content?.image_url}
             initialAmount={defaultAmount}
           />
         </section>
       );
+    }
+
     default:
       return null;
   }

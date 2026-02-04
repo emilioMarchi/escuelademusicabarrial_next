@@ -71,7 +71,7 @@ export default function DonationForm({ title, description, backgroundImage, init
                 
             />
           </div>
-          <div className="absolute inset-0 z-0 bg-slate-900/80 backdrop-blur-sm" />
+          <div className="absolute inset-0 z-0 bg-slate-900/80 " />
         </>
       ) : (
          <div className="absolute inset-0 z-0 bg-slate-50" />
