@@ -144,7 +144,7 @@ export default function DonationForm({ title, description, backgroundImage, init
                 <div className="relative">
                   <span className={`absolute left-5 top-1/2 -translate-y-1/2 font-black transition-colors ${backgroundImage ? 'text-slate-400' : 'text-slate-400'}`}>$</span>
                   <input 
-                    type="number" placeholder="Monto" required min="100"
+                    type="number" placeholder="Monto" required min="0"
                     className={`w-full p-5 pl-12 rounded-2xl border-2 outline-none text-sm font-black transition-all
                         ${backgroundImage 
                             ? 'bg-white/10 border-transparent focus:border-white text-white placeholder:text-slate-500' 

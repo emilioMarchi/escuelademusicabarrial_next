@@ -12,14 +12,15 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   
-  // 1. Intentamos buscar como Página
+  // Caso especial para la página de agradecimiento
+  if (slug === "gracias") return { title: "¡Gracias por tu donación!" };
+  
   const pageData = await getPageBySlug(slug);
   if (pageData) return { title: pageData.meta_title };
 
-  // 2. Si no es página, buscamos como Clase o Noticia para el título
-  const element = await getElementBySlug(slug); // Función que busca en clases/noticias
+  const element = await getElementBySlug(slug);
   if (element) return { title: element.name || element.title };
-
+  
   return { title: "Escuela de Música Barrial" };
 }
 
@@ -27,6 +28,20 @@ export default async function DynamicRouterPage({ params }: Props) {
   const { slug } = await params;
 
   if (slug === "inicio") redirect("/");
+
+  // --- PASO 0: Intercepción manual para Mercado Pago ---
+  if (slug === "gracias") {
+    return (
+      <main>
+        <SectionRenderer 
+          sectionData={{
+            id: "success-payment-static",
+            type: "donacion-exitosa" // Este tipo debe coincidir con el switch en SectionRenderer
+          }} 
+        />
+      </main>
+    );
+  }
 
   // --- PASO 1: ¿Es una Página Dinámica (Nosotros, Contacto, etc)? ---
   const pageData = await getPageBySlug(slug);
@@ -61,17 +76,13 @@ export default async function DynamicRouterPage({ params }: Props) {
   const element = await getElementBySlug(slug); 
   
   if (element) {
-    // Si es una clase, podrías renderizar un componente de "Detalle"
-    // Aquí podrías diferenciar por una propiedad 'category' o 'type' que venga de la DB
     return (
       <div className="pt-40 pb-20 container mx-auto px-4">
         <h1 className="text-6xl font-black uppercase">{element.name || element.title}</h1>
         <p className="mt-6 text-xl text-slate-600">{element.description || element.excerpt}</p>
-        {/* Aquí iría el resto de la info del elemento */}
       </div>
     );
   }
 
-  // --- PASO 3: Si no es nada, 404 ---
   return notFound();
 }

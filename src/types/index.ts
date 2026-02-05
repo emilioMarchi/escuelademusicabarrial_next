@@ -3,7 +3,7 @@
 export type CategoryType = 'inicio' | 'nosotros' | 'clases' | 'noticias' | 'donaciones' | 'contacto';
 export type PaymentType = 'one-time' | 'monthly'; // Donación única o suscripción mensual
 export type OrderStatus = 'pending' | 'approved' | 'rejected';
-export type SectionType = 'hero' | 'clases' | 'noticias' | 'contacto' | 'donaciones' | 'texto-bloque';
+export type SectionType = 'hero' | 'clases' | 'noticias' | 'contacto' | 'donaciones' | 'texto-bloque' | 'donacion-exitosa';
 
 export interface PageContent {
   id: string;
@@ -127,6 +127,18 @@ export interface SectionData {
       form_type?: 'general' | 'inscripcion';
       default_amount?: number; 
   };
+}
+
+export interface Donation {
+  id?: string;
+  amount: number;
+  email: string;
+  name: string;
+  type: PaymentType; // 'one-time' | 'monthly'
+  status: OrderStatus; // 'pending' | 'approved' | 'rejected'
+  mp_preference_id?: string;
+  mp_payment_id?: string;
+  created_at: any;
 }
 
 // Un tipo auxiliar para cuando la página viene con sus secciones ya "infladas"

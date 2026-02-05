@@ -5,7 +5,7 @@ import Contact from "./sections/contact/Contact";
 import TextBlock from "./sections/textBlock/TextBlock"; 
 import { slugify } from "@/lib/utils";  
 import DonationForm from "./sections/donations/DonationForm";
-
+import DonationSuccess from "./sections/donations/DonationSucces";
 import { 
   Class, 
   News, 
@@ -124,7 +124,10 @@ export default function SectionRenderer({
           />
         </section>
       );
-    }
+      
+    } 
+    case "donacion-exitosa":
+      return <DonationSuccess />;
 
     default:
       return null;
