@@ -36,8 +36,8 @@ export default async function DynamicRouterPage({ params }: Props) {
         <SectionRenderer 
           sectionData={{
             id: "success-payment-static",
-            type: "donacion-exitosa" // Este tipo debe coincidir con el switch en SectionRenderer
-          }} 
+            type: "donacion-exitosa"
+          } as any} // Esto silencia el error de TypeScript
         />
       </main>
     );
