@@ -89,3 +89,21 @@ export const createMPSubscription = async (data: {
     throw error;
   }
 };
+
+export const getMPBalance = async () => {
+
+  const url = "https://api.mercadopago.com/v1/account/balance"; 
+  
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${MP_ACCESS_TOKEN}`
+      }
+    });
+    return response.data;
+  } catch (error: any) {
+    // 🔍 Imprimimos el error completo para debuggear si persiste
+    console.error("❌ Error obteniendo balance de MP:", error.response?.data || error.message);
+    return null;
+  }
+};

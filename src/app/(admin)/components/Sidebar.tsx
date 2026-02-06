@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useDirtyState } from "@/context/DirtyStateContext";
 import { 
   LayoutDashboard, ChevronDown, ChevronRight, 
-  LogOut, AlertCircle, Layers 
+  LogOut, AlertCircle, Layers, DollarSign 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,10 +23,8 @@ export default function Sidebar() {
   const { isDirty, setDirty } = useDirtyState();
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   
-  // Estado para controlar el submenú de páginas
   const [pagesOpen, setPagesOpen] = useState(true);
 
-  // Efecto para mantener abierto el menú si estamos en una subpágina
   useEffect(() => {
     if (pages.some(p => p.path === pathname)) {
       setPagesOpen(true);
@@ -65,6 +63,19 @@ export default function Sidebar() {
             Dashboard
           </button>
 
+          {/* NUEVO: BOTÓN PAGOS Y BALANCE */}
+          <button
+            onClick={() => handleNavigation("/dashboard/pagos")}
+            className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
+              pathname === "/dashboard/pagos" 
+                ? "bg-slate-900 text-white shadow-xl shadow-slate-200" 
+                : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+            }`}
+          >
+            <DollarSign size={18} />
+            Pagos y Balance
+          </button>
+
           {/* MENÚ COLAPSABLE DE PÁGINAS */}
           <div className="space-y-1">
             <button
@@ -101,7 +112,6 @@ export default function Sidebar() {
                             : "text-slate-400 hover:text-slate-600 hover:bg-slate-50/50"
                         }`}
                       >
-                        {/* Detalle tipo item (bolita) */}
                         <div className={`w-1.5 h-1.5 rounded-full transition-all ${
                           pathname === page.path ? "bg-green-500 scale-125" : "bg-slate-200"
                         }`} />
@@ -126,7 +136,7 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* MODAL DE ADVERTENCIA (Mantiene la lógica anterior) */}
+      {/* MODAL DE ADVERTENCIA */}
       <AnimatePresence>
         {pendingPath && (
           <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[999] flex items-center justify-center p-4">

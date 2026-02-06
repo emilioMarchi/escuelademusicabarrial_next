@@ -1,28 +1,56 @@
 // src/types/index.ts
 
 export type CategoryType = 'inicio' | 'nosotros' | 'clases' | 'noticias' | 'donaciones' | 'contacto';
-export type PaymentType = 'one-time' | 'monthly'; // Donación única o suscripción mensual
+export type PaymentType = 'one-time' | 'monthly';
 export type OrderStatus = 'pending' | 'approved' | 'rejected';
 export type SectionType = 'hero' | 'clases' | 'noticias' | 'contacto' | 'donaciones' | 'texto-bloque' | 'donacion-exitosa';
 
+export interface Donation {
+  id?: string;
+  amount: number;
+  email: string;
+  name: string;
+  type: PaymentType; 
+  status: OrderStatus;
+  payment_id?: string;
+  external_reference?: string;
+  created_at: any;
+}
+
 export interface PageContent {
   id: string;
-  slug: string;             // La URL (ej: /clases)
-  category: CategoryType;   // El identificador de grupo (ej: 'clases')
+  slug: string;
+  category: CategoryType;
   header_title: string;
   header_description: string;
   header_image_url: string;
   header_image_alt: string;
-  sections: (string | SectionData)[]      
+  sections: (string | SectionData)[];
   meta_title: string;
   meta_description: string;
   has_form: boolean;
   last_updated: any;
 }
 
+export interface SectionData {
+  id: string;
+  type: SectionType;
+  content: {
+    title?: string;
+    subtitle?: string;
+    description?: string;
+    image_url?: string;
+    slides?: any[];
+  };
+  settings?: {
+    layout?: string;
+    form_type?: 'general' | 'inscripcion';
+    default_amount?: number;
+  };
+}
+
 export interface Class {
   id: string;
-  category: 'clases';
   name: string;
   teacher_name: string;
   schedule: string;
@@ -32,116 +60,15 @@ export interface Class {
   image_alt: string;
   max_capacity: number;
   is_active: boolean;
-  last_updated?: any;
-  slug?: string;
+  category: 'clases';
 }
 
 export interface News {
   id: string;
-  category: 'noticias';
-  title: string;
-  description: string; // El cuerpo de la noticia
-  date: string;        // Fecha de publicación
-  image_url: string;
-  image_alt: string;
-  is_active: boolean;
-  last_updated?: any;
-  excerpt?: string;
-  slug?: string;
-}
-
-export interface PaymentOrder {
-  id: string;
-  payment_type: PaymentType; // Distingue entre donación simple o mensual
-  status: OrderStatus;
-  amount: number;
-  user_email: string;
-  concept: string;          
-  mp_preference_id: string; // ID de la transacción en Mercado Pago
-  created_at: any;
-
-}
-
-// Interfaz "Puente" solo para los componentes visuales
-export interface UniversalCardData {
-  id: string;
   title: string;
   description: string;
-  label: string;
-  slug: string;
-  color?: 'green' | 'orange' | 'purple' | 'blue' | 'yellow';
+  date: string;
   image_url?: string;
+  is_active: boolean;
+  category: 'noticias';
 }
-
-export interface ContactSubmission {
-  id?: string;
-  type: 'contacto';
-  fullname: string;
-  email: string;
-  phone?: string;
-  message: string;
-  created_at: any; // Timestamp de Firebase
-  status: 'nuevo' | 'contactado' | 'archivado';
-}
-
-// Para inscripciones de alumnos o postulaciones de profes
-export interface EnrollmentSubmission {
-  id?: string;
-  type: 'clases';
-  role: 'estudiante' | 'docente';
-  fullname: string;
-  email: string;
-  phone?: string;
-  instrument: string;
-  level_or_experience: string; // "Principiante" o "5 años", etc.
-  created_at: any;
-  status: 'pendiente' | 'entrevistado' | 'aceptado' | 'rechazado';
-}
-
-// Secciones de página dinámicas
-
-export interface SectionData {
-  id: string;               
-  type: SectionType;        
-  page_category?: CategoryType; 
-  content: {
-    title?: string;         // Título Global (Header, Hero, Contacto)
-    subtitle?: string;      // Subtítulo Global (Hero)
-    description?: string;   // Descripción Global
-    image_url?: string;     
-    slides?: {              // Array de Slides
-        image_url: string; 
-        image_alt?: string;
-        title?: string; 
-        description?: string;
-        buttons?: {         // <--- AQUÍ ESTÁ LA CORRECCIÓN IMPORTANTE
-          text: string;
-          link: string;
-          style: string;
-        }[];
-
-      }[]; 
-    };
-    settings?: {
-      layout?: 'slider' | 'grid' | 'image-left' | 'image-right' | string;
-      form_type?: 'general' | 'inscripcion';
-      default_amount?: number; 
-  };
-}
-
-export interface Donation {
-  id?: string;
-  amount: number;
-  email: string;
-  name: string;
-  type: PaymentType; // 'one-time' | 'monthly'
-  status: OrderStatus; // 'pending' | 'approved' | 'rejected'
-  mp_preference_id?: string;
-  mp_payment_id?: string;
-  created_at: any;
-}
-
-// Un tipo auxiliar para cuando la página viene con sus secciones ya "infladas"
-export interface PageWithSections extends PageContent {
-  renderedSections: SectionData[];
-} 
