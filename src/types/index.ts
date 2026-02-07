@@ -71,4 +71,15 @@ export interface News {
   image_url?: string;
   is_active: boolean;
   category: 'noticias';
+  gallery?: string[];
+}
+
+export interface GalleryImage {
+  id: string;
+  url: string;
+  alt?: string;
+  caption?: string;
+  category?: string;
+  created_at: any;
+  order?: number;
 }

@@ -6,9 +6,10 @@ if (!admin.apps.length) {
     credential: admin.credential.cert({
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Esta línea es la clave: reemplaza la cadena "\n" por el salto de línea real
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     }),
+    // AGREGÁ ESTA LÍNEA AHORA:
+    storageBucket: "escuelita-db.firebasestorage.app", 
   });
 }
 
