@@ -1,4 +1,5 @@
 "use client";
+
 import { useRef, useState, useEffect } from "react";
 import { SectionData } from "@/types";
 import { AnimatePresence, motion, Reorder } from "framer-motion"; 
@@ -10,6 +11,20 @@ import {
   Heading, GripVertical, AlignLeft, AlignRight, ExternalLink, Heart, 
   CreditCard, DollarSign
 } from "lucide-react";
+
+// --- INTERFACES PARA TYPESCRIPT ---
+interface SlideButton {
+  text: string;
+  link: string;
+  style?: string;
+}
+
+interface HeroSlide {
+  image_url: string;
+  title: string;
+  description: string;
+  buttons?: SlideButton[];
+}
 
 interface Props {
   section: SectionData;
@@ -28,7 +43,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
   const [uploading, setUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Evita el error "Cannot read properties of undefined (reading 'id')"
   useEffect(() => { 
     if (section?.id) {
       setHasChanges(false); 
@@ -114,7 +128,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
           {/* HERO SECTION */}
           {section.type === 'hero' && (
             <div className="space-y-12">
-              {/* Campos para Título y Descripción del Bloque Hero */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-10 border-b border-slate-50">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título de la Sección Hero</label>
@@ -138,7 +151,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                 </div>
               </div>
 
-              {/* LISTADO DE SLIDES */}
               <div className="space-y-6">
                 <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Diapositivas / Slides</label>
                 <Reorder.Group 
@@ -147,7 +159,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                   onReorder={(ns) => handleLocalChange({...section.content, slides: ns})} 
                   className="space-y-6"
                 >
-                  {section.content.slides?.map((slide, sIdx) => (
+                  {section.content.slides?.map((slide: HeroSlide, sIdx: number) => (
                     <Reorder.Item key={slide.image_url + sIdx} value={slide}>
                       <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-6 relative group/slide">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-900">
@@ -194,7 +206,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                           </div>
                         </div>
 
-                        {/* BOTONES DEL SLIDE */}
                         <div className="pl-6 space-y-4">
                            <div className="flex justify-between items-center">
                               <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Botones</span>
@@ -202,7 +213,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                                 onClick={() => { 
                                   const ns = [...section.content.slides!];
                                   if(!ns[sIdx].buttons) ns[sIdx].buttons = [];
-                                  ns[sIdx].buttons.push({text: "Nuevo Botón", link: "/", style: "solid"});
+                                  ns[sIdx].buttons!.push({text: "Nuevo Botón", link: "/", style: "solid"});
                                   handleLocalChange({...section.content, slides: ns});
                                 }} 
                                 className="text-[9px] font-black uppercase bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 transition-all"
@@ -211,7 +222,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                               </button>
                            </div>
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {slide.buttons?.map((btn, bIdx) => (
+                              {slide.buttons?.map((btn: SlideButton, bIdx: number) => (
                                 <div key={bIdx} className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col gap-3 shadow-sm">
                                   <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-slate-900">
                                      <span className="text-[9px] font-black text-slate-400 uppercase w-12 shrink-0">Texto:</span>
@@ -344,7 +355,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
           {/* CONTACTO */}
           {section.type === 'contacto' && (
             <div className="space-y-8">
-              {/* Campos para Título y Descripción de la sección de contacto */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título de la Sección</label>
@@ -368,7 +378,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                 </div>
               </div>
 
-              {/* Selector de tipo de formulario (Inscripción o General) */}
               <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
                 <div className="flex gap-4 items-center">
                   <div className="p-4 bg-white rounded-2xl shadow-sm text-slate-900"><FileText size={24}/></div>
@@ -395,8 +404,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
           {/* BLOQUES DINÁMICOS: CLASES Y NOTICIAS */}
           {(section.type === 'clases' || section.type === 'noticias') && (
             <div className="space-y-10">
-              
-              {/* 1. Edición de Textos e Imagen */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <div className="space-y-6">
                   <div className="space-y-2">
@@ -423,7 +430,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                     />
                   </div>
 
-                  {/* Resumen de Items (Lo que estaba antes, pero más compacto) */}
                   <div className="bg-slate-900 p-6 rounded-[2rem] text-white flex justify-between items-center shadow-xl">
                     <div className="flex items-center gap-3">
                       {section.type === 'clases' ? <Music size={20} className="text-green-400" /> : <Newspaper size={20} className="text-orange-400" />}
@@ -459,11 +465,9 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                       <span className="font-black text-[10px] uppercase tracking-widest">Cambiar Imagen</span>
                     </button>
                   </div>
-                  <p className="text-[9px] font-bold text-slate-400 text-center uppercase tracking-widest italic">Esta foto se usará como fondo o apoyo visual en la sección.</p>
                 </div>
               </div>
               
-              {/* Input oculto para la subida de imagen de bloque */}
               <input 
                 type="file" 
                 ref={blockFileRef} 
@@ -473,10 +477,10 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
               />
             </div>
           )}
-         {/* DONACIONES */}
+
+          {/* DONACIONES */}
           {section.type === 'donaciones' && (
             <div className="space-y-10">
-              {/* CABECERA DEL BLOQUE */}
               <div className="bg-orange-500 p-8 rounded-[3rem] text-white flex justify-between items-center relative overflow-hidden shadow-xl">
                 <div className="relative z-10 flex items-center gap-4">
                   <div className="p-3 bg-white/20 rounded-full"><Heart className="text-white" size={24} /></div>
@@ -485,11 +489,10 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                      <p className="text-orange-100 text-[11px] font-bold uppercase tracking-widest">Pasarela de pago de Mercado Pago</p>
                   </div>
                 </div>
-                <CreditCard size={64} className="relative z-10 opacity-20" />
+                <div className="relative z-10 opacity-20"><CreditCard size={64} /></div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                {/* COLUMNA IZQUIERDA: Textos y Monto */}
                 <div className="lg:col-span-7 space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <div className="space-y-2">
@@ -502,7 +505,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                         placeholder="Ej: Colabora con la Escuela"
                       />
                     </div>
-                    {/* NUEVO INPUT: Monto por defecto */}
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-green-600 ml-2 flex items-center gap-1">
                         <DollarSign size={12}/> Monto Inicial Sugerido
@@ -529,7 +531,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                   </div>
                 </div>
 
-                {/* COLUMNA DERECHA: Imagen de Fondo */}
                 <div className="lg:col-span-5 space-y-4">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-2 text-balance">Imagen de Fondo del Formulario (Opcional)</label>
                   <div className="aspect-video bg-slate-100 rounded-[2.5rem] overflow-hidden relative group/img shadow-inner flex items-center justify-center border-2 border-dashed border-slate-200">

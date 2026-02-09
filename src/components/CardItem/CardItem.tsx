@@ -5,13 +5,14 @@ import { UniversalCardData } from "@/types";
 import { ArrowUpRight } from "lucide-react";
 
 interface Props {
-  data: UniversalCardData & { image_url?: string };
+  data: UniversalCardData; // Simplificado, ya incluye image_url
   basePath: string;
   hideDescription?: boolean;
 }
 
 export default function CardItem({ data, basePath, hideDescription }: Props) {
-  const colors = {
+  // Tipamos el objeto de colores para que acepte las llaves de color
+  const colors: Record<string, string> = {
     green: "bg-green-100 text-green-700",
     orange: "bg-orange-100 text-orange-700",
     purple: "bg-purple-100 text-purple-700",
@@ -19,18 +20,18 @@ export default function CardItem({ data, basePath, hideDescription }: Props) {
     yellow: "bg-yellow-100 text-yellow-700",
   };
 
-  const tagColor = data.color ? colors[data.color] : colors.green;
+  // Verificamos que el color exista en nuestro objeto, sino usamos green
+  const tagColor = data.color && colors[data.color] ? colors[data.color] : colors.green;
 
   return (
     <Link href={`${basePath}/${data.slug}`} className="group block relative h-full w-full">
-      {/* bg-white puro para contraste total con el fondo de la sección */}
       <div className="relative h-full flex flex-col bg-white rounded-[2.5rem] overflow-hidden border border-white shadow-sm transition-all duration-500 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-2">
         
         <div className="relative w-full h-52 overflow-hidden bg-slate-50">
           {data.image_url ? (
             <Image 
               src={data.image_url} 
-              alt={data.title} 
+              alt={data.title || "Imagen"} 
               fill 
               className="object-cover transition-transform duration-700 group-hover:scale-110"
               sizes="(max-width: 768px) 100vw, 33vw"
@@ -48,12 +49,12 @@ export default function CardItem({ data, basePath, hideDescription }: Props) {
 
         <div className="p-7 flex flex-col flex-grow">
           <h3 className="font-serif italic text-2xl text-slate-900 mb-3 group-hover:text-green-600 transition-colors">
-            {data.title}
+            {data.title || data.name}
           </h3>
           
-          {!hideDescription && data.description && (
+          {!hideDescription && (data.description || data.excerpt) && (
             <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6 line-clamp-2 italic">
-              {data.description}
+              {data.description || data.excerpt}
             </p>
           )}
 

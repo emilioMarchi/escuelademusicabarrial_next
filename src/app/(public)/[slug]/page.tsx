@@ -1,6 +1,6 @@
 import { getPageBySlug, getElementBySlug } from "@/services/content"; 
 import { getCollectionByCategory } from "@/services/pages-services";
-import { Class, News } from "@/types";
+import { Class, News, SectionData } from "@/types"; // Importamos SectionData
 import SectionRenderer from "@/components/SectionRenderer";
 import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
@@ -12,7 +12,6 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   
-  // Caso especial para la página de agradecimiento
   if (slug === "gracias") return { title: "¡Gracias por tu donación!" };
   
   const pageData = await getPageBySlug(slug);
@@ -36,14 +35,16 @@ export default async function DynamicRouterPage({ params }: Props) {
         <SectionRenderer 
           sectionData={{
             id: "success-payment-static",
-            type: "donacion-exitosa"
-          } as any} // Esto silencia el error de TypeScript
+            type: "donacion-exitosa",
+            content: {},
+            settings: {}
+          } as SectionData} // Tipado correctamente en lugar de 'any'
         />
       </main>
     );
   }
 
-  // --- PASO 1: ¿Es una Página Dinámica (Nosotros, Contacto, etc)? ---
+  // --- PASO 1: ¿Es una Página Dinámica? ---
   const pageData = await getPageBySlug(slug);
 
   if (pageData) {
@@ -54,14 +55,15 @@ export default async function DynamicRouterPage({ params }: Props) {
 
     return (
       <main>
-        {pageData.renderedSections.map((section) => {
+        {/* LA CLAVE: Tipamos 'section' como SectionData e 'index' como number */}
+        {pageData.renderedSections.map((section: SectionData, index: number) => {
           let itemsToPass: any[] = [];
           if (section.type === "clases") itemsToPass = dbClasses;
           if (section.type === "noticias") itemsToPass = dbNews;
 
           return (
             <SectionRenderer 
-              key={section.id} 
+              key={section.id || index} 
               sectionData={section} 
               pageCategory={pageData.category}
               rawItems={itemsToPass}

@@ -1,6 +1,6 @@
 import { getPageBySlug } from "@/services/content";
 import { getCollectionByCategory } from "@/services/pages-services";
-import { Class, News } from "@/types";
+import { Class, News, SectionData } from "@/types"; // Importamos SectionData
 import SectionRenderer from "@/components/SectionRenderer";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
@@ -25,14 +25,15 @@ export default async function HomePage() {
 
   return (
     <main>
-      {pageData.renderedSections.map((section) => {
+      {/* TIPADO: Agregamos (section: SectionData, index: number) */}
+      {pageData.renderedSections.map((section: SectionData, index: number) => {
         let itemsToPass: any[] = [];
         if (section.type === "clases") itemsToPass = dbClasses;
         if (section.type === "noticias") itemsToPass = dbNews;
 
         return (
           <SectionRenderer 
-            key={section.id} 
+            key={section.id || index} 
             sectionData={section} 
             pageCategory={pageData.category}
             rawItems={itemsToPass}

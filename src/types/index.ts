@@ -83,3 +83,44 @@ export interface GalleryImage {
   created_at: any;
   order?: number;
 }
+
+
+export interface ContactSubmission {
+  type: "contacto";
+  fullname: string;
+  email: string;
+  phone: string;
+  message: string;
+  status: "nuevo" | "visto" | "respondido"; // Agregado
+  created_at: any; // Agregado
+}
+
+export interface EnrollmentSubmission {
+  type: "clases";
+  fullname: string;
+  email: string;
+  phone: string;
+  instrument: string;
+  level_or_experience: string; // Agregado (lo que viene del select)
+  role: "estudiante" | "docente"; // Cambiado a 'estudiante' para coincidir con el form
+  status: "pendiente" | "aceptado" | "rechazado"; // Agregado
+  created_at: any; // Agregado
+}
+
+export type FormSubmission = ContactSubmission | EnrollmentSubmission;
+
+export interface UniversalCardData {
+  id?: string;
+  slug: string;
+  title: string;         // Usamos title como principal
+  description?: string;
+  image_url?: string;
+  label?: string;        // Agregamos esto
+  // Limitamos los colores a los que tenés en el componente para que sea seguro
+  color?: "green" | "orange" | "purple" | "blue" | "yellow"; 
+  name?: string;         // Por compatibilidad con Clases
+  excerpt?: string;      // Por compatibilidad con Noticias
+}
+export interface PageWithSections extends PageContent {
+  renderedSections: SectionData[];
+}

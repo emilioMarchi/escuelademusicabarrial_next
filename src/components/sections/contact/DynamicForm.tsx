@@ -5,7 +5,8 @@ import { submitForm } from "@/actions/form-actions";
 import { ContactSubmission, EnrollmentSubmission } from "@/types";
 
 export default function DynamicForm({ type }: { type: string }) {
-  const [role, setRole] = useState("estudiante");
+  // Tipamos el estado para que solo acepte los valores válidos
+  const [role, setRole] = useState<"estudiante" | "docente">("estudiante");
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -14,20 +15,18 @@ export default function DynamicForm({ type }: { type: string }) {
     setIsPending(true);
 
     const formData = new FormData(e.currentTarget);
-    
-    // Construcción del objeto según el tipo de formulario y la interfaz
     let finalData: ContactSubmission | EnrollmentSubmission;
 
     if (type === "clases") {
       finalData = {
         type: "clases",
-        role: role as "estudiante" | "docente",
+        role: role, // Ahora coincide perfectamente con el tipo
         fullname: formData.get("fullname") as string,
         email: formData.get("email") as string,
         phone: formData.get("phone") as string || "",
         instrument: formData.get("instrument") as string,
         level_or_experience: formData.get("level") as string,
-        created_at: null, // Lo genera el servidor
+        created_at: null, 
         status: "pendiente",
       };
     } else {
@@ -37,7 +36,7 @@ export default function DynamicForm({ type }: { type: string }) {
         email: formData.get("email") as string,
         phone: formData.get("phone") as string || "",
         message: formData.get("message") as string,
-        created_at: null, // Lo genera el servidor
+        created_at: null,
         status: "nuevo",
       };
     }
@@ -53,7 +52,6 @@ export default function DynamicForm({ type }: { type: string }) {
     }
   };
 
-  // Pantalla de éxito post-envío
   if (isSuccess) {
     return (
       <div className="py-12 text-center animate-in fade-in zoom-in duration-500">
@@ -75,46 +73,27 @@ export default function DynamicForm({ type }: { type: string }) {
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
       
-      {/* --- CAMPOS UNIVERSALES --- */}
       <div className="md:col-span-1 flex flex-col">
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block min-h-[1.25rem]">
           Nombre Completo
         </label>
-        <input 
-          name="fullname"
-          type="text" 
-          className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-orange-400 outline-none transition-all mt-auto" 
-          placeholder="Ej: Juan Pérez" 
-          required 
-        />
+        <input name="fullname" type="text" className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-orange-400 outline-none transition-all mt-auto" placeholder="Ej: Juan Pérez" required />
       </div>
 
       <div className="md:col-span-1 flex flex-col">
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block min-h-[1.25rem]">
           Correo Electrónico
         </label>
-        <input 
-          name="email"
-          type="email" 
-          className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-orange-400 outline-none transition-all mt-auto" 
-          placeholder="Ej: hola@tuemail.com" 
-          required 
-        />
+        <input name="email" type="email" className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-orange-400 outline-none transition-all mt-auto" placeholder="Ej: hola@tuemail.com" required />
       </div>
 
       <div className="md:col-span-2 flex flex-col">
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block min-h-[1.25rem]">
           Teléfono (Opcional)
         </label>
-        <input 
-          name="phone"
-          type="tel" 
-          className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-orange-400 outline-none transition-all mt-auto" 
-          placeholder="Ej: +54 9 11 1234 5678" 
-        />
+        <input name="phone" type="tel" className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-orange-400 outline-none transition-all mt-auto" placeholder="Ej: +54 9 11 1234 5678" />
       </div>
 
-      {/* --- SELECTOR DE ROL (Solo Clases) --- */}
       {type === "clases" && (
         <div className="md:col-span-2 flex gap-2 p-1 bg-slate-100 rounded-2xl">
           <button
@@ -138,7 +117,6 @@ export default function DynamicForm({ type }: { type: string }) {
         </div>
       )}
 
-      {/* --- CAMPOS DINÁMICOS --- */}
       {type === "clases" && (
         <>
           <div className="md:col-span-1 flex flex-col">
@@ -181,16 +159,10 @@ export default function DynamicForm({ type }: { type: string }) {
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block min-h-[1.25rem]">
             Tu consulta
           </label>
-          <textarea 
-            name="message"
-            className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-orange-400 outline-none transition-all h-32 mt-auto" 
-            placeholder="¿En qué podemos ayudarte?"
-            required
-          ></textarea>
+          <textarea name="message" className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-orange-400 outline-none transition-all h-32 mt-auto" placeholder="¿En qué podemos ayudarte?" required></textarea>
         </div>
       )}
 
-      {/* --- BOTÓN DE ENVÍO CON LOADING --- */}
       <div className="md:col-span-2">
         <button 
           type="submit" 
@@ -201,14 +173,7 @@ export default function DynamicForm({ type }: { type: string }) {
               : (role === "docente" && type === "clases" ? "bg-orange-500 hover:bg-orange-600 shadow-orange-100" : "bg-green-600 hover:bg-green-700 shadow-green-100")
           }`}
         >
-          {isPending ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              Enviando...
-            </>
-          ) : (
-            type === "contacto" ? "Enviar Mensaje" : role === "estudiante" ? "Solicitar Vacante" : "Enviar Postulación"
-          )}
+          {isPending ? "Enviando..." : (type === "contacto" ? "Enviar Mensaje" : role === "estudiante" ? "Solicitar Vacante" : "Enviar Postulación")}
         </button>
       </div>
     </form>

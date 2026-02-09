@@ -24,24 +24,29 @@ export default function PagosDashboard() {
     async function loadData() {
       setLoading(true);
       
-      // 1. Cargamos donaciones guardadas en Firebase
-      const res = await getDonationsAdmin();
-      if (res.success) {
-        setDonations(res.data);
-      }
-      
-      // 2. Cargamos el balance real de la API de Mercado Pago
       try {
+        // 1. Cargamos donaciones guardadas en Firebase
+        const res = await getDonationsAdmin();
+        
+        // LA SOLUCIÓN: Si res.data no existe, pasamos un array vacío []
+        // Así TypeScript se queda tranquilo porque siempre recibe un array.
+        if (res.success && res.data) {
+          setDonations(res.data);
+        } else {
+          setDonations([]);
+        }
+        
+        // 2. Cargamos el balance real de la API de Mercado Pago
         const balanceRes = await fetch("/api/admin/mp-balance");
         if (balanceRes.ok) {
           const balanceData = await balanceRes.json();
           setBalance(balanceData);
         }
       } catch (e) {
-        console.error("Error cargando balance de MP:", e);
+        console.error("Error cargando datos del dashboard:", e);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     }
     loadData();
   }, []);
@@ -58,10 +63,8 @@ export default function PagosDashboard() {
   // --- CÁLCULO DE MÉTRICAS AVANZADAS ---
   const approved = donations.filter(d => d.status === 'approved');
   
-  // Total Histórico Aprobado
   const totalBruto = approved.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
   
-  // Desglose por tipo de aporte
   const totalSuscripciones = approved
     .filter(d => d.type === 'subscription')
     .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
@@ -70,18 +73,15 @@ export default function PagosDashboard() {
     .filter(d => d.type !== 'subscription')
     .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
-  // Conteo de socios únicos (por email)
   const sociosActivos = new Set(
     approved.filter(d => d.type === 'subscription').map(d => d.email)
   ).size;
 
-  // Ticket promedio
   const ticketPromedio = approved.length > 0 ? totalBruto / approved.length : 0;
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-10">
       
-      {/* HEADER PROFESIONAL */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-5xl font-black uppercase tracking-tighter text-slate-900 leading-none">Cuentas y Aportes</h1>
@@ -100,9 +100,7 @@ export default function PagosDashboard() {
         </div>
       </header>
 
-      {/* BLOQUE DE BALANCE MERCADO PAGO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Card Principal: Dinero Disponible */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-br from-slate-900 to-slate-800 p-10 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden group"
@@ -113,7 +111,7 @@ export default function PagosDashboard() {
               <span className="px-3 py-1 bg-orange-500 text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-full">Disponible</span>
             </div>
             <p className="text-slate-400 font-bold uppercase text-[11px] tracking-[0.2em] mb-2">Saldo listo para retirar</p>
-            <h2 className="text-6xl font-black tracking-tighter mb-8">${balance.available_balance.toLocaleString('es-AR')}</h2>
+            <h2 className="text-6xl font-black tracking-tighter mb-8">${(balance?.available_balance || 0).toLocaleString('es-AR')}</h2>
             <div className="flex items-center gap-3 text-xs font-bold text-slate-400">
               <ArrowUpRight size={18} className="text-green-400" />
               <span>Actualizado hace unos instantes</span>
@@ -121,7 +119,6 @@ export default function PagosDashboard() {
           </div>
         </motion.div>
 
-        {/* Card Secundaria: Dinero a liberar */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-sm flex flex-col justify-center relative overflow-hidden"
@@ -132,16 +129,15 @@ export default function PagosDashboard() {
             </div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fondos en proceso</p>
-              <h2 className="text-4xl font-black text-slate-900">${balance.unavailable_balance.toLocaleString('es-AR')}</h2>
+              <h2 className="text-4xl font-black text-slate-900">${(balance?.unavailable_balance || 0).toLocaleString('es-AR')}</h2>
             </div>
           </div>
           <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-xs">
-            Este dinero está retenido por plazos de acreditación de Mercado Pago. Se liberará automáticamente.
+            Dinero retenido por plazos de acreditación de Mercado Pago. Se liberará automáticamente.
           </p>
         </motion.div>
       </div>
 
-      {/* GRID DE MÉTRICAS DE GESTIÓN */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
           { label: "Suscripciones", val: totalSuscripciones, icon: Users, color: "blue" },
@@ -153,7 +149,7 @@ export default function PagosDashboard() {
             key={i} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 + (i * 0.1) }}
             className="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center gap-5 group hover:border-slate-900 transition-all cursor-default"
           >
-            <div className={`p-4 rounded-2xl bg-slate-50 text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all`}>
+            <div className="p-4 rounded-2xl bg-slate-50 text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all">
               <item.icon size={20} />
             </div>
             <div>
@@ -166,7 +162,6 @@ export default function PagosDashboard() {
         ))}
       </div>
 
-      {/* TABLA DE AUDITORÍA DE MOVIMIENTOS */}
       <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-10 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-50/30">
           <div className="flex items-center gap-4">
