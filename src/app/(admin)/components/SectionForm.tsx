@@ -2,585 +2,316 @@
 
 import { useRef, useState, useEffect } from "react";
 import { SectionData } from "@/types";
-import { AnimatePresence, motion, Reorder } from "framer-motion"; 
+import { AnimatePresence, motion } from "framer-motion"; 
 import { useDirtyState } from "@/context/DirtyStateContext";
 import { uploadImageToStorage } from "@/lib/StoreUtils";
 import { 
-  Plus, Trash2, Image as ImageIcon, Camera, Settings2, 
-  Music, Newspaper, FileText, Save, AlertCircle, Loader2, 
-  Heading, GripVertical, AlignLeft, AlignRight, ExternalLink, Heart, 
-  CreditCard, DollarSign
+  Plus, Trash2, Image as ImageIcon, Camera, 
+  Music, Newspaper, FileText, AlertCircle, Loader2, 
+  AlignLeft, AlignRight, Mail, UserPlus, 
+  MessageSquare, Type, Link as LinkIcon
 } from "lucide-react";
-
-// --- INTERFACES PARA TYPESCRIPT ---
-interface SlideButton {
-  text: string;
-  link: string;
-  style?: string;
-}
-
-interface HeroSlide {
-  image_url: string;
-  title: string;
-  description: string;
-  buttons?: SlideButton[];
-}
 
 interface Props {
   section: SectionData;
   items?: any[];
   onChange: (updatedContent: any, updatedSettings?: any) => void;
-  onSave?: () => Promise<void>; 
 }
 
-export default function SectionForm({ section, items = [], onChange, onSave }: Props) {
-  const { setDirty } = useDirtyState();
+export default function SectionForm({ section, items = [], onChange }: Props) {
+  const { isDirty, setDirty } = useDirtyState();
   const slideFileRef = useRef<HTMLInputElement>(null);
   const blockFileRef = useRef<HTMLInputElement>(null);
   
-  const [activeSlideIdx, setActiveSlideIdx] = useState<number | null>(null);
+  // --- TIPADO DEFENSIVO PARA EVITAR LÍNEAS ROJAS ---
+  const content = (section.content || {}) as any;
+  const settings = (section.settings || {}) as any;
+  const slides = (content.slides || []) as any[];
+
+  // --- LÓGICA SMART DIRTY ---
   const [hasChanges, setHasChanges] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const originalState = useRef(JSON.stringify({
+    content: section.content,
+    settings: section.settings
+  }));
 
-  useEffect(() => { 
-    if (section?.id) {
-      setHasChanges(false); 
+  useEffect(() => {
+    const currentState = JSON.stringify({
+      content: section.content,
+      settings: section.settings
+    });
+    const isDifferent = currentState !== originalState.current;
+    setHasChanges(isDifferent);
+    if (isDifferent) setDirty(true);
+  }, [section.content, section.settings, setDirty]);
+
+  useEffect(() => {
+    if (!isDirty) {
+      originalState.current = JSON.stringify({
+        content: section.content,
+        settings: section.settings
+      });
+      setHasChanges(false);
     }
-  }, [section?.id]);
+  }, [isDirty]);
 
-  if (!section) return null;
+  const [activeSlideIdx, setActiveSlideIdx] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
-  const handleLocalChange = (newContent: any, newSettings?: any) => {
-    setHasChanges(true);
-    setDirty(true);
-    onChange(newContent, newSettings || section.settings);
+  // --- HANDLERS DE ACTUALIZACIÓN ---
+  const handleUpdate = (newContent: any, newSettings?: any) => {
+    onChange(newContent, newSettings || section.settings || {});
   };
 
-  const handleIndividualSave = async () => {
-    if (!onSave) return;
-    setIsSaving(true);
-    await onSave();
-    setHasChanges(false);
-    setDirty(false);
-    setIsSaving(false);
-  };
-
-  const handleImageUpload = async (file: File, isSlide: boolean = false) => {
+  const handleImageUpload = async (file: File, isSlide = false) => {
     setUploading(true);
     try {
       const url = await uploadImageToStorage(file);
-      if (isSlide && activeSlideIdx !== null) {
-        const ns = [...(section.content.slides || [])];
-        ns[activeSlideIdx] = { ...ns[activeSlideIdx], image_url: url };
-        handleLocalChange({ ...section.content, slides: ns });
-      } else {
-        handleLocalChange({ ...section.content, image_url: url });
+      if (url) {
+        if (isSlide) {
+          const ns = [...slides];
+          ns[activeSlideIdx] = { ...ns[activeSlideIdx], image_url: url };
+          handleUpdate({ ...content, slides: ns });
+        } else {
+          handleUpdate({ ...content, image_url: url });
+        }
       }
-    } catch (e) { 
-      alert("Error al subir imagen"); 
-    } finally { 
-      setUploading(false); 
-      setActiveSlideIdx(null); 
-    }
+    } catch (e) { console.error(e); } finally { setUploading(false); }
+  };
+
+  // --- LÓGICA DE HERO (SLIDES Y BOTONES) ---
+  const addSlide = () => {
+    const newSlide = { title: "Nuevo Slide", description: "", image_url: "", buttons: [] };
+    handleUpdate({ ...content, slides: [...slides, newSlide] });
+    setActiveSlideIdx(slides.length);
+  };
+
+  const removeSlide = (idxToRemove: number) => {
+    const filteredSlides = slides.filter((s: any, i: number) => i !== idxToRemove);
+    handleUpdate({ ...content, slides: filteredSlides });
+    setActiveSlideIdx(0);
+  };
+
+  const addButton = () => {
+    const ns = [...slides];
+    const newBtn = { text: "Nuevo Botón", link: "/", style: "solid" };
+    ns[activeSlideIdx].buttons = [...(ns[activeSlideIdx].buttons || []), newBtn];
+    handleUpdate({ ...content, slides: ns });
+  };
+
+  const removeButton = (btnIdxToRemove: number) => {
+    const ns = [...slides];
+    const filteredButtons = (ns[activeSlideIdx].buttons || []).filter((b: any, i: number) => i !== btnIdxToRemove);
+    ns[activeSlideIdx].buttons = filteredButtons;
+    handleUpdate({ ...content, slides: ns });
   };
 
   return (
-    <div className="space-y-6 relative group">
+    <div className={`relative transition-all duration-500 rounded-[3.5rem] border-2 bg-white overflow-hidden
+      ${hasChanges ? 'border-orange-400 shadow-2xl shadow-orange-100/50' : 'border-slate-100 shadow-sm'}`}>
+      
+      {/* ALERTA VISUAL */}
       <AnimatePresence>
         {hasChanges && (
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }} 
-            animate={{ opacity: 1, x: 0 }} 
-            exit={{ opacity: 0, x: 20 }} 
-            className="absolute -right-4 top-0 z-20 flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-full shadow-xl"
-          >
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+            className="absolute top-8 right-8 z-30 flex items-center gap-2 bg-orange-500 text-white px-5 py-2 rounded-full shadow-lg">
             <AlertCircle size={14} className="animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Cambios pendientes</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Cambios sin guardar</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className={`p-10 bg-white rounded-[3rem] border-2 transition-all duration-500 ${hasChanges ? 'border-orange-400 shadow-2xl shadow-orange-100' : 'border-slate-100 shadow-sm'}`}>
-        
-        <div className="flex justify-between items-center mb-10 pb-6 border-b border-slate-50">
-          <div className="flex items-center gap-4">
-            <div className={`p-4 rounded-2xl ${hasChanges ? 'bg-orange-500 text-white' : 'bg-slate-900 text-white'}`}>
-              <Settings2 size={20} />
-            </div>
-            <div>
-              <h3 className="text-xl font-black uppercase text-slate-900 tracking-tighter">Bloque: {section.type}</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ID: {section.id}</p>
-            </div>
+      <div className="p-8 md:p-12">
+        <div className="flex items-center gap-4 mb-10 border-b border-slate-50 pb-8">
+          <div className={`p-4 rounded-2xl transition-colors duration-500 ${hasChanges ? 'bg-orange-500 text-white' : 'bg-slate-900 text-white'}`}>
+            {section.type === 'hero' && <ImageIcon size={24}/>}
+            {section.type === 'texto-bloque' && <FileText size={24}/>}
+            {section.type === 'clases' && <Music size={24}/>}
+            {section.type === 'noticias' && <Newspaper size={24}/>}
+            {section.type === 'contacto' && <Mail size={24}/>}
           </div>
-          {hasChanges && (
-            <button 
-              onClick={handleIndividualSave} 
-              disabled={isSaving} 
-              className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95"
-            >
-              {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar Bloque
-            </button>
-          )}
+          <div>
+            <h3 className="text-xl font-black uppercase tracking-tighter text-slate-900">Bloque: {section.type}</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">ID: {section.id}</p>
+          </div>
         </div>
 
         <div className="space-y-10">
-          {/* HERO SECTION */}
+          
+          {/* --- EDITOR HERO COMPLETO --- */}
           {section.type === 'hero' && (
-            <div className="space-y-12">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-10 border-b border-slate-50">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título de la Sección Hero</label>
-                  <input 
-                    type="text" 
-                    value={section.content.title || ""} 
-                    onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
-                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
-                    placeholder="Ej: Bienvenidos a La Escuela"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción General</label>
-                  <textarea 
-                    rows={2} 
-                    value={section.content.description || ""} 
-                    onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
-                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
-                    placeholder="Breve texto introductorio..."
-                  />
-                </div>
+            <div className="space-y-8">
+              <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 rounded-[2rem] w-fit">
+                {slides.map((s: any, idx: number) => (
+                  <div key={idx} className="relative group/tab">
+                    <button onClick={() => setActiveSlideIdx(idx)}
+                      className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                        ${activeSlideIdx === idx ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                      Slide {idx + 1}
+                    </button>
+                    {slides.length > 1 && (
+                      <button onClick={() => removeSlide(idx)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/tab:opacity-100 transition-opacity shadow-lg">
+                        <Plus size={10} className="rotate-45"/>
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={addSlide} className="p-2 bg-slate-900 text-white rounded-xl hover:bg-green-600 transition-all ml-2"><Plus size={16}/></button>
               </div>
 
-              <div className="space-y-6">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Diapositivas / Slides</label>
-                <Reorder.Group 
-                  axis="y" 
-                  values={section.content.slides || []} 
-                  onReorder={(ns) => handleLocalChange({...section.content, slides: ns})} 
-                  className="space-y-6"
-                >
-                  {section.content.slides?.map((slide: HeroSlide, sIdx: number) => (
-                    <Reorder.Item key={slide.image_url + sIdx} value={slide}>
-                      <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-6 relative group/slide">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-900">
-                          <GripVertical size={20} />
-                        </div>
-                        
-                        <div className="flex gap-8 pl-6">
-                          <div className="w-44 h-44 bg-slate-200 rounded-[2rem] overflow-hidden shrink-0 flex items-center justify-center relative group/img shadow-inner">
-                            {slide.image_url ? (
-                              <img src={slide.image_url} className="w-full h-full object-cover object-center" />
-                            ) : (
-                              <ImageIcon size={32} className="text-slate-400" />
-                            )}
-                            <button 
-                              onClick={() => { setActiveSlideIdx(sIdx); slideFileRef.current?.click(); }} 
-                              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-white"
-                            >
-                              <Camera size={24} />
-                            </button>
-                          </div>
-                          <div className="flex-1 space-y-4">
-                            <input 
-                              type="text" 
-                              placeholder="Título del Slide" 
-                              value={slide.title || ""} 
-                              onChange={(e) => { 
-                                const ns = [...section.content.slides!]; 
-                                ns[sIdx].title = e.target.value; 
-                                handleLocalChange({...section.content, slides: ns}); 
-                              }} 
-                              className="w-full p-4 bg-white rounded-xl text-sm font-bold text-slate-900 border border-slate-200 outline-none" 
-                            />
-                            <textarea 
-                              placeholder="Descripción" 
-                              rows={2} 
-                              value={slide.description || ""} 
-                              onChange={(e) => { 
-                                const ns = [...section.content.slides!]; 
-                                ns[sIdx].description = e.target.value; 
-                                handleLocalChange({...section.content, slides: ns}); 
-                              }} 
-                              className="w-full p-4 bg-white rounded-xl text-xs font-bold text-slate-900 border border-slate-200 outline-none" 
-                            />
-                          </div>
-                        </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="space-y-6">
+                  <input type="text" value={slides[activeSlideIdx]?.title || ""}
+                    onChange={(e) => {
+                      const ns = [...slides];
+                      ns[activeSlideIdx].title = e.target.value;
+                      handleUpdate({ ...content, slides: ns });
+                    }}
+                    placeholder="Título del slide" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all"/>
+                  <textarea rows={3} value={slides[activeSlideIdx]?.description || ""}
+                    onChange={(e) => {
+                      const ns = [...slides];
+                      ns[activeSlideIdx].description = e.target.value;
+                      handleUpdate({ ...content, slides: ns });
+                    }}
+                    placeholder="Descripción" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all resize-none"/>
 
-                        <div className="pl-6 space-y-4">
-                           <div className="flex justify-between items-center">
-                              <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Botones</span>
-                              <button 
-                                onClick={() => { 
-                                  const ns = [...section.content.slides!];
-                                  if(!ns[sIdx].buttons) ns[sIdx].buttons = [];
-                                  ns[sIdx].buttons!.push({text: "Nuevo Botón", link: "/", style: "solid"});
-                                  handleLocalChange({...section.content, slides: ns});
-                                }} 
-                                className="text-[9px] font-black uppercase bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 transition-all"
-                              >
-                                + Añadir
+                  {/* BOTONES DEL SLIDE */}
+                  <div className="space-y-4 pt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Botones de Acción</p>
+                      <button onClick={addButton} className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-green-600 transition-all">
+                        <Plus size={12}/> Nuevo Botón
+                      </button>
+                    </div>
+                    <div className="space-y-3">
+                      {(slides[activeSlideIdx]?.buttons || []).map((btn: any, bIdx: number) => (
+                        <div key={bIdx} className="bg-slate-50 p-4 rounded-3xl border border-slate-100 space-y-4 relative">
+                          <button onClick={() => removeButton(bIdx)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                          <div className="grid grid-cols-2 gap-4">
+                            <input type="text" value={btn.text} placeholder="Texto" onChange={(e) => {
+                                const ns = [...slides];
+                                ns[activeSlideIdx].buttons[bIdx].text = e.target.value;
+                                handleUpdate({...content, slides: ns});
+                            }} className="w-full p-3 bg-white rounded-xl text-[11px] font-bold text-slate-900 border border-slate-100 outline-none focus:border-slate-900" />
+                            <input type="text" value={btn.link} placeholder="Link" onChange={(e) => {
+                                const ns = [...slides];
+                                ns[activeSlideIdx].buttons[bIdx].link = e.target.value;
+                                handleUpdate({...content, slides: ns});
+                            }} className="w-full p-3 bg-white rounded-xl text-[11px] font-bold text-slate-900 border border-slate-100 outline-none focus:border-slate-900" />
+                          </div>
+                          <div className="flex gap-2">
+                            {['solid', 'outline'].map(s => (
+                              <button key={s} onClick={() => {
+                                const ns = [...slides];
+                                ns[activeSlideIdx].buttons[bIdx].style = s;
+                                handleUpdate({...content, slides: ns});
+                              }} className={`px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest border-2 transition-all ${btn.style === s ? 'bg-slate-900 border-slate-900 text-white shadow-lg' : 'border-slate-200 text-slate-400'}`}>
+                                {s}
                               </button>
-                           </div>
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {slide.buttons?.map((btn: SlideButton, bIdx: number) => (
-                                <div key={bIdx} className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col gap-3 shadow-sm">
-                                  <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-slate-900">
-                                     <span className="text-[9px] font-black text-slate-400 uppercase w-12 shrink-0">Texto:</span>
-                                     <input 
-                                       type="text" 
-                                       value={btn.text} 
-                                       onChange={(e) => { 
-                                         const ns = [...section.content.slides!]; 
-                                         ns[sIdx].buttons![bIdx].text = e.target.value; 
-                                         handleLocalChange({...section.content, slides: ns}); 
-                                       }} 
-                                       className="w-full bg-transparent text-[10px] font-black uppercase outline-none" 
-                                     />
-                                  </div>
-                                  <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg text-slate-900">
-                                     <span className="text-[9px] font-black text-slate-400 uppercase w-12 shrink-0">Link:</span>
-                                     <input 
-                                       type="text" 
-                                       value={btn.link} 
-                                       onChange={(e) => { 
-                                         const ns = [...section.content.slides!]; 
-                                         ns[sIdx].buttons![bIdx].link = e.target.value; 
-                                         handleLocalChange({...section.content, slides: ns}); 
-                                       }} 
-                                       className="w-full bg-transparent text-[10px] font-bold outline-none" 
-                                     />
-                                     <ExternalLink size={12} className="text-slate-300"/>
-                                  </div>
-                                  <button 
-                                    onClick={() => { 
-                                      const ns = [...section.content.slides!]; 
-                                      ns[sIdx].buttons!.splice(bIdx, 1); 
-                                      handleLocalChange({...section.content, slides: ns}); 
-                                    }} 
-                                    className="text-[9px] font-black text-red-400 hover:text-red-600 text-right uppercase"
-                                  >
-                                    Eliminar Botón
-                                  </button>
-                                </div>
-                              ))}
-                           </div>
+                            ))}
+                          </div>
                         </div>
-                        
-                        <button 
-                          onClick={() => { if(confirm("¿Borrar slide completo?")) { const ns = [...section.content.slides!]; ns.splice(sIdx, 1); handleLocalChange({...section.content, slides: ns}); }}} 
-                          className="absolute right-8 bottom-8 text-red-300 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 size={18} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="aspect-video bg-slate-100 rounded-[3rem] overflow-hidden relative group border-2 border-slate-100 flex items-center justify-center">
+                    {uploading ? <Loader2 className="animate-spin text-slate-300" size={32} /> : (
+                      <>
+                        <img src={slides[activeSlideIdx]?.image_url} className="w-full h-full object-cover" alt="" />
+                        <button onClick={() => slideFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2 font-black uppercase text-[10px] tracking-widest">
+                          <Camera size={24} /> Cambiar Fondo
                         </button>
-                      </div>
-                    </Reorder.Item>
-                  ))}
-                </Reorder.Group>
-                
-                <button 
-                  onClick={() => { 
-                    const ns = [...(section.content.slides || []), { image_url: "", title: "Nuevo Slide", description: "", buttons: [] }]; 
-                    handleLocalChange({...section.content, slides: ns}); 
-                  }} 
-                  className="w-full py-8 border-2 border-dashed border-slate-200 rounded-[2.5rem] text-slate-400 font-black text-xs uppercase tracking-widest hover:border-slate-900 transition-all bg-slate-50/30"
-                >
-                  + Diapositiva
-                </button>
+                      </>
+                    )}
+                  </div>
+                  <input type="file" ref={slideFileRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], true)} />
+                </div>
               </div>
             </div>
           )}
 
-          {/* TEXTO BLOQUE */}
+          {/* --- TEXTO BLOQUE --- */}
           {section.type === 'texto-bloque' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título</label>
-                  <input 
-                    type="text" 
-                    value={section.content.title || ""} 
-                    onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
-                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción</label>
-                  <textarea 
-                    rows={6} 
-                    value={section.content.description || ""} 
-                    onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
-                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none" 
-                  />
-                </div>
                 <div className="flex gap-4">
-                   <button 
-                    onClick={() => handleLocalChange(section.content, { ...section.settings, layout: 'image-left' })} 
-                    className={`flex-1 p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${section.settings?.layout === 'image-left' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-100 text-slate-400 hover:border-slate-300'}`}
-                   >
-                    <AlignLeft size={20}/><span className="text-[9px] font-black uppercase">Imagen Izquierda</span>
-                   </button>
-                   <button 
-                    onClick={() => handleLocalChange(section.content, { ...section.settings, layout: 'image-right' })} 
-                    className={`flex-1 p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${section.settings?.layout === 'image-right' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-100 text-slate-400 hover:border-slate-300'}`}
-                   >
-                    <AlignRight size={20}/><span className="text-[9px] font-black uppercase">Imagen Derecha</span>
-                   </button>
+                    <button onClick={() => handleUpdate(content, {...settings, layout: 'image-left'})} 
+                        className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-widest transition-all ${settings.layout === 'image-left' ? 'border-slate-900 bg-slate-900 text-white shadow-lg' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                        <AlignLeft size={16}/> Foto Izquierda
+                    </button>
+                    <button onClick={() => handleUpdate(content, {...settings, layout: 'image-right'})} 
+                        className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-widest transition-all ${settings.layout === 'image-right' ? 'border-slate-900 bg-slate-900 text-white shadow-lg' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                        <AlignRight size={16}/> Foto Derecha
+                    </button>
                 </div>
+                <input type="text" value={content.title || ""} onChange={(e) => handleUpdate({ ...content, title: e.target.value })}
+                  placeholder="Título" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-black text-slate-900 text-xl outline-none transition-all"/>
+                <textarea rows={6} value={content.description || ""} onChange={(e) => handleUpdate({ ...content, description: e.target.value })}
+                  placeholder="Cuerpo de texto" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all resize-none leading-relaxed"/>
               </div>
-              <div className="space-y-4">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Imagen</label>
-                <div className="aspect-square bg-slate-100 rounded-[3rem] overflow-hidden relative group/img shadow-inner flex items-center justify-center">
-                  {section.content.image_url ? (
-                    <img src={section.content.image_url} className="w-full h-full object-cover object-center" />
-                  ) : (
-                    <ImageIcon size={48} className="text-slate-300" />
-                  )}
-                  {uploading && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <Loader2 className="animate-spin text-white" />
-                    </div>
-                  )}
-                  <button 
-                    onClick={() => blockFileRef.current?.click()} 
-                    className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-all flex items-center justify-center text-white font-black text-[10px] uppercase tracking-widest"
-                  >
-                    Subir Imagen
-                  </button>
-                </div>
+              <div className="aspect-square bg-slate-100 rounded-[3rem] overflow-hidden relative group border-2 border-slate-100 flex items-center justify-center shadow-inner">
+                {content.image_url ? <img src={content.image_url} className="w-full h-full object-cover" alt="" /> : <ImageIcon size={48} className="text-slate-200" />}
+                <button onClick={() => blockFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2 font-black uppercase text-[10px] tracking-widest">
+                  <Camera size={24} /> Cambiar Foto
+                </button>
                 <input type="file" ref={blockFileRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} />
               </div>
             </div>
           )}
 
-          {/* CONTACTO */}
-          {section.type === 'contacto' && (
-            <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título de la Sección</label>
-                  <input 
-                    type="text" 
-                    value={section.content.title || ""} 
-                    onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
-                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
-                    placeholder="Ej: Contactanos"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción / Bajada</label>
-                  <textarea 
-                    rows={2} 
-                    value={section.content.description || ""} 
-                    onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
-                    className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
-                    placeholder="Ej: Dejanos tu mensaje y te responderemos a la brevedad."
-                  />
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-8 rounded-[3rem] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
-                <div className="flex gap-4 items-center">
-                  <div className="p-4 bg-white rounded-2xl shadow-sm text-slate-900"><FileText size={24}/></div>
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900 uppercase">Tipo de Formulario</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Actual: {section.settings?.form_type || 'general'}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {['general', 'inscripcion'].map((type) => (
-                    <button 
-                      key={type} 
-                      onClick={() => handleLocalChange(section.content, { ...section.settings, form_type: type })} 
-                      className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${ (section.settings?.form_type === type || (!section.settings?.form_type && type === 'general')) ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-400'}`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* BLOQUES DINÁMICOS: CLASES Y NOTICIAS */}
+          {/* --- CLASES Y NOTICIAS CON CONTADOR REAL --- */}
           {(section.type === 'clases' || section.type === 'noticias') && (
-            <div className="space-y-10">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2">
-                      Título de la Sección {section.type === 'clases' ? 'Clases' : 'Novedades'}
-                    </label>
-                    <input 
-                      type="text" 
-                      value={section.content.title || ""} 
-                      onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
-                      className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
-                      placeholder={section.type === 'clases' ? "Nuestras Clases" : "Noticias del Barrio"}
-                    />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+               <div className="space-y-6">
+                  <input type="text" value={content.title || ""} onChange={(e) => handleUpdate({ ...content, title: e.target.value })}
+                    placeholder="Título sección" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all"/>
+                  <textarea rows={3} value={content.description || ""} onChange={(e) => handleUpdate({ ...content, description: e.target.value })}
+                    placeholder="Introducción" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all resize-none"/>
+               </div>
+               <div className="bg-slate-900 p-12 rounded-[3.5rem] flex flex-col items-center justify-center text-center shadow-2xl relative overflow-hidden group">
+                  <div className="absolute -right-6 -bottom-6 text-white/5 group-hover:scale-110 group-hover:-rotate-12 transition-all duration-700">
+                      {section.type === 'clases' ? <Music size={150}/> : <Newspaper size={150}/>}
                   </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción de la Sección</label>
-                    <textarea 
-                      rows={4} 
-                      value={section.content.description || ""} 
-                      onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
-                      className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none transition-all" 
-                      placeholder="Escribe una breve introducción para este bloque..."
-                    />
-                  </div>
-
-                  <div className="bg-slate-900 p-6 rounded-[2rem] text-white flex justify-between items-center shadow-xl">
-                    <div className="flex items-center gap-3">
-                      {section.type === 'clases' ? <Music size={20} className="text-green-400" /> : <Newspaper size={20} className="text-orange-400" />}
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Items Publicados</span>
-                    </div>
-                    <span className="text-3xl font-black">{items.length}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2 text-balance">Imagen de Cabecera (Opcional)</label>
-                  <div className="aspect-video lg:aspect-square bg-slate-100 rounded-[3rem] overflow-hidden relative group/img shadow-inner flex items-center justify-center">
-                    {section.content.image_url ? (
-                      <img src={section.content.image_url} className="w-full h-full object-cover object-center" />
-                    ) : (
-                      <div className="text-center p-6">
-                        <ImageIcon size={48} className="text-slate-300 mx-auto mb-2" />
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Sin imagen de portada</p>
-                      </div>
-                    )}
-                    
-                    {uploading && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                        <Loader2 className="animate-spin text-white" />
-                      </div>
-                    )}
-
-                    <button 
-                      onClick={() => blockFileRef.current?.click()} 
-                      className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2"
-                    >
-                      <Camera size={24} />
-                      <span className="font-black text-[10px] uppercase tracking-widest">Cambiar Imagen</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              <input 
-                type="file" 
-                ref={blockFileRef} 
-                className="hidden" 
-                accept="image/*" 
-                onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} 
-              />
+                  <p className="text-6xl font-black text-white leading-none mb-3 z-10 tabular-nums tracking-tighter">{items?.length || 0}</p>
+                  <p className="text-[11px] font-black uppercase text-white/30 tracking-[0.4em] z-10">
+                    {section.type === 'clases' ? 'Clases publicadas' : 'Noticias activas'}
+                  </p>
+               </div>
             </div>
           )}
 
-          {/* DONACIONES */}
-          {section.type === 'donaciones' && (
-            <div className="space-y-10">
-              <div className="bg-orange-500 p-8 rounded-[3rem] text-white flex justify-between items-center relative overflow-hidden shadow-xl">
-                <div className="relative z-10 flex items-center gap-4">
-                  <div className="p-3 bg-white/20 rounded-full"><Heart className="text-white" size={24} /></div>
-                  <div>
-                     <h4 className="text-xl font-black uppercase tracking-tighter">Configurar Donaciones</h4>
-                     <p className="text-orange-100 text-[11px] font-bold uppercase tracking-widest">Pasarela de pago de Mercado Pago</p>
-                  </div>
-                </div>
-                <div className="relative z-10 opacity-20"><CreditCard size={64} /></div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                <div className="lg:col-span-7 space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Título Principal</label>
-                      <input 
-                        type="text" 
-                        value={section.content.title || ""} 
-                        onChange={(e) => handleLocalChange({ ...section.content, title: e.target.value })} 
-                        className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-bold text-slate-900 border-2 border-transparent focus:border-slate-900 outline-none transition-all"
-                        placeholder="Ej: Colabora con la Escuela"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-green-600 ml-2 flex items-center gap-1">
-                        <DollarSign size={12}/> Monto Inicial Sugerido
-                      </label>
-                      <input 
-                        type="number" 
-                        min="100" 
-                        value={section.settings?.default_amount || 1000} 
-                        onChange={(e) => handleLocalChange(section.content, { ...section.settings, default_amount: parseInt(e.target.value) })} 
-                        className="w-full p-4 bg-green-50 rounded-2xl text-sm font-black text-green-900 border-2 border-transparent focus:border-green-600 outline-none transition-all"
-                      />
+          {/* --- CONTACTO --- */}
+          {section.type === 'contacto' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+               <div className="space-y-6">
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-4">Modalidad Formulario</label>
+                    <div className="flex gap-3">
+                        <button onClick={() => handleUpdate(content, {...settings, form_type: 'general'})} 
+                            className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${settings.form_type === 'general' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                            <MessageSquare size={20}/>
+                            <span className="text-[9px] font-black uppercase tracking-widest">General</span>
+                        </button>
+                        <button onClick={() => handleUpdate(content, {...settings, form_type: 'clases'})} 
+                            className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${settings.form_type === 'clases' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                            <UserPlus size={20}/>
+                            <span className="text-[9px] font-black uppercase tracking-widest">Inscripción</span>
+                        </button>
                     </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2">Descripción / Bajada</label>
-                    <textarea 
-                      rows={3} 
-                      value={section.content.description || ""} 
-                      onChange={(e) => handleLocalChange({ ...section.content, description: e.target.value })} 
-                      className="w-full p-4 bg-slate-50 rounded-2xl text-sm font-medium text-slate-700 border-2 border-transparent focus:border-slate-900 outline-none transition-all resize-none"
-                      placeholder="Texto breve explicando el destino de los fondos."
-                    />
-                  </div>
-                </div>
-
-                <div className="lg:col-span-5 space-y-4">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-2 text-balance">Imagen de Fondo del Formulario (Opcional)</label>
-                  <div className="aspect-video bg-slate-100 rounded-[2.5rem] overflow-hidden relative group/img shadow-inner flex items-center justify-center border-2 border-dashed border-slate-200">
-                    {section.content.image_url ? (
-                      <>
-                        <img src={section.content.image_url} className="w-full h-full object-cover object-center" />
-                        <div className="absolute inset-0 bg-black/50 transition-opacity opacity-0 group-hover/img:opacity-100" />
-                      </>
-                    ) : (
-                      <div className="text-center p-6">
-                        <ImageIcon size={32} className="text-slate-300 mx-auto mb-2" />
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Sin fondo seleccionado</p>
-                      </div>
-                    )}
-                    
-                    {uploading && (
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                        <Loader2 className="animate-spin text-white" />
-                      </div>
-                    )}
-
-                    <button 
-                      onClick={() => blockFileRef.current?.click()} 
-                      className="absolute inset-0 opacity-0 group-hover/img:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2 z-20"
-                    >
-                      <Camera size={24} />
-                      <span className="font-black text-[9px] uppercase tracking-widest bg-black/50 px-3 py-1 rounded-full">Cambiar Fondo</span>
-                    </button>
-                  </div>
-                   {/* Input oculto para la subida */}
-                  <input 
-                    type="file" 
-                    ref={blockFileRef} 
-                    className="hidden" 
-                    accept="image/*" 
-                    onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} 
-                  />
-                </div>
-              </div>
+                  <input type="text" value={content.title || ""} onChange={(e) => handleUpdate({ ...content, title: e.target.value })}
+                    placeholder="Título formulario" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all"/>
+               </div>
+               <textarea rows={6} value={content.description || ""} onChange={(e) => handleUpdate({ ...content, description: e.target.value })}
+                 placeholder="Instrucciones..." className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all resize-none"/>
             </div>
           )}
         </div>
       </div>
-      <input 
-        type="file" 
-        ref={slideFileRef} 
-        className="hidden" 
-        accept="image/*" 
-        onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], true)} 
-      />
     </div>
   );
 }

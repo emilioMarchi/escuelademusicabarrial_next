@@ -4,263 +4,306 @@ import {
   getGalleryImagesAdmin, 
   uploadAndAddImageAdmin, 
   deleteImageAdmin,
-  updateImageOrderAdmin 
+  updateImageOrderAdmin,
+  getPageAdmin,
+  savePageConfigAdmin,
+  uploadFileOnlyAdmin
 } from "@/services/admin-services";
-import { GalleryImage } from "@/types";
+import { GalleryImage, PageContent } from "@/types";
+import { useDirtyState } from "@/context/DirtyStateContext";
 import { 
   Plus, Trash2, Loader2, Image as ImageIcon, 
-  CheckCircle, AlertCircle, X, Upload, Eye, GripVertical, Save, ChevronDown
+  CheckCircle, AlertCircle, Save, Settings2, 
+  Upload, GripVertical, Layout, Type, Camera
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 
-// Interfaz para el estado de mensajes
-interface StatusState {
-  type: 'success' | 'error';
-  message: string;
-}
-
 export default function AdminGaleria() {
+  const { setDirty: setGlobalDirty } = useDirtyState();
+  
   const [images, setImages] = useState<GalleryImage[]>([]);
+  const [pageConfig, setPageConfig] = useState<PageContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-  const [isSavingOrder, setIsSavingOrder] = useState(false);
-  const [status, setStatus] = useState<StatusState | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [hasChanged, setHasChanged] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
-  // PAGINACIÓN: Cuántas fotos se muestran en la lista de gestión
-  const [visibleCount, setVisibleCount] = useState(10);
+  const [hasChangesConfig, setHasChangesConfig] = useState(false);
+  const [hasChangesOrder, setHasChangesOrder] = useState(false);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [headerPreview, setHeaderPreview] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  const loadImages = async () => {
-    setLoading(true);
-    const res = await getGalleryImagesAdmin();
-    if (res.success) {
-      setImages(res.data as GalleryImage[]);
-    }
+  const headerFileRef = useRef<HTMLInputElement>(null);
+  const photoFileRef = useRef<HTMLInputElement>(null);
+
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    const [imgRes, pageRes] = await Promise.all([
+      getGalleryImagesAdmin(),
+      getPageAdmin("galeria")
+    ]);
+    if (imgRes.success) setImages(imgRes.data as GalleryImage[]);
+    if (pageRes.success) setPageConfig(pageRes.data as PageContent);
     setLoading(false);
   };
 
-  useEffect(() => { loadImages(); }, []);
+  useEffect(() => { loadData(); }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setPreviewUrl(URL.createObjectURL(file));
+  const handleSaveAll = async () => {
+    setIsSaving(true);
+    try {
+      if (hasChangesConfig) await handlePageSave();
+      if (hasChangesOrder) await handleSaveGalleryData();
+      
+      setStatus({ type: 'success', message: "Cambios guardados con éxito" });
+      setGlobalDirty(false);
+      // Recargamos datos para confirmar que lo que vemos es lo que está en la DB
+      await loadData(true);
+    } catch (e) {
+      setStatus({ type: 'error', message: "Error al sincronizar" });
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setStatus(null), 3000);
+    }
   };
 
-  const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget; // Referencia segura al form
-    setIsUploading(true);
-    const res = await uploadAndAddImageAdmin(new FormData(form));
+  const handlePageSave = async () => {
+    if (!pageConfig) return;
+    let currentImageUrl = pageConfig.header_image_url;
+    if (headerFileRef.current?.files?.[0]) {
+      const formData = new FormData();
+      formData.append("file", headerFileRef.current.files[0]);
+      const uploadRes = await uploadFileOnlyAdmin(formData);
+      if (uploadRes.success) currentImageUrl = uploadRes.url || "";
+    }
+    await savePageConfigAdmin("galeria", { ...pageConfig, header_image_url: currentImageUrl });
+    setHasChangesConfig(false);
+    setHeaderPreview(null);
+  };
 
+  const handleSaveGalleryData = async () => {
+    const updateData = images.map((img, idx) => ({ 
+      id: img.id, 
+      order: idx,
+      caption: img.caption || "" 
+    }));
+    const res = await updateImageOrderAdmin(updateData);
     if (res.success) {
-      setStatus({ type: 'success', message: "Imagen añadida con éxito" });
-      setPreviewUrl(null);
-      form.reset(); 
-      await loadImages();
+      setHasChangesOrder(false);
     } else {
-      setStatus({ type: 'error', message: res.error || "Error al subir" });
+      throw new Error("Fallo al actualizar galería");
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!photoFileRef.current?.files?.[0]) return;
+    setIsUploading(true);
+    const formData = new FormData(e.currentTarget);
+    const res = await uploadAndAddImageAdmin(formData);
+    if (res.success) {
+      await loadData(true);
+      setPhotoPreview(null);
+      (e.target as HTMLFormElement).reset();
+      setStatus({ type: 'success', message: "Foto publicada" });
     }
     setIsUploading(false);
     setTimeout(() => setStatus(null), 3000);
   };
 
-  const handleSaveOrder = async () => {
-    setIsSavingOrder(true);
-    const updatedOrder = images.map((img, i) => ({ id: img.id!, order: i }));
-    const res = await updateImageOrderAdmin(updatedOrder);
-    if (res.success) {
-      setHasChanged(false);
-      setStatus({ type: 'success', message: "Nuevo orden guardado" });
-    }
-    setIsSavingOrder(false);
-    setTimeout(() => setStatus(null), 3000);
-  };
-
-  if (loading) return (
-    <div className="p-20 text-center font-black uppercase text-slate-300 animate-pulse tracking-widest">
-      Sincronizando Galería...
-    </div>
-  );
+  if (loading) return <div className="p-20 text-center font-black uppercase text-slate-900 animate-pulse tracking-widest">Sincronizando Galería...</div>;
 
   return (
-    <div className="p-4 lg:p-8 space-y-10 pb-40 max-w-[1100px] mx-auto">
+    <div className="p-4 lg:p-8 space-y-10 pb-40 max-w-5xl mx-auto relative">
       
-      {/* HEADER COMPACTO CON BOTÓN DE GUARDADO FLOTANTE */}
-      <header className="flex items-center justify-between gap-4 sticky top-0 z-50 bg-white/80 backdrop-blur-md py-4 border-b border-slate-50">
-        <div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">
-            Galería <span className="text-slate-300">Admin</span>
-          </h1>
-          <p className="text-slate-400 font-bold uppercase text-[9px] tracking-[0.2em] mt-1">
-            Gestión de orden y contenido
-          </p>
+      {/* HEADER PRINCIPAL */}
+      <header className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b-2 border-slate-100">
+        <div className="flex items-center gap-5">
+          <div className="bg-slate-900 text-white p-4 rounded-3xl shadow-xl">
+             <ImageIcon size={32} />
+          </div>
+          <div>
+            <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900">Galería</h1>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">
+              Total: <span className="text-slate-900">{images.length} fotos</span>
+            </p>
+          </div>
         </div>
-
-        <AnimatePresence>
-          {hasChanged && (
-            <motion.button 
-              initial={{ scale: 0.8, opacity: 0, x: 20 }} animate={{ scale: 1, opacity: 1, x: 0 }} exit={{ scale: 0.8, opacity: 0, x: 20 }}
-              onClick={handleSaveOrder}
-              disabled={isSavingOrder}
-              className="flex items-center gap-3 px-8 py-4 bg-green-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-green-100 hover:bg-green-700 transition-all active:scale-95"
-            >
-              {isSavingOrder ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>}
-              Guardar Cambios de Orden
-            </motion.button>
-          )}
-        </AnimatePresence>
+        {(hasChangesConfig || hasChangesOrder) && (
+          <motion.button 
+            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            onClick={handleSaveAll} disabled={isSaving}
+            className="flex items-center gap-3 px-10 py-5 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest shadow-2xl hover:bg-green-600 transition-all active:scale-95"
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} 
+            Guardar Cambios Pendientes
+          </motion.button>
+        )}
       </header>
 
-      {/* FORMULARIO SUPER COMPACTO */}
-      <section className="bg-slate-50 p-4 rounded-[2.5rem] border border-slate-100 shadow-sm">
-        <form onSubmit={handleUpload} className="flex flex-col sm:flex-row items-center gap-6">
-          <label className={`relative w-14 h-14 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all shrink-0 overflow-hidden ${
-            previewUrl ? 'border-green-500 bg-white' : 'border-slate-200 bg-white hover:border-slate-400'
-          }`}>
-            {previewUrl ? (
-              <img src={previewUrl} className="w-full h-full object-cover" alt="" />
-            ) : (
-              <Plus className="text-slate-300" size={20} />
-            )}
-            <input ref={fileInputRef} name="file" type="file" required accept="image/*" onChange={handleFileChange} className="hidden" />
-          </label>
+      {/* SECCIÓN 1: CABECERA Y SEO */}
+      <section className={`p-10 rounded-[3rem] border-2 transition-all duration-500 relative bg-white ${hasChangesConfig ? 'border-orange-400 shadow-2xl shadow-orange-50' : 'border-slate-100 shadow-sm'}`}>
+        <AnimatePresence>
+          {hasChangesConfig && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="absolute -right-4 -top-4 z-20 flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-full shadow-xl">
+              <AlertCircle size={14} className="animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Configuración modificada</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          <div className="flex-1 w-full">
-            <input 
-              name="caption" 
-              type="text" 
-              placeholder="Escribe una descripción corta (Ej: Concierto Anual)..." 
-              className="w-full bg-transparent p-2 text-base font-bold text-black border-b border-slate-200 outline-none focus:border-slate-900 transition-all placeholder:text-slate-300" 
-            />
+        <div className="flex items-center justify-between border-b-2 border-slate-50 pb-8 mb-8">
+          <div className="flex items-center gap-3">
+            <Settings2 size={24} className="text-slate-900"/>
+            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Textos y Portada</h2>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-slate-900 ml-2 tracking-widest">Título Header</label>
+              <input 
+                type="text" 
+                value={pageConfig?.header_title || ""} 
+                onChange={e => { setPageConfig(prev => prev ? {...prev, header_title: e.target.value} : null); setHasChangesConfig(true); setGlobalDirty(true); }}
+                className="w-full p-5 bg-slate-50 rounded-2xl text-sm font-bold border-2 border-transparent focus:border-slate-900 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-slate-900 ml-2 tracking-widest">Descripción / SEO</label>
+              <textarea 
+                rows={3}
+                value={pageConfig?.meta_description || ""} 
+                onChange={e => { setPageConfig(prev => prev ? {...prev, meta_description: e.target.value} : null); setHasChangesConfig(true); setGlobalDirty(true); }}
+                className="w-full p-5 bg-slate-50 rounded-2xl text-sm font-bold border-2 border-transparent focus:border-slate-900 outline-none transition-all resize-none"
+              />
+            </div>
           </div>
 
-          <button 
-            disabled={isUploading || !previewUrl}
-            className="w-full sm:w-auto px-10 h-14 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 disabled:bg-slate-100 transition-all flex items-center justify-center gap-3"
+          <div className="space-y-4">
+            <label className="text-[10px] font-black uppercase text-slate-900 ml-2 tracking-widest">Imagen Hero Background</label>
+            <div className="aspect-video bg-slate-100 rounded-[2.5rem] overflow-hidden relative group border-2 border-slate-100 shadow-inner flex items-center justify-center">
+              {(headerPreview || pageConfig?.header_image_url) ? (
+                <img src={headerPreview || pageConfig?.header_image_url} className="w-full h-full object-cover" alt="Portada" />
+              ) : (
+                <ImageIcon className="text-slate-200" size={48}/>
+              )}
+              <button onClick={() => headerFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2">
+                <Camera size={24} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Cambiar Fondo</span>
+              </button>
+            </div>
+            <input type="file" ref={headerFileRef} className="hidden" accept="image/*" onChange={e => { e.target.files?.[0] && setHeaderPreview(URL.createObjectURL(e.target.files[0])); setHasChangesConfig(true); setGlobalDirty(true); }} />
+          </div>
+        </div>
+      </section>
+
+      {/* SECCIÓN 2: SUBIDA DE FOTOS */}
+      <section className="bg-slate-900 p-10 rounded-[3.5rem] text-white shadow-2xl">
+        <form onSubmit={handlePhotoUpload} className="flex flex-col md:flex-row items-center gap-10">
+          <div 
+            onClick={() => photoFileRef.current?.click()}
+            className="w-44 h-44 shrink-0 bg-white/5 rounded-[2.5rem] border-2 border-dashed border-white/20 hover:border-white/60 transition-all cursor-pointer overflow-hidden flex items-center justify-center group"
           >
-            {isUploading ? <Loader2 className="animate-spin" size={16}/> : <Upload size={16}/>}
-            {isUploading ? "Subiendo..." : "Cargar Foto"}
-          </button>
+            {photoPreview ? <img src={photoPreview} className="w-full h-full object-cover" /> : <div className="text-center p-4"><Upload size={32} className="mx-auto mb-2 opacity-20 group-hover:opacity-100 transition-all"/><span className="text-[8px] font-black uppercase tracking-widest opacity-20">Click para seleccionar</span></div>}
+          </div>
+          <input type="file" name="file" ref={photoFileRef} className="hidden" accept="image/*" onChange={e => e.target.files?.[0] && setPhotoPreview(URL.createObjectURL(e.target.files[0]))} />
+          
+          <div className="flex-1 w-full space-y-6">
+            <div className="space-y-2">
+               <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Publicar Nueva Foto</h3>
+               <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Se añadirá al inicio de la galería</p>
+            </div>
+            <input name="caption" type="text" placeholder="Escribe un pie de foto..." className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-sm outline-none focus:border-white/40 font-medium text-white transition-all" />
+            <button disabled={isUploading} className="w-full md:w-auto px-12 py-5 bg-white text-slate-900 font-black uppercase text-[10px] tracking-[0.2em] rounded-2xl hover:bg-green-400 transition-all flex items-center justify-center gap-3 shadow-xl">
+              {isUploading ? <Loader2 className="animate-spin" size={16}/> : <Plus size={16}/>}
+              Subir a la Galería
+            </button>
+          </div>
         </form>
       </section>
 
-      {/* LISTA DE REORDENAMIENTO (TARJETAS GRANDES) */}
-      {/* Usamos axis="y" para estabilidad total del Drag & Drop */}
-      <section className="space-y-4">
-        <Reorder.Group 
-          axis="y" 
-          values={images} 
-          onReorder={(newOrder) => { setImages(newOrder); setHasChanged(true); }}
-          className="space-y-3"
-        >
-          {images.slice(0, visibleCount).map((img, idx) => (
-            <Reorder.Item 
-              key={img.id} 
-              value={img}
-              className="relative bg-white p-3 rounded-[2rem] border border-slate-100 flex items-center gap-6 cursor-grab active:cursor-grabbing group hover:border-slate-300 hover:shadow-md transition-all"
-            >
-              {/* MANIJA DE ARRASTRE */}
-              <div className="pl-2 text-slate-300 group-hover:text-slate-900 transition-colors">
-                <GripVertical size={24} />
-              </div>
+      {/* SECCIÓN 3: GESTIÓN DE LISTA */}
+      <section className={`p-10 rounded-[3.5rem] border-2 transition-all duration-500 bg-white relative ${hasChangesOrder ? 'border-orange-400 shadow-2xl shadow-orange-50' : 'border-slate-100 shadow-sm'}`}>
+        <AnimatePresence>
+          {hasChangesOrder && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="absolute -right-4 -top-4 z-20 flex items-center gap-2 bg-orange-500 text-white px-5 py-2.5 rounded-full shadow-xl">
+              <AlertCircle size={14} className="animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Hay cambios en la lista</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-              {/* MINIATURA GRANDE */}
-              <div className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-50 shrink-0 border border-slate-50">
-                <img src={img.url} className="w-full h-full object-cover" alt="" />
-              </div>
+        <div className="flex items-center gap-3 border-b-2 border-slate-50 pb-8 mb-8">
+            <Layout size={24} className="text-slate-900"/>
+            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Mosaico y Orden</h2>
+        </div>
 
-              {/* INFORMACIÓN */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1">
-                    <span className="text-[9px] font-black uppercase px-2 py-1 bg-slate-100 text-slate-500 rounded-md tracking-widest">
-                        Posición #{idx + 1}
-                    </span>
+        <Reorder.Group axis="y" values={images} onReorder={(newOrder) => { setImages(newOrder); setHasChangesOrder(true); setGlobalDirty(true); }} className="space-y-4">
+          {images.map((img, idx) => (
+            <Reorder.Item key={img.id} value={img}>
+              <div className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-50 flex flex-col md:flex-row items-center gap-8 group hover:border-slate-900 transition-all shadow-sm">
+                
+                <div className="cursor-grab active:cursor-grabbing text-slate-200 hover:text-slate-900 transition-colors">
+                    <GripVertical size={28} />
                 </div>
-                <p className="text-sm font-bold text-black truncate pr-4">
-                  {img.caption || <span className="text-slate-300 italic font-medium tracking-normal">Sin descripción</span>}
-                </p>
-              </div>
+                
+                <div className="w-24 h-24 rounded-[1.5rem] overflow-hidden bg-slate-100 shrink-0 border-2 border-slate-100 shadow-inner flex items-center justify-center">
+                    <img 
+                      src={img.url} 
+                      className="w-full h-full object-cover object-center block" 
+                      alt="" 
+                    />
+                </div>
 
-              {/* ACCIONES */}
-              <div className="flex items-center gap-2 pr-4">
+                <div className="flex-1 w-full space-y-2">
+                    <div className="flex items-center gap-2">
+                       <Type size={12} className="text-slate-300" />
+                       <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Pie de foto</span>
+                    </div>
+                    <input 
+                      type="text"
+                      value={img.caption || ""}
+                      onChange={(e) => {
+                        const newImages = [...images];
+                        newImages[idx] = { ...newImages[idx], caption: e.target.value };
+                        setImages(newImages);
+                        setHasChangesOrder(true);
+                        setGlobalDirty(true);
+                      }}
+                      placeholder="Sin descripción..."
+                      className="w-full bg-slate-50 border-2 border-transparent focus:border-slate-900 p-3 rounded-xl text-sm font-bold text-slate-900 outline-none transition-all"
+                    />
+                </div>
+
                 <button 
-                  type="button"
-                  onClick={() => setSelectedImage(img.url)}
-                  className="p-3 bg-slate-50 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
-                  title="Visualizar"
+                  onClick={() => deleteImageAdmin(img.id, img.url).then(() => loadData(true))}
+                  className="p-4 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
                 >
-                  <Eye size={20} />
+                  <Trash2 size={22} />
                 </button>
-                <button 
-                  type="button"
-                  onClick={() => deleteImageAdmin(img.id!, img.url).then(loadImages)}
-                  className="p-3 bg-red-50 text-red-200 hover:text-red-600 hover:bg-red-100 rounded-xl transition-all"
-                  title="Eliminar"
-                >
-                  <Trash2 size={20} />
-                </button>
+
               </div>
             </Reorder.Item>
           ))}
         </Reorder.Group>
-
-        {/* BOTÓN MOSTRAR MÁS (PAGINACIÓN) */}
-        {images.length > visibleCount && (
-          <div className="flex justify-center pt-8">
-            <button 
-              onClick={() => setVisibleCount(prev => prev + 10)}
-              className="flex items-center gap-3 px-12 py-4 bg-white text-slate-400 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-slate-900 hover:text-white transition-all border border-slate-200 shadow-sm"
-            >
-              <ChevronDown size={16} />
-              Ver más fotos ({images.length - visibleCount} restantes)
-            </button>
-          </div>
-        )}
       </section>
 
-      {/* VISUALIZADOR (LIGHTBOX) */}
-      <AnimatePresence>
-        {selectedImage && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setSelectedImage(null)}
-            className="fixed inset-0 z-[200] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-6 lg:p-12"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="relative max-w-5xl w-full flex flex-col items-center"
-              onClick={e => e.stopPropagation()}
-            >
-              <img src={selectedImage} className="w-full h-auto max-h-[80vh] object-contain rounded-[2.5rem] shadow-2xl border border-white/10" alt="" />
-              <button 
-                onClick={() => setSelectedImage(null)}
-                className="mt-10 bg-white/10 hover:bg-white/20 text-white px-12 py-4 rounded-full font-black uppercase text-[10px] tracking-[0.3em] transition-all border border-white/5"
-              >
-                Cerrar Previsualización
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* MENSAJE DE ESTADO FLOTANTE */}
+      {/* NOTIFICACIÓN FLOTANTE */}
       <AnimatePresence>
         {status && (
           <motion.div 
             initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[250] px-8 py-4 bg-slate-900 text-white rounded-full shadow-2xl flex items-center gap-3 border border-white/10"
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[250] px-10 py-5 bg-slate-900 text-white rounded-full shadow-2xl flex items-center gap-4 border border-white/10"
           >
-            {status.type === 'success' ? <CheckCircle size={18} className="text-green-400" /> : <AlertCircle size={18} className="text-red-400" />}
-            <span className="text-[10px] font-black uppercase tracking-widest">
-              {status.message}
-            </span>
+            {status.type === 'success' ? <CheckCircle className="text-green-400" size={20}/> : <AlertCircle className="text-red-400" size={20}/>}
+            <span className="text-xs font-black uppercase tracking-widest">{status.message}</span>
           </motion.div>
         )}
       </AnimatePresence>
+
     </div>
   );
 }
