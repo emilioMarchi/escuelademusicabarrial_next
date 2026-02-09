@@ -1,37 +1,49 @@
+// src/app/(public)/galeria/page.tsx
 import { getGalleryImagesAdmin } from "@/services/admin-services";
+import { getPageBySlug } from "@/services/content"; // Importamos para traer la data de la página
 import GalleryClient from "./GalleryClient";
 import { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Galería | Escuela de Música Barrial",
-  description: "Registros visuales de nuestras actividades y conciertos.",
-};
+// --- METADATA DINÁMICA ---
+export async function generateMetadata(): Promise<Metadata> {
+  const pageData = await getPageBySlug("galeria");
+  
+  return {
+    title: pageData?.meta_title || "Galería | Escuela de Música Barrial",
+    description: pageData?.meta_description || "Registros visuales de nuestras actividades y conciertos.",
+  };
+}
 
 export default async function GaleriaPage() {
-  const { success, data: images } = await getGalleryImagesAdmin();
+  // Traemos las imágenes y también la data de la página por si querés usar títulos dinámicos en el h1
+  const [imagesRes, pageData] = await Promise.all([
+    getGalleryImagesAdmin(),
+    getPageBySlug("galeria")
+  ]);
+
+  const images = imagesRes.success ? imagesRes.data : [];
 
   return (
     <main className="min-h-screen bg-white">
       {/* --- HEADER: Estilo Elegante con Serif e Itálica --- */}
       <section className="bg-slate-950 px-6 pt-24 pb-20 lg:pt-32 lg:pb-28">
         <div className="max-w-7xl mx-auto">
-          {/* Las clases que pediste aplicadas al h1 */}
+          {/* Usamos el header_title de la DB o el fallback que ya tenías */}
           <h1 className="font-serif italic text-3xl md:text-5xl lg:text-6xl text-white mb-6 tracking-tight leading-[1.2]">
-            Nuestra Galería de Momentos
+            {pageData?.header_title || "Nuestra Galería de Momentos"}
           </h1>
           
-          {/* Detalle minimalista: línea sutil */}
           <div className="w-12 h-[1px] bg-white/20 mb-6" />
           
           <p className="text-white/40 font-bold uppercase text-[9px] tracking-[0.5em]">
-            Escuela de música barrial • registros visuales
+            {pageData?.header_description || "Escuela de música barrial • registros visuales"}
           </p>
         </div>
       </section>
 
       {/* --- EL MOSAICO DE FOTOS (GalleryClient) --- */}
       <section className="pb-20">
-        <GalleryClient images={success ? images : []} />
+        <GalleryClient images={images || []} />
       </section>
     </main>
   );

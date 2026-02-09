@@ -1,8 +1,13 @@
-// src/components/footer/Footer.tsx
 "use client";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mail, Phone, MapPin, Instagram, Facebook, Youtube } from "lucide-react";
+import { getAllPagesForMenu } from "@/services/pages-services";
+import { PageContent } from "@/types";
+
+// Mantenemos el mismo orden que en el Navbar para que el sitio sea coherente
+const MENU_ORDER = ["inicio", "nosotros", "clases", "novedades", "noticias", "contacto", "galeria", "como-ayudar"];
 
 interface FooterData {
   address: string;
@@ -15,28 +20,33 @@ interface FooterData {
 
 export default function Footer({ data }: { data: FooterData }) {
   const [isMounted, setIsMounted] = useState(false);
+  const [pages, setPages] = useState<PageContent[]>([]);
 
-  // Hook 1: Maneja el montado para evitar errores de Hydration (Siempre [])
+  // 1. Manejo de Hydration
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Hook 2: Solo para debug de data (Siempre [data])
+  // 2. Carga dinámica del menú (Igual que en el Navbar)
   useEffect(() => {
-    if (data) {
-      console.log("Data recibida en Footer:", data);
-    }
-  }, [data]);
+    getAllPagesForMenu().then((data) => {
+      const sorted = data.sort((a, b) => {
+        const indexA = MENU_ORDER.indexOf(a.slug);
+        const indexB = MENU_ORDER.indexOf(b.slug);
+        const valA = indexA === -1 ? 999 : indexA;
+        const valB = indexB === -1 ? 999 : indexB;
+        return valA - valB;
+      });
+      setPages(sorted);
+    });
+  }, []);
 
   const apiKey = process.env.NEXT_PUBLIC_MAP_KEY;
-  
-  // Búsqueda específica por nombre para que aparezca el marcador oficial
   const searchQuery = encodeURIComponent(`Escuela de Música Barrial, ${data?.address}, Santa Fe, Argentina`);
   
-  // URL ESTÁNDAR DE GOOGLE MAPS EMBED
+  // URL Corregida de Google Maps Embed
   const mapUrl = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${searchQuery}`;
 
-  // Si no está montado, devolvemos un placeholder del mismo color para evitar el error de Hydration
   if (!isMounted) {
     return <footer className="bg-slate-900 min-h-[400px]" />;
   }
@@ -46,7 +56,7 @@ export default function Footer({ data }: { data: FooterData }) {
       <div className="container mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           
-          {/* COLUMNA 1: IDENTIDAD Y REDES */}
+          {/* COLUMNA 1: IDENTIDAD */}
           <div className="space-y-6">
             <Link href="/" className="flex items-center gap-3">
               <img src="/favicon.png" alt="Logo" className="h-10 w-10 brightness-0 invert" />
@@ -59,19 +69,18 @@ export default function Footer({ data }: { data: FooterData }) {
               "Transformando realidades a través de la música en el corazón del barrio."
             </p>
             
-            {/* REDES SOCIALES: Verificación explícita de contenido */}
             <div className="flex gap-5 pt-2">
-              {data?.instagram && data.instagram.length > 5 && (
+              {data?.instagram && (
                 <a href={data.instagram} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-500 transition-all">
                   <Instagram size={22} />
                 </a>
               )}
-              {data?.facebook && data.facebook.length > 5 && (
+              {data?.facebook && (
                 <a href={data.facebook} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-500 transition-all">
                   <Facebook size={22} />
                 </a>
               )}
-              {data?.youtube && data.youtube.length > 5 && (
+              {data?.youtube && (
                 <a href={data.youtube} target="_blank" rel="noopener noreferrer" className="text-white hover:text-green-500 transition-all">
                   <Youtube size={22} />
                 </a>
@@ -79,14 +88,20 @@ export default function Footer({ data }: { data: FooterData }) {
             </div>
           </div>
 
-          {/* COLUMNA 2: NAVEGACIÓN */}
+          {/* COLUMNA 2: NAVEGACIÓN DINÁMICA */}
           <div>
             <h4 className="font-serif italic text-white text-lg mb-6">Navegación</h4>
             <ul className="space-y-4 text-[10px] font-black uppercase tracking-widest">
-              <li><Link href="/" className="hover:text-green-500 transition-all">Inicio</Link></li>
-              <li><Link href="/nosotros" className="hover:text-green-500 transition-all">Nosotros</Link></li>
-              <li><Link href="/clases" className="hover:text-green-500 transition-all">Clases</Link></li>
-              <li><Link href="/donaciones" className="hover:text-green-500 transition-all">Donaciones</Link></li>
+              {pages.map((page) => (
+                <li key={page.id}>
+                  <Link 
+                    href={page.slug === 'inicio' ? '/' : `/${page.slug}`} 
+                    className="hover:text-green-500 transition-all"
+                  >
+                    {page.slug === 'inicio' ? 'Inicio' : page.slug.replace("-", " ")}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -109,7 +124,7 @@ export default function Footer({ data }: { data: FooterData }) {
             </ul>
           </div>
 
-          {/* COLUMNA 4: MAPA A COLOR CON MARCADOR */}
+          {/* COLUMNA 4: MAPA */}
           <div className="h-64 lg:h-full min-h-[220px] rounded-[2rem] overflow-hidden bg-slate-800 border border-slate-700 shadow-2xl">
             {apiKey ? (
               <iframe
@@ -118,12 +133,11 @@ export default function Footer({ data }: { data: FooterData }) {
                 style={{ border: 0 }}
                 loading="lazy"
                 allowFullScreen
-                referrerPolicy="no-referrer-when-downgrade"
                 src={mapUrl}
               ></iframe>
             ) : (
-              <div className="w-full h-full flex items-center justify-center p-4 text-center text-xs text-slate-500">
-                Falta API Key de Google Maps
+              <div className="w-full h-full flex items-center justify-center p-4 text-center text-xs text-slate-500 font-black uppercase tracking-widest">
+                Configurar Google Maps
               </div>
             )}
           </div>

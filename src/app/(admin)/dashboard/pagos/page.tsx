@@ -4,17 +4,17 @@ import { getDonationsAdmin, deleteDonationAdmin } from "@/services/admin-service
 import { 
   DollarSign, Clock, Search, Copy, CheckCircle, 
   ExternalLink, Trash2, Download, 
-  User, Hash, Activity, RefreshCcw, CreditCard, Users
+  User, Hash, Activity, RefreshCcw, CreditCard, Users, XCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Definimos una interfaz para evitar errores de "any" y propiedades faltantes
+// 1. Agregamos 'cancelled' a la interfaz
 interface Donation {
   id: string;
   name: string;
   email: string;
   amount: number;
-  status: 'approved' | 'pending' | 'rejected';
+  status: 'approved' | 'pending' | 'rejected' | 'cancelled'; 
   type: 'subscription' | 'one-time';
   mp_id?: string;
   mp_payment_id?: string;
@@ -31,7 +31,6 @@ export default function PagosDashboard() {
   const loadData = async () => {
     setLoading(true);
     const res = await getDonationsAdmin();
-    // Corregimos el error de la línea 20 asegurando el acceso a data
     if (res.success && 'data' in res) {
       setDonations(res.data as Donation[]);
     }
@@ -61,7 +60,7 @@ export default function PagosDashboard() {
         d.type === 'subscription' ? 'Suscripcion' : 'Pago Unico',
         `"${d.mp_payment_id || d.mp_id || 'N/A'}"`,
         d.amount,
-        d.status
+        d.status === 'cancelled' ? 'Cancelado' : d.status
       ].join(",");
     });
     const csvContent = "sep=,\n" + "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
@@ -70,16 +69,12 @@ export default function PagosDashboard() {
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", `auditoria_${new Date().getTime()}.csv`);
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
   };
 
-  // --- CÁLCULOS CON VALIDACIÓN DE TYPES ---
   const approvedItems = donations.filter(d => d.status === 'approved');
   const pendingItems = donations.filter(d => d.status === 'pending');
 
-  // Corregimos errores de conteo asegurando que email existe
   const uniqueDonorsTotal = new Set(donations.map(d => d.email?.toLowerCase()).filter(Boolean)).size;
   const uniqueDonorsUnicos = new Set(donations.filter(d => d.type !== 'subscription').map(d => d.email?.toLowerCase()).filter(Boolean)).size;
   const uniqueDonorsSuscrip = new Set(donations.filter(d => d.type === 'subscription').map(d => d.email?.toLowerCase()).filter(Boolean)).size;
@@ -118,7 +113,6 @@ export default function PagosDashboard() {
         )}
       </AnimatePresence>
 
-      {/* MÉTRICAS COMPACTAS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
             <div className="flex items-center gap-2 mb-2 text-blue-600">
@@ -158,7 +152,7 @@ export default function PagosDashboard() {
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input 
             type="text" 
-            placeholder="Buscar..." 
+            placeholder="Buscar por nombre, email o ID..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-black text-black outline-none focus:ring-2 ring-slate-900/5 transition-all"
@@ -168,11 +162,10 @@ export default function PagosDashboard() {
           onClick={downloadCSV}
           className="w-full lg:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest rounded-2xl hover:bg-slate-800 transition-all shadow-md"
         >
-          <Download size={14} /> Exportar
+          <Download size={14} /> Exportar CSV
         </button>
       </div>
 
-      {/* TABLA SIN SCROLL LATERAL (ULTRA COMPACTA) */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="w-full">
           <table className="w-full text-left border-collapse table-auto">
@@ -227,11 +220,18 @@ export default function PagosDashboard() {
 
                   <td className="px-3 py-4 text-center">
                     <div className="flex flex-col items-center gap-1">
+                        {/* 2. Lógica de Badge para Cancelado */}
                         <span className={`px-2 py-0.5 rounded-full text-[7px] font-black uppercase border ${
-                        doc.status === 'approved' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-orange-50 border-orange-200 text-orange-700'
+                          doc.status === 'approved' ? 'bg-green-50 border-green-200 text-green-700' : 
+                          doc.status === 'pending' ? 'bg-orange-50 border-orange-200 text-orange-700' :
+                          doc.status === 'cancelled' ? 'bg-red-50 border-red-200 text-red-700' :
+                          'bg-red-50 border-red-200 text-red-700'
                         }`}>
-                        {doc.status === 'approved' ? 'Aprobado' : 'Pendiente'}
+                        {doc.status === 'approved' ? 'Aprobado' : 
+                         doc.status === 'pending' ? 'Pendiente' : 
+                         doc.status === 'cancelled' ? 'Cancelado' : 'Rechazado'}
                         </span>
+                        
                         {doc.payment_link && doc.status === 'pending' && (
                         <a href={doc.payment_link} target="_blank" className="flex items-center gap-1 text-[7px] font-black uppercase text-blue-500 hover:text-blue-700">
                             Pagar <ExternalLink size={7} />

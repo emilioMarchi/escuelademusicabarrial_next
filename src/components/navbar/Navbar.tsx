@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { getAllPagesForMenu } from "@/services/pages-services";
 import { PageContent } from "@/types";
 
-const MENU_ORDER = ["inicio", "nosotros", "clases", "novedades", "noticias", "contacto", "donaciones", "como-ayudar"];
+const MENU_ORDER = ["inicio", "nosotros", "clases", "novedades", "noticias", "contacto", "galeria", "como-ayudar"];
 
 export default function Navbar() {
   const pathname = usePathname();
