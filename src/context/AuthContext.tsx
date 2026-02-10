@@ -8,13 +8,8 @@ import {
   onAuthStateChanged, 
   User 
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-
-/**
- * 1. Lista blanca de correos autorizados.
- * Solo los emails incluidos aquí podrán mantener la sesión activa en el dashboard.
- */
-const ADMIN_EMAILS = ["emiliomarchi.dev@gmail.com"]; 
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 interface AuthContextType {
   user: User | null;
@@ -30,17 +25,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Escucha los cambios en el estado de autenticación de Firebase
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true);
       if (currentUser) {
-        // Se valida si el correo electrónico está en la lista de administradores permitidos
-        if (ADMIN_EMAILS.includes(currentUser.email || "")) {
-          setUser(currentUser);
-        } else {
-          // Si el usuario no está autorizado, se cierra la sesión inmediatamente
-          await signOut(auth);
+        try {
+          // Consultamos la lista de emails permitidos en Firestore
+          const adminDoc = await getDoc(doc(db, "settings", "admins"));
+          const allowedEmails = adminDoc.data()?.emails || [];
+
+          // Si la lista está vacía, podrías permitir el primer acceso o dejar un fallback
+          if (allowedEmails.includes(currentUser.email || "")) {
+            setUser(currentUser);
+          } else {
+            await signOut(auth);
+            setUser(null);
+            alert("Acceso denegado: Este correo no tiene permisos de administrador.");
+          }
+        } catch (error) {
+          console.error("Error verificando permisos:", error);
           setUser(null);
-          alert("Acceso denegado: Este correo no tiene permisos de administrador.");
         }
       } else {
         setUser(null);
@@ -67,10 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  /**
-   * Se memoriza el valor del contexto para optimizar el rendimiento y 
-   * asegurar la compatibilidad con el tipo AuthContextType.
-   */
   const contextValue = useMemo<AuthContextType>(() => ({
     user,
     loading,

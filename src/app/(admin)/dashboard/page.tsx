@@ -4,13 +4,15 @@ import {
   getCollectionAdmin, upsertItemAdmin, deleteItemAdmin,
   getInstrumentsAdmin, updateInstrumentsAdmin,
   getTeachersAdmin, updateTeachersAdmin,
-  getGlobalSettingsAdmin, updateGlobalSettingsAdmin 
+  getGlobalSettingsAdmin, updateGlobalSettingsAdmin,
+  getAdminsAdmin, updateAdminsAdmin 
 } from "@/services/admin-services";
 import { Class, News } from "@/types";
 import { 
   Plus, Music, Newspaper, Settings2, RefreshCw, 
   ChevronRight, Save, Mail, Phone, MapPin, Instagram, Facebook, 
-  YoutubeIcon, Users, X, Clock, CheckCircle, MessageSquare, Inbox, Trash2
+  YoutubeIcon, Users, X, Clock, CheckCircle, MessageSquare, Inbox, Trash2, ShieldCheck,
+  Youtube, GraduationCap, UserRound, Briefcase
 } from "lucide-react";
 import CollectionManager from "../components/CollectionManager";
 import ListManager from "../components/ListManager";
@@ -21,330 +23,392 @@ import { AnimatePresence, motion } from "framer-motion";
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [viewManager, setViewManager] = useState<"clases" | "noticias" | null>(null);
-  const [viewList, setViewList] = useState<"teachers" | "instruments" | null>(null);
+  const [viewList, setViewList] = useState<"teachers" | "instruments" | "admins" | null>(null);
   const [submissionModal, setSubmissionModal] = useState<{ type: string, items: any[] } | null>(null);
   const [selectedSub, setSelectedSub] = useState<any | null>(null);
 
   const [data, setData] = useState({
     clases: [] as Class[],
     noticias: [] as News[],
-    instruments: [] as string[],
-    teachers: [] as string[],
     submissions: [] as any[],
-    general: { 
-      email: "", phone: "", address: "", 
-      instagram: "", facebook: "", youtube: "" 
-    }
+    teachers: [] as string[],
+    instruments: [] as string[],
+    admins: [] as string[],
+    settings: {} as any
   });
 
   const refreshData = async () => {
     setLoading(true);
-    try {
-      const [clases, noticias, inst, teach, gen] = await Promise.all([
-        getCollectionAdmin("clases"),
-        getCollectionAdmin("noticias"),
-        getInstrumentsAdmin(),
-        getTeachersAdmin(),
-        getGlobalSettingsAdmin()
-      ]);
-
-      const subQuery = query(collection(db, "submissions"), orderBy("created_at", "desc"));
-      const subSnap = await getDocs(subQuery);
-      const submissions = subSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      setData({
-        clases: clases.success ? clases.data : [],
-        noticias: noticias.success ? noticias.data : [],
-        instruments: inst.success ? inst.data : [],
-        teachers: teach.success ? teach.data : [],
-        submissions: submissions,
-        general: gen.success ? gen.data : { 
-          email: "", phone: "", address: "", 
-          instagram: "", facebook: "", youtube: "" 
-        }
-      });
-    } catch (e) {
-      console.error("Error al refrescar datos:", e);
-    } finally {
-      setLoading(false);
-    }
+    const [resC, resN, resS, resI, resT, resG, resA] = await Promise.all([
+      getCollectionAdmin("clases"),
+      getCollectionAdmin("noticias"),
+      getSubmissionsAdmin(),
+      getInstrumentsAdmin(),
+      getTeachersAdmin(),
+      getGlobalSettingsAdmin(),
+      getAdminsAdmin()
+    ]);
+    
+    setData({
+      clases: resC.data || [],
+      noticias: resN.data || [],
+      submissions: resS.data || [],
+      instruments: resI.data || [],
+      teachers: resT.data || [],
+      admins: resA.data || [],
+      settings: resG.data || {}
+    });
+    setLoading(false);
   };
 
   useEffect(() => { refreshData(); }, []);
 
-  const markAsRead = async (id: string) => {
-    try {
-      const docRef = doc(db, "submissions", id);
-      await updateDoc(docRef, { status: 'leído' });
-      
-      const updateList = (list: any[]) => list.map(s => s.id === id ? { ...s, status: 'leído' } : s);
+  async function getSubmissionsAdmin() {
+    // Traemos de la colección "submissions" ordenada por fecha
+    const q = query(collection(db, "submissions"), orderBy("created_at", "desc"));
+    const snap = await getDocs(q);
+    return { data: snap.docs.map(d => ({ id: d.id, ...d.data() })) };
+  }
 
-      setData(prev => ({ ...prev, submissions: updateList(prev.submissions) }));
-      if (submissionModal) {
-        setSubmissionModal(prev => prev ? { ...prev, items: updateList(prev.items) } : null);
-      }
-      if (selectedSub && selectedSub.id === id) {
-        setSelectedSub((prev: any) => ({ ...prev, status: 'leído' }));
-      }
-    } catch (e) {
-      alert("Error al marcar como leído");
-    }
+  const handleUpdateSettings = async (newData: any) => {
+    const res = await updateGlobalSettingsAdmin(newData);
+    if (res.success) refreshData();
   };
 
   const deleteSubmission = async (id: string) => {
-    if (!window.confirm("¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.")) return;
-
-    try {
-      await deleteDoc(doc(db, "submissions", id));
-      
-      // Actualizar estados locales
-      const filterList = (list: any[]) => list.filter(s => s.id !== id);
-      
-      setData(prev => ({ ...prev, submissions: filterList(prev.submissions) }));
-      
-      if (submissionModal) {
-        setSubmissionModal(prev => prev ? { ...prev, items: filterList(prev.items) } : null);
-      }
-      
-      setSelectedSub(null);
-    } catch (e) {
-      alert("Error al intentar eliminar el registro.");
-    }
+    if (!confirm("¿Eliminar este registro de forma permanente?")) return;
+    await deleteDoc(doc(db, "submissions", id));
+    setSelectedSub(null);
+    refreshData();
   };
 
-  const saveGeneralSettings = async () => {
-    setLoading(true);
-    const res = await updateGlobalSettingsAdmin(data.general);
-    if (res.success) alert("✓ Configuración actualizada");
-    setLoading(false);
+  const updateSubStatus = async (id: string, newStatus: string) => {
+    await updateDoc(doc(db, "submissions", id), { status: newStatus });
+    refreshData();
+    setSelectedSub(null);
   };
-
-  const getStats = (items: any[]) => {
-    const pendientes = items.filter(s => s.status !== 'leído').length;
-    return { pendientes, total: items.length };
-  };
-
-  const consultas = data.submissions.filter(s => s.type === 'contacto');
-  const inscripciones = data.submissions.filter(s => s.role === 'estudiante' || s.type === 'inscripcion');
-  const postulaciones = data.submissions.filter(s => s.role === 'docente');
-
-  const cStats = getStats(consultas);
-  const iStats = getStats(inscripciones);
-  const pStats = getStats(postulaciones);
 
   return (
-    <div className="space-y-12 pb-32">
-      <header className="flex justify-between items-end">
+    <div className="space-y-12">
+      <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900">Panel Principal</h1>
-          <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-2">EMB Gestión de Contenidos</p>
+          <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900">Panel Central</h1>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gestión de la Escuela de Música</p>
         </div>
-        <button onClick={refreshData} disabled={loading} className="p-4 bg-white border border-slate-200 text-slate-500 rounded-2xl hover:bg-slate-50 transition-all shadow-sm cursor-pointer">
+        <button 
+          onClick={refreshData} 
+          className="p-4 bg-white rounded-2xl border-2 border-slate-100 hover:border-slate-900 transition-all text-slate-900 shadow-sm"
+        >
           <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
         </button>
       </header>
 
-      {/* BARRA DE COMUNICACIONES */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div onClick={() => setSubmissionModal({ type: 'Consultas de Contacto', items: consultas })} 
-          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-slate-900 cursor-pointer transition-all">
-          <div className={`p-4 rounded-2xl transition-colors ${cStats.pendientes > 0 ? 'bg-slate-900 text-white group-hover:bg-green-500' : 'bg-slate-100 text-slate-400'}`}>
-            <Mail size={24} />
-          </div>
-          <div>
-            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Consultas</h4>
-            <div className="flex items-baseline gap-2">
-              <p className={`text-2xl font-black ${cStats.pendientes > 0 ? 'text-slate-900' : 'text-slate-300'}`}>{cStats.pendientes}</p>
-              <p className="text-[10px] font-bold text-slate-400">/ {cStats.total} total</p>
-            </div>
-          </div>
-        </div>
-
-        <div onClick={() => setSubmissionModal({ type: 'Inscripciones de Alumnos', items: inscripciones })} 
-          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-slate-900 cursor-pointer transition-all">
-          <div className={`p-4 rounded-2xl transition-colors ${iStats.pendientes > 0 ? 'bg-slate-900 text-white group-hover:bg-blue-500' : 'bg-slate-100 text-slate-400'}`}>
-            <Music size={24} />
-          </div>
-          <div>
-            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Inscripciones</h4>
-            <div className="flex items-baseline gap-2">
-              <p className={`text-2xl font-black ${iStats.pendientes > 0 ? 'text-slate-900' : 'text-slate-300'}`}>{iStats.pendientes}</p>
-              <p className="text-[10px] font-bold text-slate-400">/ {iStats.total} total</p>
-            </div>
-          </div>
-        </div>
-
-        <div onClick={() => setSubmissionModal({ type: 'Postulaciones de Staff', items: postulaciones })} 
-          className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-5 group hover:border-slate-900 cursor-pointer transition-all">
-          <div className={`p-4 rounded-2xl transition-colors ${pStats.pendientes > 0 ? 'bg-slate-900 text-white group-hover:bg-orange-500' : 'bg-slate-100 text-slate-400'}`}>
-            <Users size={24} />
-          </div>
-          <div>
-            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Docentes</h4>
-            <div className="flex items-baseline gap-2">
-              <p className={`text-2xl font-black ${pStats.pendientes > 0 ? 'text-slate-900' : 'text-slate-300'}`}>{pStats.pendientes}</p>
-              <p className="text-[10px] font-bold text-slate-400">/ {pStats.total} total</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* CARDS DE GESTIÓN DE CONTENIDOS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white p-10 rounded-[3rem] border border-slate-200 group hover:border-green-500 transition-all duration-500 shadow-sm">
-          <div className="flex justify-between items-start mb-8">
-            <div className="p-5 bg-green-50 text-green-600 rounded-3xl"><Inbox size={28} /></div>
-            <span className="text-4xl font-black text-slate-200 group-hover:text-green-100">{data.clases.length}</span>
-          </div>
-          <h3 className="text-2xl font-black uppercase text-slate-900 mb-2">Clases y Talleres</h3>
-          <button onClick={() => setViewManager("clases")} className="w-full flex justify-between items-center bg-slate-900 text-white px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-green-600 transition-all cursor-pointer">Administrar Clases <ChevronRight size={18} /></button>
-        </div>
-
-        <div className="bg-white p-10 rounded-[3rem] border border-slate-200 group hover:border-orange-500 transition-all duration-500 shadow-sm">
-          <div className="flex justify-between items-start mb-8">
-            <div className="p-5 bg-orange-50 text-orange-600 rounded-3xl"><Newspaper size={28} /></div>
-            <span className="text-4xl font-black text-slate-200 group-hover:text-orange-100">{data.noticias.length}</span>
-          </div>
-          <h3 className="text-2xl font-black uppercase text-slate-900 mb-2">Novedades y Blog</h3>
-          <button onClick={() => setViewManager("noticias")} className="w-full flex justify-between items-center bg-slate-900 text-white px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-600 transition-all cursor-pointer">Administrar Noticias <ChevronRight size={18} /></button>
-        </div>
-      </div>
-
-      {/* AJUSTES GLOBALES */}
-      <div className="bg-slate-900 p-10 md:p-14 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden">
-        <div className="relative z-10 flex flex-col gap-12">
-          <div className="flex justify-between items-center border-b border-white/10 pb-8">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-500 text-slate-900 rounded-2xl"><Settings2 size={24} /></div>
-              <div><h2 className="text-3xl font-black uppercase tracking-tighter">Ajustes Globales</h2><p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Contacto y Redes</p></div>
-            </div>
-            <button onClick={saveGeneralSettings} disabled={loading} className="bg-white text-slate-900 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-green-400 transition-all flex items-center gap-2 cursor-pointer"><Save size={18} /> {loading ? "Guardando..." : "Guardar Cambios"}</button>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-            <div className="space-y-12">
-              <div className="space-y-5">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-2">Contacto</label>
-                <div className="flex items-center gap-4 bg-white/5 p-5 rounded-2xl border border-white/10"><Mail className="text-slate-600" size={20} /><input type="email" placeholder="Email" value={data.general.email} onChange={(e)=>setData({...data, general: {...data.general, email: e.target.value}})} className="bg-transparent border-none outline-none text-sm w-full font-bold" /></div>
-                <div className="flex items-center gap-4 bg-white/5 p-5 rounded-2xl border border-white/10"><Phone className="text-slate-600" size={20} /><input type="text" placeholder="Teléfono" value={data.general.phone} onChange={(e)=>setData({...data, general: {...data.general, phone: e.target.value}})} className="bg-transparent border-none outline-none text-sm w-full font-bold" /></div>
-                <div className="flex items-center gap-4 bg-white/5 p-5 rounded-2xl border border-white/10"><MapPin className="text-slate-600" size={20} /><input type="text" placeholder="Dirección" value={data.general.address} onChange={(e)=>setData({...data, general: {...data.general, address: e.target.value}})} className="bg-transparent border-none outline-none text-sm w-full font-bold" /></div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* COLUMNA 1: CONTENIDOS Y CONSULTAS */}
+        <div className="lg:col-span-2 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <button 
+              onClick={() => setViewManager("clases")}
+              className="group p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all text-left space-y-4 shadow-sm hover:shadow-2xl shadow-slate-200"
+            >
+              <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                <Music size={28} />
               </div>
+              <div>
+                <h3 className="font-black uppercase text-lg tracking-tighter text-slate-900">Clases y Talleres</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{data.clases.length} Publicadas</p>
+              </div>
+            </button>
 
-              <div className="space-y-5">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-2">Redes Sociales</label>
-                <div className="flex items-center gap-4 bg-white/5 p-5 rounded-2xl border border-white/10"><Instagram className="text-pink-500" size={20} /><input type="text" placeholder="Instagram URL" value={data.general.instagram} onChange={(e)=>setData({...data, general: {...data.general, instagram: e.target.value}})} className="bg-transparent border-none outline-none text-sm w-full font-bold" /></div>
-                <div className="flex items-center gap-4 bg-white/5 p-5 rounded-2xl border border-white/10"><Facebook className="text-blue-500" size={20} /><input type="text" placeholder="Facebook URL" value={data.general.facebook} onChange={(e)=>setData({...data, general: {...data.general, facebook: e.target.value}})} className="bg-transparent border-none outline-none text-sm w-full font-bold" /></div>
-                <div className="flex items-center gap-4 bg-white/5 p-5 rounded-2xl border border-white/10"><YoutubeIcon className="text-red-500" size={20} /><input type="text" placeholder="Youtube URL" value={data.general.youtube} onChange={(e)=>setData({...data, general: {...data.general, youtube: e.target.value}})} className="bg-transparent border-none outline-none text-sm w-full font-bold" /></div>
+            <button 
+              onClick={() => setViewManager("noticias")}
+              className="group p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all text-left space-y-4 shadow-sm hover:shadow-2xl shadow-slate-200"
+            >
+              <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                <Newspaper size={28} />
+              </div>
+              <div>
+                <h3 className="font-black uppercase text-lg tracking-tighter text-slate-900">Noticias y Eventos</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{data.noticias.length} Entradas</p>
+              </div>
+            </button>
+          </div>
+
+          {/* BANDEJA DE ENTRADA MEJORADA */}
+          <section className="bg-white rounded-[3.5rem] p-10 border-2 border-slate-100 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-slate-900 text-white rounded-2xl">
+                    <Inbox size={20} />
+                </div>
+                <h2 className="font-black uppercase text-xs tracking-[0.2em] text-slate-900">Bandeja de Entrada</h2>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setSubmissionModal({ type: "Contacto", items: data.submissions.filter(s => s.type === "contacto") })}
+                  className="px-6 py-3 bg-slate-50 text-slate-900 rounded-full font-black uppercase text-[9px] tracking-widest hover:bg-slate-900 hover:text-white transition-all border border-slate-100"
+                >
+                  Consultas
+                </button>
+                <button 
+                  onClick={() => setSubmissionModal({ type: "Inscripciones", items: data.submissions.filter(s => s.type === "clases") })}
+                  className="px-6 py-3 bg-slate-50 text-slate-900 rounded-full font-black uppercase text-[9px] tracking-widest hover:bg-slate-900 hover:text-white transition-all border border-slate-100"
+                >
+                  Inscripciones
+                </button>
               </div>
             </div>
-
-            <div className="bg-white/5 p-10 rounded-[3rem] border border-white/10 space-y-10">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center"><label className="text-[11px] font-black uppercase text-slate-500">Docentes</label><button onClick={() => setViewList("teachers")} className="text-[10px] font-black text-green-400 uppercase tracking-widest cursor-pointer">Gestionar</button></div>
-                <div className="flex flex-wrap gap-2">{data.teachers.map((t, i) => <span key={i} className="px-4 py-2 bg-slate-800 rounded-xl text-[11px] font-bold">{t}</span>)}</div>
-              </div>
-              <div className="space-y-4 pt-6 border-t border-white/10">
-                <div className="flex justify-between items-center"><label className="text-[11px] font-black uppercase text-slate-500">Instrumentos</label><button onClick={() => setViewList("instruments")} className="text-[10px] font-black text-green-400 uppercase tracking-widest cursor-pointer">Gestionar</button></div>
-                <div className="flex flex-wrap gap-2">{data.instruments.map((ins, i) => <span key={i} className="px-4 py-2 bg-slate-800 rounded-xl text-[11px] font-bold">{ins}</span>)}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* MODAL LISTADO */}
-      <AnimatePresence>
-        {submissionModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setSubmissionModal(null)} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative bg-white w-full max-w-5xl h-[95vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden">
-              <header className="p-8 border-b bg-slate-50 flex justify-between items-center">
-                <h3 className="text-2xl font-black uppercase text-slate-900 tracking-tighter">{submissionModal.type}</h3>
-                <button onClick={() => setSubmissionModal(null)} className="p-3 bg-slate-200 hover:bg-slate-900 hover:text-white rounded-full transition-all cursor-pointer"><X size={20} /></button>
-              </header>
-              <div className="flex-1 overflow-y-auto p-8 space-y-4">
-                {submissionModal.items.length === 0 ? (
-                  <div className="text-center py-20 text-slate-300 font-black uppercase text-xs tracking-widest">Sin registros.</div>
-                ) : (
-                  submissionModal.items.map((sub) => (
-                    <div 
-                      key={sub.id} 
-                      className={`group p-6 rounded-2xl border-2 transition-all flex justify-between items-center cursor-pointer ${
-                        sub.status === 'leído' 
-                          ? 'bg-slate-50 border-transparent opacity-60' 
-                          : 'bg-white border-slate-100 hover:border-slate-900 shadow-sm'
-                      }`}
-                    >
-                      <div onClick={() => setSelectedSub(sub)} className="flex-1 flex gap-4 items-center">
-                        <div className={`p-3 rounded-xl ${sub.status === 'leído' ? 'bg-slate-200 text-slate-400' : 'bg-slate-900 text-white'}`}><Mail size={16}/></div>
-                        <div>
-                          <p className="text-sm font-black text-slate-900 uppercase">{sub.fullname}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{sub.email}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {sub.status !== 'leído' && <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />}
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); deleteSubmission(sub.id); }}
-                          className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all cursor-pointer opacity-0 group-hover:opacity-100"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                        <ChevronRight onClick={() => setSelectedSub(sub)} size={18} className="text-slate-300" />
+            
+            <div className="space-y-3">
+              {data.submissions.length === 0 ? (
+                <p className="text-center py-10 text-[10px] font-bold uppercase text-slate-400 tracking-widest">No hay nuevas consultas</p>
+              ) : (
+                data.submissions.slice(0, 6).map((sub: any) => (
+                  <div 
+                    key={sub.id} 
+                    onClick={() => setSelectedSub(sub)}
+                    className={`flex items-center justify-between p-5 rounded-3xl border-2 cursor-pointer transition-all
+                      ${sub.status === 'gestionado' ? 'bg-slate-50/50 border-transparent opacity-60' : 'bg-white border-slate-50 hover:border-slate-900 shadow-sm'}`}
+                  >
+                    <div className="flex items-center gap-5">
+                      <div className={`w-2 h-2 rounded-full ${
+                        sub.status === 'gestionado' ? 'bg-slate-300' : 
+                        sub.type === 'clases' ? 'bg-orange-500 animate-pulse' : 'bg-blue-500 animate-pulse'
+                      }`} />
+                      <div>
+                        <p className="font-black uppercase text-[10px] tracking-tighter text-slate-900">{sub.fullname}</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">
+                          {sub.type === 'clases' ? `${sub.role} - ${sub.instrument}` : 'Consulta General'}
+                        </p>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                    <div className="flex items-center gap-4">
+                        <span className="hidden md:block text-[8px] font-black uppercase text-slate-300 tracking-widest">
+                            {sub.created_at?.toDate ? new Date(sub.created_at.toDate()).toLocaleDateString() : ''}
+                        </span>
+                        <ChevronRight size={14} className="text-slate-300" />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
 
-      {/* MODAL DETALLE */}
+        {/* COLUMNA 2: CONFIGURACIÓN Y LISTAS */}
+        <div className="space-y-8">
+          <section className="bg-slate-900 text-white rounded-[3.5rem] p-10 space-y-8 shadow-2xl shadow-slate-300">
+            <div className="flex items-center gap-4">
+              <Settings2 size={24} />
+              <h2 className="font-black uppercase text-xs tracking-[0.2em]">Configuración General</h2>
+            </div>
+
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-[8px] font-black uppercase text-slate-500 ml-4 flex items-center gap-2">
+                    <Phone size={10}/> Teléfono
+                </label>
+                <input 
+                  type="text" 
+                  value={data.settings.phone || ""} 
+                  onChange={(e) => setData({...data, settings: {...data.settings, phone: e.target.value}})}
+                  className="w-full bg-slate-800 border-none rounded-2xl p-4 font-bold text-xs outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[8px] font-black uppercase text-slate-500 ml-4 flex items-center gap-2">
+                    <Mail size={10}/> Email Principal
+                </label>
+                <input 
+                  type="text" 
+                  value={data.settings.email || ""} 
+                  onChange={(e) => setData({...data, settings: {...data.settings, email: e.target.value}})}
+                  className="w-full bg-slate-800 border-none rounded-2xl p-4 font-bold text-xs outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"
+                />
+              </div>
+              
+              <div className="pt-2 space-y-4">
+                  <div className="flex items-center gap-3 bg-slate-800 p-2 rounded-2xl">
+                      <div className="p-2 bg-slate-700 rounded-lg text-pink-400"><Instagram size={14}/></div>
+                      <input 
+                        type="text" placeholder="Usuario"
+                        value={data.settings.instagram || ""} 
+                        onChange={(e) => setData({...data, settings: {...data.settings, instagram: e.target.value}})}
+                        className="bg-transparent border-none w-full text-xs font-bold outline-none text-white"
+                      />
+                  </div>
+                  <div className="flex items-center gap-3 bg-slate-800 p-2 rounded-2xl">
+                      <div className="p-2 bg-slate-700 rounded-lg text-blue-400"><Facebook size={14}/></div>
+                      <input 
+                        type="text" placeholder="Link"
+                        value={data.settings.facebook || ""} 
+                        onChange={(e) => setData({...data, settings: {...data.settings, facebook: e.target.value}})}
+                        className="bg-transparent border-none w-full text-xs font-bold outline-none text-white"
+                      />
+                  </div>
+                  <div className="flex items-center gap-3 bg-slate-800 p-2 rounded-2xl">
+                      <div className="p-2 bg-slate-700 rounded-lg text-red-500"><Youtube size={14}/></div>
+                      <input 
+                        type="text" placeholder="Link"
+                        value={data.settings.youtube || ""} 
+                        onChange={(e) => setData({...data, settings: {...data.settings, youtube: e.target.value}})}
+                        className="bg-transparent border-none w-full text-xs font-bold outline-none text-white"
+                      />
+                  </div>
+              </div>
+
+              <button 
+                onClick={() => handleUpdateSettings(data.settings)}
+                className="w-full py-5 bg-white text-slate-900 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] hover:bg-green-400 transition-all flex items-center justify-center gap-3 mt-4"
+              >
+                <Save size={16} /> Guardar Cambios
+              </button>
+            </div>
+          </section>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button onClick={() => setViewList("teachers")} className="flex flex-col items-center justify-center p-6 bg-white rounded-[2.5rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-3 group">
+              <div className="p-4 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                <Users size={24} className="text-slate-900 group-hover:text-white" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-900">Docentes</span>
+            </button>
+
+            <button onClick={() => setViewList("instruments")} className="flex flex-col items-center justify-center p-6 bg-white rounded-[2.5rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-3 group">
+              <div className="p-4 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                <Music size={24} className="text-slate-900 group-hover:text-white" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-900">Instrumentos</span>
+            </button>
+
+            <button onClick={() => setViewList("admins")} className="col-span-2 flex flex-col items-center justify-center p-6 bg-white rounded-[2.5rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-3 group">
+              <div className="p-4 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                <ShieldCheck size={24} className="text-slate-900 group-hover:text-white" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-900">Gestionar Administradores</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* MODAL DE DETALLE DE CONSULTA (DINÁMICO) */}
       <AnimatePresence>
         {selectedSub && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-            <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setSelectedSub(null)} />
-            <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} className="relative bg-white w-full max-w-lg rounded-[3rem] shadow-3xl overflow-hidden">
-              <div className="p-10 space-y-8">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedSub(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white w-full max-w-xl rounded-[4rem] overflow-hidden shadow-2xl">
+              <div className="p-10 md:p-14 space-y-8">
                 <div className="flex justify-between items-start">
-                  <div className={`p-4 rounded-2xl ${selectedSub.status === 'leído' ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white'}`}><MessageSquare /></div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => deleteSubmission(selectedSub.id)}
-                      className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all cursor-pointer"
-                    >
-                      <Trash2 size={20}/>
-                    </button>
-                    <button onClick={() => setSelectedSub(null)} className="p-2 hover:bg-slate-100 rounded-full transition-all cursor-pointer"><X size={24}/></button>
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                        {selectedSub.type === 'clases' ? (
+                            <span className={`px-4 py-1.5 rounded-full text-[8px] font-black uppercase tracking-widest ${selectedSub.role === 'docente' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'}`}>
+                                {selectedSub.role}
+                            </span>
+                        ) : (
+                            <span className="px-4 py-1.5 bg-blue-100 text-blue-600 rounded-full text-[8px] font-black uppercase tracking-widest">
+                                Consulta General
+                            </span>
+                        )}
+                        <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">
+                            {selectedSub.created_at?.toDate ? new Date(selectedSub.created_at.toDate()).toLocaleString() : ''}
+                        </span>
+                    </div>
+                    <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">{selectedSub.fullname}</h2>
+                  </div>
+                  <button onClick={() => setSelectedSub(null)} className="p-4 bg-slate-50 rounded-full hover:bg-slate-100 transition-all text-slate-900"><X size={20}/></button>
+                </div>
+                
+                {/* INFO DE CONTACTO */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-6 bg-slate-50 rounded-3xl space-y-1 border border-slate-100">
+                    <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Mail size={10}/> Email de contacto</p>
+                    <p className="font-bold text-slate-900 text-sm break-all">{selectedSub.email}</p>
+                  </div>
+                  <div className="p-6 bg-slate-50 rounded-3xl space-y-1 border border-slate-100">
+                    <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Phone size={10}/> Teléfono / WhatsApp</p>
+                    <p className="font-bold text-slate-900 text-sm">{selectedSub.phone || "No especificado"}</p>
                   </div>
                 </div>
-                <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Mensaje:</h4>
-                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 italic text-slate-700 text-sm leading-relaxed">
-                    "{selectedSub.message || selectedSub.level_or_experience || selectedSub.instrument || 'Sin detalles.'}"
+
+                {/* INFO ESPECÍFICA SEGÚN TIPO */}
+                {selectedSub.type === 'clases' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-6 bg-orange-50/50 rounded-3xl space-y-1 border border-orange-100">
+                      <p className="text-[8px] font-black uppercase text-orange-400 tracking-widest flex items-center gap-2"><Music size={10}/> Instrumento</p>
+                      <p className="font-bold text-orange-900 text-sm">{selectedSub.instrument}</p>
+                    </div>
+                    <div className="p-6 bg-orange-50/50 rounded-3xl space-y-1 border border-orange-100">
+                      <p className="text-[8px] font-black uppercase text-orange-400 tracking-widest flex items-center gap-2"><GraduationCap size={10}/> Experiencia</p>
+                      <p className="font-bold text-orange-900 text-sm">{selectedSub.level_or_experience}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-50 p-4 rounded-2xl text-[10px] font-black uppercase text-slate-900"><Mail size={12} className="mb-2 text-slate-400"/> {selectedSub.email}</div>
-                  <div className="bg-slate-50 p-4 rounded-2xl text-[10px] font-black uppercase text-slate-900"><Phone size={12} className="mb-2 text-slate-400"/> {selectedSub.phone || 'N/A'}</div>
-                </div>
-                {selectedSub.status !== 'leído' && (
-                  <button 
-                    onClick={() => markAsRead(selectedSub.id)} 
-                    className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-green-600 transition-all shadow-xl cursor-pointer"
-                  >
-                    <CheckCircle size={16}/> Marcar como Gestionado
-                  </button>
+                ) : (
+                  <div className="p-8 bg-blue-50/30 rounded-[2.5rem] space-y-3 border border-blue-100">
+                    <p className="text-[8px] font-black uppercase text-blue-400 tracking-widest flex items-center gap-2"><MessageSquare size={10}/> Mensaje recibido</p>
+                    <p className="font-medium text-slate-700 leading-relaxed text-sm italic">"{selectedSub.message}"</p>
+                  </div>
                 )}
+
+                {/* ACCIONES */}
+                <div className="flex flex-col md:flex-row gap-4 pt-4">
+                  <button 
+                    onClick={() => updateSubStatus(selectedSub.id, selectedSub.status === 'gestionado' ? 'pendiente' : 'gestionado')}
+                    className={`flex-1 py-5 rounded-[2rem] font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all shadow-xl
+                        ${selectedSub.status === 'gestionado' ? 'bg-slate-200 text-slate-500' : 'bg-slate-900 text-white hover:bg-green-600'}`}
+                  >
+                    <CheckCircle size={16}/> {selectedSub.status === 'gestionado' ? "Reabrir Consulta" : "Marcar como Gestionado"}
+                  </button>
+                  <button 
+                    onClick={() => deleteSubmission(selectedSub.id)}
+                    className="p-5 bg-red-50 text-red-500 rounded-[2rem] hover:bg-red-500 hover:text-white transition-all shadow-xl flex items-center justify-center"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* COMPONENTES DE GESTIÓN DE ITEMS */}
+      {/* MODALES DE LISTAS (POR TIPO) */}
+      <AnimatePresence>
+        {submissionModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSubmissionModal(null)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
+                <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="relative bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                    <div className="p-10 border-b border-slate-50 flex justify-between items-center">
+                        <h3 className="font-black uppercase text-xl tracking-tighter text-slate-900">Bandeja de {submissionModal.type}</h3>
+                        <button onClick={() => setSubmissionModal(null)} className="p-3 bg-slate-50 rounded-full text-slate-400 hover:text-slate-900"><X size={18}/></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-10 space-y-4">
+                        {submissionModal.items.length === 0 ? (
+                            <p className="text-center py-20 text-[10px] font-bold uppercase text-slate-300 tracking-widest">No hay registros en esta categoría</p>
+                        ) : (
+                            submissionModal.items.map((sub: any) => (
+                                <div key={sub.id} onClick={() => { setSelectedSub(sub); setSubmissionModal(null); }} className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem] cursor-pointer hover:bg-slate-900 group transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${sub.status === 'gestionado' ? 'bg-slate-300' : 'bg-green-500'}`} />
+                                        <div>
+                                            <p className="font-black uppercase text-[10px] tracking-tight text-slate-900 group-hover:text-white">{sub.fullname}</p>
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{sub.email}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-[8px] font-black text-slate-300 uppercase">{sub.instrument || sub.type}</span>
+                                        <ChevronRight size={14} className="text-slate-300 group-hover:text-white" />
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </motion.div>
+            </div>
+        )}
+      </AnimatePresence>
+
+      {/* GESTORES DE COLECCIONES Y LISTAS */}
       {viewManager && (
         <CollectionManager 
           type={viewManager}
@@ -356,15 +420,25 @@ export default function AdminDashboard() {
           onDelete={async (id) => { await deleteItemAdmin(viewManager!, id); refreshData(); }}
         />
       )}
+
       {viewList && (
         <ListManager
-          title={viewList === "teachers" ? "Base de Docentes" : "Lista de Instrumentos"}
-          list={viewList === "teachers" ? data.teachers : data.instruments}
+          title={
+            viewList === "teachers" ? "Base de Docentes" : 
+            viewList === "instruments" ? "Lista de Instrumentos" : 
+            "Administradores Permitidos"
+          }
+          list={
+            viewList === "teachers" ? data.teachers : 
+            viewList === "instruments" ? data.instruments : 
+            data.admins
+          }
           onClose={() => setViewList(null)}
           onUpdate={async (newList) => {
             if (viewList === "teachers") await updateTeachersAdmin(newList);
-            else await updateInstrumentsAdmin(newList);
-            await refreshData();
+            else if (viewList === "instruments") await updateInstrumentsAdmin(newList);
+            else await updateAdminsAdmin(newList);
+            refreshData();
           }}
         />
       )}

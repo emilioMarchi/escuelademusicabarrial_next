@@ -225,3 +225,25 @@ export const uploadFileOnlyAdmin = async (formData: FormData) => {
     return { success: false, error: String(error) };
   }
 };
+
+
+
+// --- GESTIÓN DE ADMINISTRADORES ---
+
+export const getAdminsAdmin = async () => {
+  try {
+    const doc = await adminDb.collection("settings").doc("admins").get();
+    return { success: true, data: doc.exists ? doc.data()?.emails || [] : [] };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+};
+
+export const updateAdminsAdmin = async (emails: string[]) => {
+  try {
+    await adminDb.collection("settings").doc("admins").set({ emails }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+};
