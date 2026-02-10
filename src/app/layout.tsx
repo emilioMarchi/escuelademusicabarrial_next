@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css"; // <-- ESTO NO SE MUEVE
+import "./globals.css"; 
 import { AuthProvider } from "@/context/AuthContext";
 
 const geistSans = Geist({
@@ -12,6 +12,21 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+// --- AGREGAMOS ESTO ---
+export const metadata: Metadata = {
+  metadataBase: new URL("https://escuelademusicabarrial.ar"), // Tu dominio real
+  title: {
+    default: "Escuela de Música Barrial",
+    template: "%s | Escuela de Música Barrial",
+  },
+  description: "Espacio de formación, contención y arte en el corazón del barrio.",
+  icons: {
+    icon: "/favicon.png",      // Archivo en la carpeta public/favicon.png
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
+};
 
 export default function RootLayout({
   children,
