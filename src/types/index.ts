@@ -124,3 +124,14 @@ export interface UniversalCardData {
 export interface PageWithSections extends PageContent {
   renderedSections: SectionData[];
 }
+
+
+export interface GalleryVideo {
+  id: string;
+  url: string; // URL de Storage o link de YouTube
+  type: 'file' | 'link';
+  title: string;
+  description?: string;
+  created_at: any;
+  order: number;
+}

@@ -4,6 +4,7 @@ const nextConfig = {
     // Probamos con esta configuración que es la que Next.js 14/15 
     // requiere para túneles como ngrok
     serverActions: {
+      bodySizeLimit: '50mb', // Aumentamos el límite a 50MB para soportar videos y fotos pesadas
       allowedOrigins: [
         "2590-2803-9800-b802-81b2-3596-f3c1-55e4-f2bb.ngrok-free.app"
       ],

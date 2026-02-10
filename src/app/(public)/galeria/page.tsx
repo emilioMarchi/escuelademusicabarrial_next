@@ -1,5 +1,5 @@
 // src/app/(public)/galeria/page.tsx
-import { getGalleryImagesAdmin } from "@/services/admin-services";
+import { getGalleryImagesAdmin, addGalleryLinkAdmin } from "@/services/admin-services";
 import { getPageBySlug } from "@/services/content";
 import GalleryClient from "./GalleryClient";
 import { Metadata } from "next";

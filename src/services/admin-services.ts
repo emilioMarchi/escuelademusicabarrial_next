@@ -2,7 +2,7 @@
 "use server";
 
 import { adminDb, adminStorage } from "@/lib/firebase-admin";
-import { PageContent, Donation, GalleryImage } from "@/types";
+import { PageContent, Donation, GalleryImage, GalleryVideo } from "@/types";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -242,6 +242,60 @@ export const getAdminsAdmin = async () => {
 export const updateAdminsAdmin = async (emails: string[]) => {
   try {
     await adminDb.collection("settings").doc("admins").set({ emails }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+};
+
+
+// --- GESTIÓN DE VIDEOS DE GALERÍA ---
+
+export const getGalleryVideosAdmin = async () => {
+  try {
+    const snapshot = await adminDb.collection("gallery_videos").orderBy("order", "asc").get();
+    const videos = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
+    return { success: true, data: videos as GalleryVideo[] };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+};
+
+export const addVideoAdmin = async (video: Omit<GalleryVideo, 'id'>) => {
+  try {
+    const docRef = await adminDb.collection("gallery_videos").add({
+      ...video,
+      created_at: new Date()
+    });
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+};
+
+export const deleteVideoAdmin = async (id: string, url: string, type: 'file' | 'link') => {
+  try {
+    await adminDb.collection("gallery_videos").doc(id).delete();
+    // Si es un archivo, lo borramos de Storage
+    if (type === 'file') {
+      const bucket = adminStorage.bucket("escuelita-db.firebasestorage.app");
+      const fileName = url.split('/').pop()?.split('?')[0];
+      if (fileName) await bucket.file(`gallery/${fileName}`).delete();
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+};
+
+export const addGalleryLinkAdmin = async (url: string, caption: string) => {
+  try {
+    await adminDb.collection("gallery").add({
+      url,
+      caption,
+      order: 0, // Se agrega al inicio siguiendo tu lógica actual
+      created_at: new Date().toISOString()
+    });
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
