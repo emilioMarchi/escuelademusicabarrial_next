@@ -1,4 +1,3 @@
-// src/app/(public)/novedades/[slug]/page.tsx
 import { getCollectionAdmin } from "@/services/admin-services";
 import Contact from "@/components/sections/contact/Contact";
 import { ArrowLeft, Calendar, Share2 } from "lucide-react";
@@ -9,7 +8,6 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-// --- GENERACIÓN DE METADATOS DINÁMICOS ---
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { data: news } = await getCollectionAdmin("noticias");
@@ -23,15 +21,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: newsItem.title,
       description: newsItem.excerpt || newsItem.description?.substring(0, 160),
-      images: newsItem.image_url ? [{ url: newsItem.image_url }] : [],
+      url: `https://escuelademusicabarrial.ar/novedades/${slug}`,
+      images: [
+        {
+          url: "/favicon.png", // Forzamos el favicon como miniatura
+          width: 1200,
+          height: 630,
+        },
+      ],
       type: 'article',
-      publishedTime: newsItem.date,
     },
     twitter: {
-      card: "summary_large_image",
-      title: newsItem.title,
-      description: newsItem.excerpt,
-      images: newsItem.image_url ? [newsItem.image_url] : [],
+      card: "summary",
+      images: ["/favicon.png"],
     }
   };
 }
@@ -48,7 +50,7 @@ export default async function NewsDetailPage({ params }: Props) {
 
   return (
     <article className="w-full bg-white">
-      <nav className="w-full pt-8 pb-4 px-6 md:px-16 flex justify-between items-center">
+      <nav className="w-full pt-8 pb-4 px-6 md:px-16 flex justify-between items-center max-w-7xl mx-auto">
         <Link href="/noticias" className="flex items-center gap-2 text-slate-400 hover:text-orange-600 transition-colors group">
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           <span className="text-[9px] font-black uppercase tracking-[0.2em]">Novedades</span>
