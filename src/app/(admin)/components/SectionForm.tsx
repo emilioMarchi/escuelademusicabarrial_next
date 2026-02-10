@@ -16,9 +16,10 @@ interface Props {
   section: SectionData;
   items?: any[];
   onChange: (updatedContent: any, updatedSettings?: any) => void;
+  onSave?: () => void;
 }
 
-export default function SectionForm({ section, items = [], onChange }: Props) {
+export default function SectionForm({ section, items = [], onChange, onSave }: Props) {
   const { isDirty, setDirty } = useDirtyState();
   const slideFileRef = useRef<HTMLInputElement>(null);
   const blockFileRef = useRef<HTMLInputElement>(null);
@@ -75,8 +76,18 @@ export default function SectionForm({ section, items = [], onChange }: Props) {
         } else {
           handleUpdate({ ...content, image_url: url });
         }
+        
+        // DISPARO DE GUARDADO AUTOMÁTICO
+        // Usamos un pequeño delay para asegurar que el estado de 'onChange' se procese primero
+        if (onSave) {
+          setTimeout(() => onSave(), 100);
+        }
       }
-    } catch (e) { console.error(e); } finally { setUploading(false); }
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setUploading(false); 
+    }
   };
 
   // --- LÓGICA DE HERO (SLIDES Y BOTONES) ---
@@ -240,11 +251,11 @@ export default function SectionForm({ section, items = [], onChange }: Props) {
               <div className="space-y-6">
                 <div className="flex gap-4">
                     <button onClick={() => handleUpdate(content, {...settings, layout: 'image-left'})} 
-                        className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-widest transition-all ${settings.layout === 'image-left' ? 'border-slate-900 bg-slate-900 text-white shadow-lg' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                      className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-widest transition-all ${settings.layout === 'image-left' ? 'border-slate-900 bg-slate-900 text-white shadow-lg' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
                         <AlignLeft size={16}/> Foto Izquierda
                     </button>
                     <button onClick={() => handleUpdate(content, {...settings, layout: 'image-right'})} 
-                        className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-widest transition-all ${settings.layout === 'image-right' ? 'border-slate-900 bg-slate-900 text-white shadow-lg' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                      className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-widest transition-all ${settings.layout === 'image-right' ? 'border-slate-900 bg-slate-900 text-white shadow-lg' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
                         <AlignRight size={16}/> Foto Derecha
                     </button>
                 </div>
@@ -292,12 +303,12 @@ export default function SectionForm({ section, items = [], onChange }: Props) {
                     <label className="text-[10px] font-black uppercase text-slate-400 ml-4">Modalidad Formulario</label>
                     <div className="flex gap-3">
                         <button onClick={() => handleUpdate(content, {...settings, form_type: 'general'})} 
-                            className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${settings.form_type === 'general' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                          className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${settings.form_type === 'general' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
                             <MessageSquare size={20}/>
                             <span className="text-[9px] font-black uppercase tracking-widest">General</span>
                         </button>
                         <button onClick={() => handleUpdate(content, {...settings, form_type: 'clases'})} 
-                            className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${settings.form_type === 'clases' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                          className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${settings.form_type === 'clases' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
                             <UserPlus size={20}/>
                             <span className="text-[9px] font-black uppercase tracking-widest">Inscripción</span>
                         </button>
