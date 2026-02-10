@@ -7,18 +7,15 @@ import { Metadata } from "next";
 
 export async function generateMetadata(): Promise<Metadata> {
   const pageData = await getPageBySlug("inicio");
-  
-  // Si en la DB dice "Escuela de Música Barrial", lo usamos tal cual
   const siteTitle = pageData?.meta_title || "Escuela de Música Barrial";
 
   return {
     title: {
-      absolute: siteTitle // LA CLAVE: 'absolute' anula la repetición del layout
+      absolute: siteTitle // Fuerza a que sea solo este texto
     },
     description: pageData?.meta_description || "Bienvenidos a la Escuela de Música del barrio.",
   };
 }
-
 export default async function HomePage() {
   const pageData = await getPageBySlug("inicio");
   

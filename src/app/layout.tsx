@@ -16,9 +16,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://escuelademusicabarrial.ar"),
   title: {
-    // El %s es el espacio que llenarán las páginas internas (ej: "Clases")
+    // Esto evita que se duplique: el template solo se usa en páginas hijas
     template: "%s | Escuela de Música Barrial",
-    // Título por defecto si una página no define uno
     default: "Escuela de Música Barrial",
   },
   description: "Espacio de formación, contención y arte en el corazón del barrio.",
