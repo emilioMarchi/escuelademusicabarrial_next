@@ -2,9 +2,10 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useDirtyState } from "@/context/DirtyStateContext";
+import { useAuth } from "@/context/AuthContext";
 import { 
   LayoutDashboard, ChevronDown, ChevronRight, 
-  LogOut, AlertCircle, Layers, DollarSign 
+  LogOut, AlertCircle, Layers, DollarSign, Image as ImageIcon 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -21,9 +22,11 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isDirty, setDirty } = useDirtyState();
+  const { logout } = useAuth();
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   
-  const [pagesOpen, setPagesOpen] = useState(true);
+  // Ajustado para que comience cerrado
+  const [pagesOpen, setPagesOpen] = useState(false);
 
   useEffect(() => {
     if (pages.some(p => p.path === pathname)) {
@@ -39,9 +42,18 @@ export default function Sidebar() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/login");
+    } catch (error) {
+      console.error("Error al cerrar sesión", error);
+    }
+  };
+
   return (
     <aside className="w-72 bg-white border-r border-slate-100 flex flex-col h-screen sticky top-0">
-      <div className="p-8">
+      <div className="p-8 flex flex-col h-full">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
             <span className="text-white font-black text-xl">E</span>
@@ -49,53 +61,51 @@ export default function Sidebar() {
           <span className="font-black uppercase tracking-tighter text-xl text-slate-900">EMB Admin</span>
         </div>
 
-        <nav className="space-y-2">
-          {/* BOTÓN DASHBOARD PRINCIPAL */}
-          <button
+        <nav className="space-y-2 flex-1">
+          {/* Dashboard */}
+          <button 
             onClick={() => handleNavigation("/dashboard")}
-            className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
-              pathname === "/dashboard" 
-                ? "bg-slate-900 text-white shadow-xl shadow-slate-200" 
-                : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
-            }`}
+            className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all
+              ${pathname === "/dashboard" ? "bg-slate-900 text-white shadow-xl" : "text-slate-400 hover:bg-slate-50"}`}
           >
-            <LayoutDashboard size={18} />
-            Dashboard
+            <LayoutDashboard size={18} /> Dashboard
           </button>
 
-          {/* NUEVO: BOTÓN PAGOS Y BALANCE */}
-          <button
-            onClick={() => handleNavigation("/dashboard/pagos")}
-            className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
-              pathname === "/dashboard/pagos" 
-                ? "bg-slate-900 text-white shadow-xl shadow-slate-200" 
-                : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
-            }`}
+          {/* Balances */}
+          <button 
+            onClick={() => handleNavigation("/dashboard/balances")}
+            className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all
+              ${pathname === "/dashboard/balances" ? "bg-slate-900 text-white shadow-xl" : "text-slate-400 hover:bg-slate-50"}`}
           >
-            <DollarSign size={18} />
-            Pagos y Balance
+            <DollarSign size={18} /> Balances
           </button>
 
-          {/* MENÚ COLAPSABLE DE PÁGINAS */}
+          {/* Galería - Botón Independiente */}
+          <button 
+            onClick={() => handleNavigation("/dashboard/galeria")}
+            className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all
+              ${pathname === "/dashboard/galeria" ? "bg-slate-900 text-white shadow-xl" : "text-slate-400 hover:bg-slate-50"}`}
+          >
+            <ImageIcon size={18} /> Galería
+          </button>
+
+          {/* Menú de Páginas */}
           <div className="space-y-1">
-            <button
+            <button 
               onClick={() => setPagesOpen(!pagesOpen)}
-              className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                pages.some(p => p.path === pathname) 
-                  ? "text-slate-900 bg-slate-50" 
-                  : "text-slate-400 hover:bg-slate-50"
-              }`}
+              className="w-full flex items-center justify-between px-6 py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 rounded-2xl transition-all"
             >
-              <div className="flex items-center gap-3">
-                <Layers size={18} />
-                Páginas
+              <div className="flex items-center gap-4">
+                <Layers size={18} /> Páginas
               </div>
-              {pagesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <motion.div animate={{ rotate: pagesOpen ? 180 : 0 }}>
+                <ChevronDown size={14} />
+              </motion.div>
             </button>
 
             <AnimatePresence>
               {pagesOpen && (
-                <motion.div
+                <motion.div 
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
@@ -106,15 +116,9 @@ export default function Sidebar() {
                       <button
                         key={page.path}
                         onClick={() => handleNavigation(page.path)}
-                        className={`w-full flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${
-                          pathname === page.path
-                            ? "text-slate-900 bg-white"
-                            : "text-slate-400 hover:text-slate-600 hover:bg-slate-50/50"
-                        }`}
+                        className={`w-full text-left px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all
+                          ${pathname === page.path ? "text-slate-900 bg-slate-50" : "text-slate-400 hover:text-slate-600"}`}
                       >
-                        <div className={`w-1.5 h-1.5 rounded-full transition-all ${
-                          pathname === page.path ? "bg-green-500 scale-125" : "bg-slate-200"
-                        }`} />
                         {page.name}
                       </button>
                     ))}
@@ -124,32 +128,32 @@ export default function Sidebar() {
             </AnimatePresence>
           </div>
         </nav>
+
+        {/* Cerrar Sesión */}
+        <div className="pt-6 border-t border-slate-50">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-red-400 hover:bg-red-50 transition-all"
+          >
+            <LogOut size={18} /> Cerrar Sesión
+          </button>
+        </div>
       </div>
 
-      <div className="mt-auto p-8 space-y-4">
-        <button 
-          onClick={() => { /* Lógica logout */ }}
-          className="w-full flex items-center gap-3 px-5 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all"
-        >
-          <LogOut size={18} />
-          Cerrar Sesión
-        </button>
-      </div>
-
-      {/* MODAL DE ADVERTENCIA */}
+      {/* Modal de cambios pendientes */}
       <AnimatePresence>
         {pendingPath && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full shadow-2xl text-center"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white p-10 rounded-[3rem] max-w-sm w-full text-center shadow-2xl"
             >
               <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertCircle size={32} />
               </div>
               <h3 className="text-2xl font-black uppercase text-slate-900 leading-tight mb-2">Cambios sin guardar</h3>
-              <p className="text-slate-500 text-sm font-medium mb-8">Si sales ahora perderás las ediciones realizadas en esta página.</p>
+              <p className="text-slate-500 text-sm font-medium mb-8">Si sales ahora perderás las ediciones realizadas.</p>
               <div className="space-y-3">
                 <button 
                   onClick={() => setPendingPath(null)} 
