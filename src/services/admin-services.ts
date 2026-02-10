@@ -6,8 +6,22 @@ import { PageContent, Donation, GalleryImage, GalleryVideo } from "@/types";
 import { revalidatePath } from "next/cache";
 
 /**
+ * UTILS: Generador de Slugs
+ */
+const generateSlug = (text: string) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Elimina acentos
+    .replace(/\s+/g, "-")           // Reemplaza espacios con -
+    .replace(/[^\w-]+/g, "")       // Elimina caracteres no válidos
+    .replace(/--+/g, "-")           // Elimina guiones dobles
+    .trim();
+};
+
+/**
  * UTILS: Serialización de datos
- * Convierte Timestamps de Firebase a Strings ISO para Next.js
  */
 const serializeData = (data: any) => {
   if (!data) return data;
@@ -44,7 +58,6 @@ export const savePageConfigAdmin = async (slug: string, data: any) => {
     const docId = snapshot.docs[0].id;
     await adminDb.collection("pages").doc(docId).update({ ...data, last_updated: new Date() });
     
-    // REVALIDACIÓN
     revalidatePath(`/${slug}`);
     revalidatePath(`/dashboard/${slug}`);
     revalidatePath("/", "layout");
@@ -71,14 +84,26 @@ export const getCollectionAdmin = async (collectionName: string) => {
 export const upsertItemAdmin = async (collectionName: string, item: any) => {
   try {
     const { id, ...rest } = item;
-    const dataToSave = { ...rest, last_updated: new Date() };
+    
+    // GENERACIÓN AUTOMÁTICA DE SLUG
+    let slug = rest.slug;
+    const nameOrTitle = rest.name || rest.title;
+    if (nameOrTitle) {
+      slug = generateSlug(nameOrTitle);
+    }
+
+    const dataToSave = { 
+      ...rest, 
+      slug, 
+      last_updated: new Date() 
+    };
+
     if (id) {
       await adminDb.collection(collectionName).doc(id).set(dataToSave, { merge: true });
     } else {
       await adminDb.collection(collectionName).add(dataToSave);
     }
     
-    // REVALIDACIÓN: Para que impacte en Home, Clases o Noticias
     revalidatePath("/");
     revalidatePath("/clases");
     revalidatePath("/novedades");
@@ -274,8 +299,10 @@ export const getGalleryVideosAdmin = async () => {
 
 export const addVideoAdmin = async (video: Omit<GalleryVideo, 'id'>) => {
   try {
+    const slug = video.title ? generateSlug(video.title) : "";
     const docRef = await adminDb.collection("gallery_videos").add({
       ...video,
+      slug,
       created_at: new Date()
     });
     revalidatePath("/galeria");
@@ -302,9 +329,11 @@ export const deleteVideoAdmin = async (id: string, url: string, type: 'file' | '
 
 export const addGalleryLinkAdmin = async (url: string, caption: string) => {
   try {
+    const slug = caption ? generateSlug(caption) : "";
     await adminDb.collection("gallery").add({
       url,
       caption,
+      slug,
       order: 0,
       created_at: new Date().toISOString()
     });

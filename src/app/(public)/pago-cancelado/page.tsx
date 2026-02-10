@@ -1,16 +1,26 @@
+// src/app/(public)/pago-cancelado/page.tsx
 import { adminDb } from "@/lib/firebase-admin";
 import Link from "next/link";
-import { XCircle, ArrowLeft, Heart, Calendar } from "lucide-react";
+import { XCircle, ArrowLeft, Heart } from "lucide-react";
+import { Metadata } from "next";
 
 interface Props {
   searchParams: Promise<{ id?: string }>;
 }
 
+// --- METADATOS ---
+export const metadata: Metadata = {
+  title: "Aporte cancelado | Escuela de Música Barrial",
+  description: "La operación de donación fue cancelada. No se realizó ningún cargo.",
+  robots: {
+    index: false, // Evitamos que esta página aparezca en los resultados de Google
+  }
+};
+
 export default async function PagoCanceladoPage({ searchParams }: Props) {
   const { id } = await searchParams;
   let donationData = null;
 
-  // Si hay ID, buscamos la info en Firebase
   if (id) {
     const doc = await adminDb.collection("donations").doc(id).get();
     if (doc.exists) {
@@ -21,8 +31,6 @@ export default async function PagoCanceladoPage({ searchParams }: Props) {
   return (
     <main className="min-h-screen bg-white flex items-center justify-center px-6 pt-20">
       <div className="max-w-md w-full text-center">
-        
-        {/* Icono de Cancelado */}
         <div className="relative inline-block mb-8">
           <div className="absolute inset-0 bg-red-100 rounded-full scale-150 blur-2xl opacity-50" />
           <XCircle size={80} className="relative text-red-500 mx-auto" strokeWidth={1.5} />
@@ -32,7 +40,6 @@ export default async function PagoCanceladoPage({ searchParams }: Props) {
           Aporte cancelado
         </h1>
 
-        {/* --- DATOS DEL PAGO CANCELADO --- */}
         {donationData ? (
           <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6 mb-10 text-left">
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 border-b border-slate-200 pb-2">
@@ -59,7 +66,6 @@ export default async function PagoCanceladoPage({ searchParams }: Props) {
           </p>
         )}
 
-        {/* Acciones */}
         <div className="flex flex-col gap-4">
           <Link 
             href="/como-ayudar" 
@@ -67,7 +73,6 @@ export default async function PagoCanceladoPage({ searchParams }: Props) {
           >
             Intentar nuevamente
           </Link>
-          
           <Link 
             href="/" 
             className="flex items-center justify-center gap-2 text-slate-400 font-black uppercase text-[9px] tracking-widest hover:text-slate-900 transition-colors py-4"
@@ -76,7 +81,6 @@ export default async function PagoCanceladoPage({ searchParams }: Props) {
           </Link>
         </div>
 
-        {/* Footer */}
         <div className="mt-16 pt-8 border-t border-slate-50 flex items-center justify-center gap-2 text-slate-300">
           <Heart size={12} fill="currentColor" />
           <span className="text-[8px] font-black uppercase tracking-widest">

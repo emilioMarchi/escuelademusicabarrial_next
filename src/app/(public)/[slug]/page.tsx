@@ -1,6 +1,6 @@
 import { getPageBySlug, getElementBySlug } from "@/services/content"; 
 import { getCollectionByCategory } from "@/services/pages-services";
-import { Class, News, SectionData } from "@/types"; // Importamos SectionData
+import { Class, News, SectionData } from "@/types";
 import SectionRenderer from "@/components/SectionRenderer";
 import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
@@ -14,11 +14,35 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   
   if (slug === "gracias") return { title: "¡Gracias por tu donación!" };
   
+  // Intentar obtener data de página
   const pageData = await getPageBySlug(slug);
-  if (pageData) return { title: pageData.meta_title };
+  if (pageData) {
+    return {
+      title: pageData.meta_title || pageData.header_title,
+      description: pageData.meta_description,
+      openGraph: {
+        title: pageData.meta_title || pageData.header_title,
+        description: pageData.meta_description,
+        images: pageData.header_image_url ? [{ url: pageData.header_image_url }] : [],
+      }
+    };
+  }
 
+  // Intentar obtener detalle de ítem (Noticia o Clase si cae aquí)
   const element = await getElementBySlug(slug);
-  if (element) return { title: element.name || element.title };
+  if (element) {
+    const title = element.name || element.title;
+    const desc = element.description || element.excerpt;
+    return {
+      title: `${title} | Escuela de Música Barrial`,
+      description: desc?.substring(0, 160),
+      openGraph: {
+        title: title,
+        description: desc,
+        images: element.image_url ? [{ url: element.image_url }] : [],
+      }
+    };
+  }
   
   return { title: "Escuela de Música Barrial" };
 }
@@ -28,7 +52,6 @@ export default async function DynamicRouterPage({ params }: Props) {
 
   if (slug === "inicio") redirect("/");
 
-  // --- PASO 0: Intercepción manual para Mercado Pago ---
   if (slug === "gracias") {
     return (
       <main>
@@ -38,13 +61,12 @@ export default async function DynamicRouterPage({ params }: Props) {
             type: "donacion-exitosa",
             content: {},
             settings: {}
-          } as SectionData} // Tipado correctamente en lugar de 'any'
+          } as SectionData} 
         />
       </main>
     );
   }
 
-  // --- PASO 1: ¿Es una Página Dinámica? ---
   const pageData = await getPageBySlug(slug);
 
   if (pageData) {
@@ -55,7 +77,6 @@ export default async function DynamicRouterPage({ params }: Props) {
 
     return (
       <main>
-        {/* LA CLAVE: Tipamos 'section' como SectionData e 'index' como number */}
         {pageData.renderedSections.map((section: SectionData, index: number) => {
           let itemsToPass: any[] = [];
           if (section.type === "clases") itemsToPass = dbClasses;
@@ -74,7 +95,6 @@ export default async function DynamicRouterPage({ params }: Props) {
     );
   }
 
-  // --- PASO 2: ¿Es el detalle de una Clase o Noticia? ---
   const element = await getElementBySlug(slug); 
   
   if (element) {

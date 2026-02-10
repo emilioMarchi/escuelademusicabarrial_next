@@ -1,22 +1,53 @@
+// src/app/(public)/novedades/[slug]/page.tsx
 import { getCollectionAdmin } from "@/services/admin-services";
 import Contact from "@/components/sections/contact/Contact";
-import { ArrowLeft, Calendar, Clock, Share2 } from "lucide-react";
+import { ArrowLeft, Calendar, Share2 } from "lucide-react";
 import Link from "next/link";
+import { Metadata } from "next";
 
-export default async function NewsDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+interface Props {
+  params: Promise<{ slug: string }>;
+}
+
+// --- GENERACIÓN DE METADATOS DINÁMICOS ---
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const { data: news } = await getCollectionAdmin("noticias");
+  const newsItem = news?.find((n: any) => n.slug === slug);
+
+  if (!newsItem) return { title: "Noticia no encontrada" };
+
+  return {
+    title: `${newsItem.title} | Novedades`,
+    description: newsItem.excerpt || newsItem.description?.substring(0, 160),
+    openGraph: {
+      title: newsItem.title,
+      description: newsItem.excerpt || newsItem.description?.substring(0, 160),
+      images: newsItem.image_url ? [{ url: newsItem.image_url }] : [],
+      type: 'article',
+      publishedTime: newsItem.date,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: newsItem.title,
+      description: newsItem.excerpt,
+      images: newsItem.image_url ? [newsItem.image_url] : [],
+    }
+  };
+}
+
+export default async function NewsDetailPage({ params }: Props) {
   const { slug } = await params;
   const { data: news } = await getCollectionAdmin("noticias");
   const newsItem = news?.find((n: any) => n.slug === slug);
 
   if (!newsItem) return <div className="p-20 text-center font-bold text-slate-400 uppercase tracking-widest text-sm">Noticia no encontrada</div>;
 
-  // Formateamos fecha y hora por separado
   const pubDate = new Date(newsItem.date);
   const dateString = pubDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <article className="w-full bg-white">
-      {/* 1. NAVEGACIÓN */}
       <nav className="w-full pt-8 pb-4 px-6 md:px-16 flex justify-between items-center">
         <Link href="/noticias" className="flex items-center gap-2 text-slate-400 hover:text-orange-600 transition-colors group">
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
@@ -27,26 +58,18 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
         </button>
       </nav>
 
-      {/* 2. GRIDS DE CONTENIDO */}
       <section className="w-full px-6 md:px-16 pb-20 lg:max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-12 gap-y-8 items-start">
-          
-          {/* COLUMNA IZQUIERDA: Header + Cuerpo */}
           <div className="lg:col-span-7 order-2 lg:order-1">
-            
             <header className="mb-8">
-              {/* CAMBIO AQUÍ: Ahora muestra la hora de publicación */}
               <div className="flex items-center gap-3 text-orange-500 font-bold text-[10px] mb-3 uppercase tracking-widest">
                 <Calendar size={12} />
                 <span>{dateString}</span>
                 <span className="text-slate-200">|</span>
-              
               </div>
-              
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-black text-slate-900 leading-[1.05] mb-3">
                 {newsItem.title}
               </h1>
-              
               {newsItem.excerpt && (
                 <p className="text-lg md:text-xl text-slate-500 font-medium leading-tight italic font-serif border-l-2 border-orange-100 pl-4">
                   {newsItem.excerpt}
@@ -54,24 +77,18 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
               )}
             </header>
 
-            <div className="prose prose-slate prose-xl max-w-none 
-                            text-slate-700 leading-relaxed
-                            first-letter:text-7xl first-letter:font-black 
-                            first-letter:text-slate-900 first-letter:mr-3 
-                            first-letter:float-left first-letter:leading-[0.8]">
+            <div className="prose prose-slate prose-xl max-w-none text-slate-700 leading-relaxed first-letter:text-7xl first-letter:font-black first-letter:text-slate-900 first-letter:mr-3 first-letter:float-left first-letter:leading-[0.8]">
               <div className="whitespace-pre-line font-serif selection:bg-orange-100">
                 {newsItem.description}
               </div>
             </div>
 
-            {/* Firma */}
             <div className="mt-12 pt-6 border-t border-slate-50 flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-xs">M</div>
               <p className="text-sm font-bold text-slate-800 font-serif">Redacción La Escuela</p>
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: La foto esquinada */}
           {newsItem.image_url && (
             <div className="lg:col-span-5 order-1 lg:order-2 lg:sticky lg:top-8">
               <div className="relative">
@@ -87,7 +104,6 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
         </div>
       </section>
 
-      {/* 3. FORMULARIO FINAL */}
       <Contact 
         category="contacto" 
         hasForm={true} 

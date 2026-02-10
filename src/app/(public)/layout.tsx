@@ -3,6 +3,15 @@ import React from "react";
 import Navbar from "@/components/navbar/Navbar";
 import Footer from "@/components/footer/Footer";
 import { fetchGeneralSettings } from "@/services/settings-services";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://escuelademusicabarrial.ar"), // Reemplaza con tu dominio real
+  title: {
+    template: "%s | Escuela de Música Barrial",
+    default: "Escuela de Música Barrial",
+  }
+};
 
 export default async function PublicLayout({
   children,
