@@ -13,16 +13,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// --- AGREGAMOS ESTO ---
 export const metadata: Metadata = {
-  metadataBase: new URL("https://escuelademusicabarrial.ar"), // Tu dominio real
+  metadataBase: new URL("https://escuelademusicabarrial.ar"),
   title: {
-    default: "Escuela de Música Barrial",
+    // El %s es el espacio que llenarán las páginas internas (ej: "Clases")
     template: "%s | Escuela de Música Barrial",
+    // Título por defecto si una página no define uno
+    default: "Escuela de Música Barrial",
   },
   description: "Espacio de formación, contención y arte en el corazón del barrio.",
   icons: {
-    icon: "/favicon.png",      // Archivo en la carpeta public/favicon.png
+    icon: "/favicon.png",
     shortcut: "/favicon.png",
     apple: "/favicon.png",
   },
