@@ -1,6 +1,6 @@
 import { getCollectionAdmin } from "@/services/admin-services";
 import Contact from "@/components/sections/contact/Contact";
-import DynamicSection from "@/components/DynamicSection/DynamicSection"; // Importamos el slider
+import DynamicSection from "@/components/DynamicSection/DynamicSection";
 import { User, Clock, ArrowLeft, Share2, Music } from "lucide-react";
 import Link from "next/link";
 import { Metadata } from "next";
@@ -23,8 +23,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: classItem.description?.substring(0, 160),
     openGraph: {
       title: classItem.name,
-      description: classItem.description,
-      images: classItem.image_url ? [{ url: classItem.image_url }] : [],
+      description: classItem.description?.substring(0, 160),
+      url: `https://escuelademusicabarrial.ar/clases/${slug}`,
+      images: [
+        {
+          url: "/favicon.png", // Forzamos el favicon como miniatura
+          width: 1200,
+          height: 630,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: "summary",
+      images: ["/favicon.png"],
     }
   };
 }
@@ -32,30 +44,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ClassDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const { data: classes } = await getCollectionAdmin("clases");
-  
-  // 1. Buscamos la clase actual
-  const classItem = classes?.find((c: any) => c.slug === slug);
+  const allItems = (classes as any[]) || [];
+  const classItem = allItems.find((c: any) => c.slug === slug);
 
-  if (!classItem) return <div className="p-20 text-center uppercase tracking-widest font-bold text-slate-400">Clase no encontrada</div>;
+  if (!classItem) return <div className="p-20 text-center font-bold text-slate-400 uppercase tracking-widest text-sm">Clase no encontrada</div>;
 
-  // 2. Preparamos las "Otras Clases" para el Slider
-  // Filtramos la clase actual para que no se sugiera a sí misma
-  const otherClassesRaw = classes?.filter((c: any) => c.slug !== slug) || [];
-  
-  // Mapeamos al formato UniversalCardData que pide el DynamicSection
-  const otherClassesData: UniversalCardData[] = otherClassesRaw.map((c: any) => ({
-    id: c.id,
-    slug: c.slug,
-    title: c.name,
-    description: c.teacher_name, // Mostramos el profe como descripción corta en el slider
-    image_url: c.image_url,
-    color: "orange" as const, // Color corporativo de clases
-    label: c.instrument || "Música"
-  }));
+  const otherClassesData: UniversalCardData[] = allItems
+    .filter((c: any) => c.slug !== slug)
+    .map((c: any) => ({
+      id: c.id,
+      slug: c.slug,
+      title: c.name,
+      description: c.teacher_name,
+      image: c.image_url,
+      color: "green",
+      label: c.instrument || "Música"
+    }));
 
   return (
     <article className="w-full bg-white">
-      {/* NAVEGACIÓN */}
       <nav className="w-full pt-8 pb-4 px-6 md:px-16 flex justify-between items-center max-w-7xl mx-auto">
         <Link href="/clases" className="flex items-center gap-2 text-slate-400 hover:text-green-600 transition-colors group">
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
@@ -66,39 +73,29 @@ export default async function ClassDetailPage({ params }: PageProps) {
         </button>
       </nav>
 
-      {/* CUERPO PRINCIPAL */}
       <section className="w-full px-6 md:px-16 pb-20 lg:max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-16 gap-y-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-12 gap-y-8 items-start">
           
           <div className="lg:col-span-7 order-2 lg:order-1">
-            <header className="mb-12">
-              <div className="flex items-center gap-3 text-green-600 font-bold text-[10px] mb-4 uppercase tracking-[0.3em]">
+            <header className="mb-8">
+              <div className="flex items-center gap-3 text-green-600 font-bold text-[10px] mb-3 uppercase tracking-widest">
                 <Music size={12} />
                 <span>Formación Musical</span>
+                <span className="text-slate-200">|</span>
               </div>
               
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-black text-slate-900 leading-[0.95] mb-8">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-black text-slate-900 leading-[1.05] mb-6">
                 {classItem.name}
               </h1>
 
-              <div className="flex flex-wrap gap-8 py-8 border-y border-slate-100">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white">
-                    <User size={18} />
-                  </div>
-                  <div>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Docente</p>
-                    <p className="text-sm font-bold text-slate-900">{classItem.teacher_name}</p>
-                  </div>
+              <div className="flex flex-wrap gap-6 mb-8 py-4 border-y border-slate-50">
+                <div className="flex items-center gap-2">
+                  <User size={14} className="text-green-600" />
+                  <span className="text-xs font-bold text-slate-800">{classItem.teacher_name}</span>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white">
-                    <Clock size={18} />
-                  </div>
-                  <div>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Horarios</p>
-                    <p className="text-sm font-bold text-slate-900">{classItem.schedule}</p>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-green-600" />
+                  <span className="text-xs font-bold text-slate-800">{classItem.schedule}</span>
                 </div>
               </div>
             </header>
@@ -110,31 +107,24 @@ export default async function ClassDetailPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="lg:col-span-5 order-1 lg:order-2 lg:sticky lg:top-8">
-            <div className="relative group">
-              <div className="aspect-[4/5] overflow-hidden rounded-[3rem] shadow-2xl shadow-slate-200">
-                {classItem.image_url ? (
-                  <Image 
-                    src={classItem.image_url}
-                    alt={classItem.name}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-w-768px) 100vw, 40vw"
-                    priority
-                    quality={85}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-slate-100 flex items-center justify-center">
-                    <Music size={40} className="text-slate-200" />
-                  </div>
-                )}
+          {classItem.image_url && (
+            <div className="lg:col-span-5 order-1 lg:order-2 lg:sticky lg:top-8">
+              <div className="relative aspect-[4/5] lg:aspect-square overflow-hidden rounded-[2.5rem] shadow-2xl shadow-slate-200">
+                <Image 
+                  src={classItem.image_url}
+                  alt={classItem.name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-w-768px) 100vw, 40vw"
+                  priority
+                  quality={85}
+                />
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
-      {/* 3. SLIDER DE OTRAS CLASES (DynamicSection) */}
       {otherClassesData.length > 0 && (
         <DynamicSection 
           title="Otras Clases"
@@ -145,12 +135,11 @@ export default async function ClassDetailPage({ params }: PageProps) {
         />
       )}
 
-      {/* 4. FORMULARIO DE CONTACTO */}
       <Contact 
         category="clases" 
         hasForm={true}
         customTitle={`Inscribite a ${classItem.name}`}
-        customDescription="Sumate a nuestra comunidad. Completa tus datos para reservar una vacante o realizar una consulta."
+        customDescription="Completa el formulario para reservar tu lugar o realizar una consulta."
       />
     </article>
   );

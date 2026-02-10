@@ -4,7 +4,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LogIn, Music } from "lucide-react";
+import { Metadata } from "next";
 
+
+export const metadata: Metadata = {
+  title: "Acceso Admin | Escuela de Música Barrial",
+  description: "Ingreso exclusivo para administradores.",
+};
 export default function LoginPage() {
   const { user, loginWithGoogle } = useAuth();
   const router = useRouter();
