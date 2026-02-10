@@ -3,20 +3,20 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { LogIn, Music } from "lucide-react";
-import { Metadata } from "next";
+import { Music } from "lucide-react";
 
-
-export const metadata: Metadata = {
-  title: "Acceso Admin | Escuela de Música Barrial",
-  description: "Ingreso exclusivo para administradores.",
-};
 export default function LoginPage() {
   const { user, loginWithGoogle } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user) router.push("/dashboard"); // Si ya está logueado, lo mandamos al panel
+    // Al no poder usar el objeto 'metadata' en componentes de cliente,
+    // se define el título de esta manera para evitar errores en Vercel.
+    document.title = "Acceso Admin | Escuela de Música Barrial";
+
+    if (user) {
+      router.push("/dashboard");
+    }
   }, [user, router]);
 
   return (
