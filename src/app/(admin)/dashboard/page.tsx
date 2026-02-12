@@ -358,7 +358,7 @@ export default function AdminDashboard() {
       <AnimatePresence>
         {status && (
           <motion.div initial={{ opacity: 0, y: 50, x: "-50%" }} animate={{ opacity: 1, y: 0, x: "-50%" }} exit={{ opacity: 0, y: 50, x: "-50%" }}
-            className={`fixed bottom-10 left-1/2 px-10 py-5 rounded-full shadow-2xl flex items-center gap-4 z-[150] border bg-slate-900 text-white ${status.type === 'success' ? 'border-green-500' : 'border-red-500'}`}>
+            className={`fixed z-[1000] bottom-10 left-1/2 px-10 py-5 rounded-full shadow-2xl flex items-center gap-4 z-[150] border bg-slate-900 text-white ${status.type === 'success' ? 'border-green-500' : 'border-red-500'}`}>
             {status.type === 'success' ? <CheckCircle2 size={20} className="text-green-500" /> : <AlertCircle size={20} className="text-red-500" />}
             <span className="text-[11px] font-black uppercase tracking-[0.2em]">{status.msg}</span>
           </motion.div>

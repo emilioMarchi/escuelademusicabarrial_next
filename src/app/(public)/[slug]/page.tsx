@@ -88,6 +88,7 @@ export default async function DynamicRouterPage({ params }: Props) {
               sectionData={section} 
               pageCategory={pageData.category}
               rawItems={itemsToPass}
+              id={section.content?.anchor_id}
             />
           );
         })}

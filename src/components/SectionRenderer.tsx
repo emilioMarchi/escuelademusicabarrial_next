@@ -17,13 +17,15 @@ import {
 interface SectionRendererProps {
   sectionData: SectionData; 
   pageCategory?: CategoryType; 
-  rawItems?: (Class | News)[]; 
+  rawItems?: (Class | News)[];
+  id?: string; 
 }
 
 export default function SectionRenderer({ 
   sectionData, 
   pageCategory, 
-  rawItems = [] 
+  rawItems = [], 
+  id 
 }: SectionRendererProps) {
 
   if (!sectionData) return null;
@@ -33,21 +35,25 @@ export default function SectionRenderer({
     
     case "hero":
       return (
-        <Hero 
-          title={sectionData.content?.title} 
-          description={sectionData.content?.description} 
-          slides={sectionData.content?.slides || []} 
-        />
+        <section id={id}>
+          <Hero 
+            title={sectionData.content?.title} 
+            description={sectionData.content?.description} 
+            slides={sectionData.content?.slides || []} 
+          />
+        </section>
       );
 
     case "texto-bloque":
       return (
-        <TextBlock
-          title={sectionData.content?.title}
-          text={sectionData.content?.description || ""}
-          imageUrl={sectionData.content?.image_url}
-          imagePosition={sectionData.settings?.layout === "image-left" ? "left" : "right"}
-        />
+        <section id={id}>
+          <TextBlock
+            title={sectionData.content?.title}
+            text={sectionData.content?.description || ""}
+            imageUrl={sectionData.content?.image_url}
+            imagePosition={sectionData.settings?.layout === "image-left" ? "left" : "right"}
+          />
+        </section>
       );
 
     case "clases": {
@@ -58,17 +64,19 @@ export default function SectionRenderer({
         label: c.instrument, 
         image_url: c.image_url, 
         slug: (c as any).slug || slugify(c.name), 
-        color: "orange" as const // <--- Clases en Naranja
+        color: "orange" as const 
       }));
 
       return (
-        <DynamicSection 
-          title={sectionData.content?.title || "Nuestras Clases"} 
-          description={sectionData.content?.description}
-          items={classesData} 
-          layout={(sectionData.settings?.layout as any) || (isHome ? "slider" : "grid")} 
-          basePath="/clases" 
-        />
+        <section id={id}>
+          <DynamicSection 
+            title={sectionData.content?.title || "Nuestras Clases"} 
+            description={sectionData.content?.description}
+            items={classesData} 
+            layout={(sectionData.settings?.layout as any) || (isHome ? "slider" : "grid")} 
+            basePath="/clases" 
+          />
+        </section>
       );
     }
 
@@ -80,34 +88,48 @@ export default function SectionRenderer({
         label: "Novedades", 
         image_url: n.image_url, 
         slug: (n as any).slug || slugify(n.title), 
-        color: "green" as const // <--- Noticias en Verde
+        color: "green" as const 
       }));
 
       return (
-        <DynamicSection 
-          title={sectionData.content?.title || "Noticias del Barrio"} 
-          description={sectionData.content?.description}
-          items={newsData} 
-          layout={(sectionData.settings?.layout as any) || (isHome ? "slider" : "grid")} 
-          basePath="/novedades" 
-        />
+        <section id={id}>
+          <DynamicSection 
+            title={sectionData.content?.title || "Noticias del Barrio"} 
+            description={sectionData.content?.description}
+            items={newsData} 
+            layout={(sectionData.settings?.layout as any) || (isHome ? "slider" : "grid")} 
+            basePath="/novedades" 
+          />
+        </section>
       );
     }
 
     case "contacto": {
-      const adminSelection = sectionData.settings?.form_type;
+      // 1. Buscamos en settings (nuevo) y luego en content (viejo/db actual)
+      const adminSelection = sectionData.settings?.form_type || sectionData.content?.form_type;
+      
+      // Valor por defecto
       let effectiveCategory = pageCategory || "contacto";
       
-      if (adminSelection === 'inscripcion') effectiveCategory = 'clases';
-      if (adminSelection === 'general') effectiveCategory = 'contacto';
+      // CORRECCIÓN AQUÍ:
+      // En la DB dice "clases", así que tenemos que chequear por "clases", no por "inscripcion".
+      if (adminSelection === 'clases' || adminSelection === 'inscripcion') {
+          effectiveCategory = 'clases';
+      }
+      
+      if (adminSelection === 'general' || adminSelection === 'contacto') {
+          effectiveCategory = 'contacto';
+      }
 
       return (
-        <Contact 
-          category={effectiveCategory} 
-          hasForm={true} 
-          customTitle={sectionData.content?.title}
-          customDescription={sectionData.content?.description}
-        />
+        <section id={id}>
+          <Contact 
+            category={effectiveCategory} 
+            hasForm={true} 
+            customTitle={sectionData.content?.title}
+            customDescription={sectionData.content?.description}
+          />
+        </section>
       );
     } 
 
@@ -115,7 +137,7 @@ export default function SectionRenderer({
       const defaultAmount = sectionData.settings?.default_amount ? Number(sectionData.settings.default_amount) : undefined;
 
       return (
-        <section> 
+        <section id={id}>
           <DonationForm 
             title={sectionData.content?.title} 
             description={sectionData.content?.description}
@@ -124,8 +146,8 @@ export default function SectionRenderer({
           />
         </section>
       );
-      
     } 
+
     case "donacion-exitosa":
       return <DonationSuccess />;
 

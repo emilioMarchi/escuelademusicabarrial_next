@@ -3,7 +3,8 @@ import { MetadataRoute } from 'next';
 import { getCollectionAdmin } from '@/services/admin-services';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  // USAMOS SIEMPRE EL DOMINIO OFICIAL
+  const baseUrl = 'https://escuelademusicabarrial.ar';
 
   // 1. Rutas Estáticas
   const staticRoutes = [
@@ -14,10 +15,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/como-ayudar',
     '/contacto',
   ].map((route) => ({
-    url: `${baseUrl}${route}`,
+    url: `${baseUrl}${route}`, // Sin la barra extra
     lastModified: new Date(),
     changeFrequency: 'monthly' as const,
-    priority: 1,
+    priority: 1.0,
   }));
 
   // 2. Rutas Dinámicas (Clases)

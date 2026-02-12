@@ -22,12 +22,14 @@ interface Slide {
 interface HeroProps {
   title?: string;        // Título de la sección (Raíz)
   description?: string;  // Descripción de la sección (Raíz)
+  subtitle?: string;     // <-- AGREGADO: Para compatibilidad con datos viejos
   slides?: Slide[];
 }
 
 export default function Hero({ 
   title, 
-  description, 
+  description,
+  subtitle, // <-- Lo recibimos
   slides = [] 
 }: HeroProps) {
   
@@ -43,10 +45,10 @@ export default function Hero({
     ? currentSlide.title 
     : (title || "Escuela de Música Barrial");
   
-  // 2. Descripción: Manda la del slide, si no hay, va la de la raíz.
+  // 2. Descripción: Manda la del slide. Si no hay, busca description O subtitle.
   const displayDescription = (currentSlide?.description && currentSlide.description.trim() !== "") 
     ? currentSlide.description 
-    : (description || "");
+    : (description || subtitle || ""); 
 
   // 3. Tag (Opcional): Si estamos usando el título del SLIDE, 
   // podemos mostrar el nombre de la escuela (título raíz) arriba sutilmente.
@@ -61,7 +63,8 @@ export default function Hero({
   }, [hasImages, validSlides.length]);
 
   return (
-    <section className="relative w-full h-[75vh] min-h-[500px] flex items-center justify-center overflow-hidden bg-slate-950">
+    // AJUSTE 1: h-[85vh] para mobile (más alto), md:h-[75vh] para desktop
+    <section className="relative w-full h-[85vh] md:h-[75vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-slate-950">
       
       {/* CAPA DE IMÁGENES */}
       <div className="absolute inset-0 z-0 w-full h-full">
@@ -92,7 +95,8 @@ export default function Hero({
       </div>
 
       {/* CONTENIDO CENTRAL */}
-      <div className="relative z-10 container mx-auto px-6 text-center">
+      {/* AJUSTE 2: pt-24 para separar del Navbar */}
+      <div className="relative z-10 container mx-auto px-6 text-center pt-24">
         <div className="max-w-3xl mx-auto">
           
           <AnimatePresence mode="wait">
@@ -114,7 +118,8 @@ export default function Hero({
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.8 }}
-            className="font-serif italic text-3xl md:text-5xl lg:text-6xl text-white mb-6 tracking-tight leading-[1.2]"
+            // AJUSTE 3: leading-[0.95] (Menos espaciado entre renglones)
+            className="font-serif italic text-4xl md:text-5xl lg:text-6xl text-white mb-6 tracking-tight leading-[0.95]"
           >
             {displayTitle}
           </motion.h1>
@@ -124,7 +129,8 @@ export default function Hero({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4, duration: 1 }}
-            className="text-sm md:text-lg text-slate-300 mb-10 max-w-xl mx-auto leading-relaxed font-light tracking-wide"
+            // AJUSTE 4: leading-snug (Menos espaciado que relaxed)
+            className="text-sm md:text-lg text-slate-300 mb-10 max-w-xl mx-auto leading-snug font-light tracking-wide"
           >
             {displayDescription}
           </motion.p>

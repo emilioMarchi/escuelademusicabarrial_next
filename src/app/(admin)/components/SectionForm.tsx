@@ -9,7 +9,7 @@ import {
   Plus, Trash2, Image as ImageIcon, Camera, 
   Music, Newspaper, FileText, AlertCircle, Loader2, 
   AlignLeft, AlignRight, Mail, UserPlus, 
-  MessageSquare, Type, Link as LinkIcon
+  MessageSquare, Type, Hash
 } from "lucide-react";
 
 interface Props {
@@ -24,7 +24,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
   const slideFileRef = useRef<HTMLInputElement>(null);
   const blockFileRef = useRef<HTMLInputElement>(null);
   
-  // --- TIPADO DEFENSIVO PARA EVITAR LÍNEAS ROJAS ---
+  // --- VARIABLES SEGURAS ---
   const content = (section.content || {}) as any;
   const settings = (section.settings || {}) as any;
   const slides = (content.slides || []) as any[];
@@ -42,9 +42,12 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
       settings: section.settings
     });
     const isDifferent = currentState !== originalState.current;
+    
     setHasChanges(isDifferent);
-    if (isDifferent) setDirty(true);
-  }, [section.content, section.settings, setDirty]);
+    if (isDifferent && !isDirty) {
+        setDirty(true);
+    }
+  }, [section.content, section.settings, isDirty, setDirty]);
 
   useEffect(() => {
     if (!isDirty) {
@@ -59,9 +62,9 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
   const [uploading, setUploading] = useState(false);
 
-  // --- HANDLERS DE ACTUALIZACIÓN ---
+  // --- HANDLER DE ACTUALIZACIÓN ---
   const handleUpdate = (newContent: any, newSettings?: any) => {
-    onChange(newContent, newSettings || section.settings || {});
+    onChange(newContent, newSettings || settings);
   };
 
   const handleImageUpload = async (file: File, isSlide = false) => {
@@ -77,8 +80,6 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
           handleUpdate({ ...content, image_url: url });
         }
         
-        // DISPARO DE GUARDADO AUTOMÁTICO
-        // Usamos un pequeño delay para asegurar que el estado de 'onChange' se procese primero
         if (onSave) {
           setTimeout(() => onSave(), 100);
         }
@@ -90,7 +91,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
     }
   };
 
-  // --- LÓGICA DE HERO (SLIDES Y BOTONES) ---
+  // --- HELPERS PARA HERO ---
   const addSlide = () => {
     const newSlide = { title: "Nuevo Slide", description: "", image_url: "", buttons: [] };
     handleUpdate({ ...content, slides: [...slides, newSlide] });
@@ -105,32 +106,35 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
 
   const addButton = () => {
     const ns = [...slides];
+    const currentSlide = { ...ns[activeSlideIdx] };
+    const currentButtons = [...(currentSlide.buttons || [])];
     const newBtn = { text: "Nuevo Botón", link: "/", style: "solid" };
-    ns[activeSlideIdx].buttons = [...(ns[activeSlideIdx].buttons || []), newBtn];
+    
+    currentSlide.buttons = [...currentButtons, newBtn];
+    ns[activeSlideIdx] = currentSlide;
+    
     handleUpdate({ ...content, slides: ns });
   };
 
   const removeButton = (btnIdxToRemove: number) => {
     const ns = [...slides];
-    const filteredButtons = (ns[activeSlideIdx].buttons || []).filter((b: any, i: number) => i !== btnIdxToRemove);
-    ns[activeSlideIdx].buttons = filteredButtons;
+    const currentSlide = { ...ns[activeSlideIdx] };
+    const currentButtons = (currentSlide.buttons || []).filter((b: any, i: number) => i !== btnIdxToRemove);
+    
+    currentSlide.buttons = currentButtons;
+    ns[activeSlideIdx] = currentSlide;
+    
     handleUpdate({ ...content, slides: ns });
   };
 
-  return (
+  // --- VALOR SEGURO PARA FORM TYPE ---
+  const currentFormType = settings.form_type || content.form_type || 'general';
+
+return (
     <div className={`relative transition-all duration-500 rounded-[3.5rem] border-2 bg-white overflow-hidden
-      ${hasChanges ? 'border-orange-400 shadow-2xl shadow-orange-100/50' : 'border-slate-100 shadow-sm'}`}>
+      ${hasChanges ? 'border-orange-400 shadow-2xl shadow-orange-100/50 z-10' : 'border-slate-100 shadow-sm z-0'}`}>
       
-      {/* ALERTA VISUAL */}
-      <AnimatePresence>
-        {hasChanges && (
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-            className="absolute top-8 right-8 z-30 flex items-center gap-2 bg-orange-500 text-white px-5 py-2 rounded-full shadow-lg">
-            <AlertCircle size={14} className="animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Cambios sin guardar</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ALERTA VISUAL - z-20 para que no tape la barra sticky z-40 */}
 
       <div className="p-8 md:p-12">
         <div className="flex items-center gap-4 mb-10 border-b border-slate-50 pb-8">
@@ -148,26 +152,39 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
         </div>
 
         <div className="space-y-10">
-          
-          {/* --- EDITOR HERO COMPLETO --- */}
           {section.type === 'hero' && (
             <div className="space-y-8">
+              <div className="p-8 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] space-y-4">
+                 <div className="flex items-center gap-2 text-slate-400 mb-2">
+                    <Type size={16} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Textos por defecto</span>
+                 </div>
+                 <div className="grid grid-cols-1 gap-4">
+                    <input type="text" value={content.title || ""} onChange={(e) => handleUpdate({ ...content, title: e.target.value })}
+                      placeholder="Título General" className="w-full p-4 bg-white border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all shadow-sm"/>
+                    <textarea rows={2} value={content.description ?? content.subtitle ?? ""} onChange={(e) => handleUpdate({ ...content, description: e.target.value })}
+                      placeholder="Descripción General" className="w-full p-4 bg-white border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all resize-none shadow-sm"/>
+                 </div>
+              </div>
+
               <div className="flex flex-wrap items-center gap-2 p-2 bg-slate-50 rounded-[2rem] w-fit">
                 {slides.map((s: any, idx: number) => (
                   <div key={idx} className="relative group/tab">
-                    <button onClick={() => setActiveSlideIdx(idx)}
+                    <button type="button" onClick={() => setActiveSlideIdx(idx)}
                       className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
                         ${activeSlideIdx === idx ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                       Slide {idx + 1}
                     </button>
                     {slides.length > 1 && (
-                      <button onClick={() => removeSlide(idx)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/tab:opacity-100 transition-opacity shadow-lg">
-                        <Plus size={10} className="rotate-45"/>
+                      <button type="button" onClick={() => removeSlide(idx)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/tab:opacity-100 transition-opacity shadow-lg">
+                        <Trash2 size={10} className="rotate-45"/>
                       </button>
                     )}
                   </div>
                 ))}
-                <button onClick={addSlide} className="p-2 bg-slate-900 text-white rounded-xl hover:bg-green-600 transition-all ml-2"><Plus size={16}/></button>
+                <button type="button" onClick={addSlide} className="p-2 bg-slate-900 text-white rounded-xl hover:bg-green-600 transition-all ml-2">
+                    <Plus size={16}/>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -187,18 +204,17 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                     }}
                     placeholder="Descripción" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all resize-none"/>
 
-                  {/* BOTONES DEL SLIDE */}
                   <div className="space-y-4 pt-4 border-t border-slate-100">
                     <div className="flex items-center justify-between">
                       <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Botones de Acción</p>
-                      <button onClick={addButton} className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-green-600 transition-all">
+                      <button type="button" onClick={addButton} className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-green-600 transition-all">
                         <Plus size={12}/> Nuevo Botón
                       </button>
                     </div>
                     <div className="space-y-3">
                       {(slides[activeSlideIdx]?.buttons || []).map((btn: any, bIdx: number) => (
                         <div key={bIdx} className="bg-slate-50 p-4 rounded-3xl border border-slate-100 space-y-4 relative">
-                          <button onClick={() => removeButton(bIdx)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                          <button type="button" onClick={() => removeButton(bIdx)} className="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
                           <div className="grid grid-cols-2 gap-4">
                             <input type="text" value={btn.text} placeholder="Texto" onChange={(e) => {
                                 const ns = [...slides];
@@ -213,7 +229,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                           </div>
                           <div className="flex gap-2">
                             {['solid', 'outline'].map(s => (
-                              <button key={s} onClick={() => {
+                              <button key={s} type="button" onClick={() => {
                                 const ns = [...slides];
                                 ns[activeSlideIdx].buttons[bIdx].style = s;
                                 handleUpdate({...content, slides: ns});
@@ -233,7 +249,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                     {uploading ? <Loader2 className="animate-spin text-slate-300" size={32} /> : (
                       <>
                         <img src={slides[activeSlideIdx]?.image_url} className="w-full h-full object-cover" alt="" />
-                        <button onClick={() => slideFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2 font-black uppercase text-[10px] tracking-widest">
+                        <button type="button" onClick={() => slideFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2 font-black uppercase text-[10px] tracking-widest">
                           <Camera size={24} /> Cambiar Fondo
                         </button>
                       </>
@@ -245,36 +261,41 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
             </div>
           )}
 
-          {/* --- TEXTO BLOQUE --- */}
           {section.type === 'texto-bloque' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
               <div className="space-y-6">
                 <div className="flex gap-4">
-                    <button onClick={() => handleUpdate(content, {...settings, layout: 'image-left'})} 
-                      className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-widest transition-all ${settings.layout === 'image-left' ? 'border-slate-900 bg-slate-900 text-white shadow-lg' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
-                        <AlignLeft size={16}/> Foto Izquierda
-                    </button>
-                    <button onClick={() => handleUpdate(content, {...settings, layout: 'image-right'})} 
-                      className={`flex-1 p-3 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[9px] uppercase tracking-widest transition-all ${settings.layout === 'image-right' ? 'border-slate-900 bg-slate-900 text-white shadow-lg' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
-                        <AlignRight size={16}/> Foto Derecha
-                    </button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); handleUpdate(content, { ...settings, layout: 'image-left' }); }} 
+                    className={`flex-1 p-4 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all duration-200
+                      ${settings.layout === 'image-left' || (!settings.layout && content.layout === 'image-left') ? 'border-slate-900 bg-slate-900 text-white shadow-lg scale-[1.02]' : 'border-slate-100 text-slate-400 bg-slate-50 hover:bg-white hover:border-slate-300'}`}>
+                    <AlignLeft size={18}/> Foto Izquierda
+                  </button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); handleUpdate(content, { ...settings, layout: 'image-right' }); }} 
+                    className={`flex-1 p-4 rounded-xl border-2 flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all duration-200
+                      ${settings.layout === 'image-right' || (!settings.layout && content.layout === 'image-right') ? 'border-slate-900 bg-slate-900 text-white shadow-lg scale-[1.02]' : 'border-slate-100 text-slate-400 bg-slate-50 hover:bg-white hover:border-slate-300'}`}>
+                    <AlignRight size={18}/> Foto Derecha
+                  </button>
                 </div>
+
                 <input type="text" value={content.title || ""} onChange={(e) => handleUpdate({ ...content, title: e.target.value })}
-                  placeholder="Título" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-black text-slate-900 text-xl outline-none transition-all"/>
+                  placeholder="Título del bloque" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-black text-slate-900 text-xl outline-none transition-all"/>
                 <textarea rows={6} value={content.description || ""} onChange={(e) => handleUpdate({ ...content, description: e.target.value })}
                   placeholder="Cuerpo de texto" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all resize-none leading-relaxed"/>
               </div>
-              <div className="aspect-square bg-slate-100 rounded-[3rem] overflow-hidden relative group border-2 border-slate-100 flex items-center justify-center shadow-inner">
-                {content.image_url ? <img src={content.image_url} className="w-full h-full object-cover" alt="" /> : <ImageIcon size={48} className="text-slate-200" />}
-                <button onClick={() => blockFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2 font-black uppercase text-[10px] tracking-widest">
-                  <Camera size={24} /> Cambiar Foto
-                </button>
-                <input type="file" ref={blockFileRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} />
+              <div className="space-y-4">
+                <div className="aspect-square bg-slate-100 rounded-[3.5rem] overflow-hidden relative group border-2 border-slate-100 flex items-center justify-center shadow-inner">
+                  {content.image_url ? (
+                    <img src={content.image_url} className="w-full h-full object-cover" alt="Vista previa" />
+                  ) : (<ImageIcon size={48} className="text-slate-200" />)}
+                  <button type="button" onClick={() => blockFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2 font-black uppercase text-[10px] tracking-widest">
+                    {uploading ? <Loader2 className="animate-spin" /> : <Camera size={24} />} {uploading ? "Subiendo..." : "Cambiar Foto"}
+                  </button>
+                  <input type="file" ref={blockFileRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} />
+                </div>
               </div>
             </div>
           )}
 
-          {/* --- CLASES Y NOTICIAS CON CONTADOR REAL --- */}
           {(section.type === 'clases' || section.type === 'noticias') && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                <div className="space-y-6">
@@ -295,25 +316,30 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
             </div>
           )}
 
-          {/* --- CONTACTO --- */}
           {section.type === 'contacto' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                <div className="space-y-6">
                   <div className="space-y-4">
                     <label className="text-[10px] font-black uppercase text-slate-400 ml-4">Modalidad Formulario</label>
                     <div className="flex gap-3">
-                        <button onClick={() => handleUpdate(content, {...settings, form_type: 'general'})} 
-                          className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${settings.form_type === 'general' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
-                            <MessageSquare size={20}/>
-                            <span className="text-[9px] font-black uppercase tracking-widest">General</span>
+                        <button type="button" onClick={() => handleUpdate(content, { ...settings, form_type: 'general' })} 
+                          className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${currentFormType === 'general' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                            <MessageSquare size={20}/> <span className="text-[9px] font-black uppercase tracking-widest">General</span>
                         </button>
-                        <button onClick={() => handleUpdate(content, {...settings, form_type: 'clases'})} 
-                          className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${settings.form_type === 'clases' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
-                            <UserPlus size={20}/>
-                            <span className="text-[9px] font-black uppercase tracking-widest">Inscripción</span>
+                        <button type="button" onClick={() => handleUpdate(content, { ...settings, form_type: 'clases' })} 
+                          className={`flex-1 p-5 rounded-2xl border-2 flex flex-col items-center gap-3 transition-all ${currentFormType === 'clases' ? 'border-slate-900 bg-slate-900 text-white shadow-xl' : 'border-slate-100 text-slate-400 bg-slate-50'}`}>
+                            <UserPlus size={20}/> <span className="text-[9px] font-black uppercase tracking-widest">Inscripción</span>
                         </button>
                     </div>
                   </div>
+                  
+                  <div className="relative">
+                    <div className="absolute top-4 left-4 text-slate-400"><Hash size={16}/></div>
+                    <input type="text" value={content.anchor_id || ""} onChange={(e) => handleUpdate({ ...content, anchor_id: e.target.value.replace(/[^a-z0-9-_]/g, '') })} 
+                      placeholder="ID para ancla (ej: inscripcion)" className="w-full p-4 pl-12 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all text-sm"/>
+                    <p className="text-[9px] text-slate-400 mt-2 ml-4 uppercase font-bold tracking-widest">Usa este nombre en el botón del Hero (ej: #inscripcion)</p>
+                  </div>
+
                   <input type="text" value={content.title || ""} onChange={(e) => handleUpdate({ ...content, title: e.target.value })}
                     placeholder="Título formulario" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all"/>
                </div>

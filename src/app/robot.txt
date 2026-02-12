@@ -1,0 +1,13 @@
+// src/app/robots.ts
+import { MetadataRoute } from 'next';
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: {
+      userAgent: '*',
+      allow: '/',
+      disallow: ['/dashboard/', '/login', '/api/'], // Protegemos el admin
+    },
+    sitemap: 'https://escuelademusicabarrial.ar/sitemap.xml',
+  };
+}

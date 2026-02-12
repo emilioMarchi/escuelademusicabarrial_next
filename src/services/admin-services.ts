@@ -2,7 +2,7 @@
 "use server";
 
 import { adminDb, adminStorage } from "@/lib/firebase-admin";
-import { PageContent, Donation, GalleryImage, GalleryVideo } from "@/types";
+import { PageContent, Donation, GalleryImage, GalleryVideo, SectionData } from "@/types";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -51,18 +51,44 @@ export const getPageAdmin = async (slug: string) => {
   }
 };
 
+// --- FUNCIÓN CORREGIDA Y ROBUSTA ---
 export const savePageConfigAdmin = async (slug: string, data: any) => {
   try {
+    // 1. Buscamos el documento por slug
     const snapshot = await adminDb.collection("pages").where("slug", "==", slug).limit(1).get();
-    if (snapshot.empty) throw new Error("Página no encontrada");
-    const docId = snapshot.docs[0].id;
-    await adminDb.collection("pages").doc(docId).update({ ...data, last_updated: new Date() });
     
-    revalidatePath(`/${slug}`);
-    revalidatePath(`/dashboard/${slug}`);
-    revalidatePath("/", "layout");
+    if (snapshot.empty) throw new Error("Página no encontrada");
+    
+    // Obtenemos la referencia directa al documento para actualizarlo
+    const docRef = snapshot.docs[0].ref;
+
+    // 2. SANEAMIENTO DE SECCIONES (El paso crítico)
+    // Nos aseguramos de que 'settings' se guarde explícitamente, incluso si está vacío.
+    // Si no hacemos esto, Firebase a veces ignora objetos vacíos o mal estructurados.
+    const sectionsToSave = (data.sections || []).map((section: any) => ({
+      id: section.id,
+      type: section.type,
+      content: section.content || {},
+      settings: section.settings || {}, // <--- ESTO ES LO QUE ARREGLA EL GUARDADO DEL SWITCH
+    }));
+
+    // 3. Actualizamos la base de datos
+    await docRef.update({
+      ...data,
+      sections: sectionsToSave,
+      last_updated: new Date()
+    });
+    
+    // 4. Limpieza de caché (Revalidación)
+    // Esto fuerza a Next.js a reconstruir la página en el frontend
+    revalidatePath(`/${slug}`);          // Ej: /contacto
+    revalidatePath("/");                 // Home
+    revalidatePath(`/dashboard/${slug}`); // Dashboard mismo
+    revalidatePath("/admin/editor/[slug]", "page"); 
+
     return { success: true };
   } catch (error) {
+    console.error("Error saving page:", error);
     return { success: false, error: String(error) };
   }
 };
@@ -75,6 +101,7 @@ export const getCollectionAdmin = async (collectionName: string) => {
     const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) }));
     return { success: true, data };
   } catch (error) {
+    // Fallback sin ordenamiento si falla el índice
     const snapshot = await adminDb.collection(collectionName).get();
     const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) }));
     return { success: true, data };
@@ -342,5 +369,23 @@ export const addGalleryLinkAdmin = async (url: string, caption: string) => {
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
+  }
+};
+
+export const getAdminCollectionItems = async (collectionName: string) => {
+  try {
+    const snapshot = await adminDb.collection(collectionName).get();
+    
+    // CORRECCIÓN CRÍTICA:
+    // Antes devolvía doc.data() directo (con Timestamps).
+    // Ahora envolvemos todo en serializeData() para pasar los Timestamps a Strings.
+    return snapshot.docs.map((doc) => serializeData({ 
+      id: doc.id, 
+      ...doc.data() 
+    }));
+
+  } catch (error) {
+    console.error(`Error en getAdminCollectionItems para ${collectionName}:`, error);
+    return [];
   }
 };

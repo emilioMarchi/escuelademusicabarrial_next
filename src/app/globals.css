@@ -18,9 +18,12 @@
     --foreground: #f9fafb;
   }
 }
-
+html{
+  scroll-behavior: smooth !important;
+}
 /* Estilos base globales */
 body {
+  scroll-behavior: smooth !important;
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui;

@@ -1,9 +1,40 @@
 // src/types/index.ts
 
-export type CategoryType = 'inicio' | 'nosotros' | 'clases' | 'noticias' | 'donaciones' | 'contacto';
 export type PaymentType = 'one-time' | 'monthly';
 export type OrderStatus = 'pending' | 'approved' | 'rejected';
-export type SectionType = 'hero' | 'clases' | 'noticias' | 'contacto' | 'donaciones' | 'texto-bloque' | 'donacion-exitosa';
+export type CategoryType = 'inicio' | 'nosotros' | 'clases' | 'noticias' | 'donaciones' | 'contacto';
+export type SectionType = 'hero' | 'clases' | 'noticias' | 'contacto' | 'donaciones' | 'texto-bloque';
+
+export interface SlideButton {
+  text: string;
+  link: string;
+  style: string; // 'solid' | 'outline' normalmente, pero string es más seguro por ahora
+}
+
+export interface Slide {
+  title?: string;
+  description?: string;
+  image_url: string;
+  buttons?: SlideButton[];
+}
+
+// Acá es donde ajustamos para que acepte TODO lo que viene de Firebase
+export interface SectionContent {
+  title?: string;
+  subtitle?: string;    // Agregamos esto para compatibilidad
+  description?: string;
+  image_url?: string;
+  slides?: Slide[];     // Array de slides
+  form_type?: string;   // Para contacto
+  [key: string]: any;   // Comodín para evitar que se rompa si hay campos extra
+}
+
+export interface SectionData {
+  id: string;
+  type: string; // 'hero' | 'clases' | etc.
+  content: SectionContent;
+  settings?: Record<string, any>;
+}
 
 export interface Donation {
   id?: string;
@@ -32,22 +63,6 @@ export interface PageContent {
   last_updated: any;
 }
 
-export interface SectionData {
-  id: string;
-  type: SectionType;
-  content: {
-    title?: string;
-    subtitle?: string;
-    description?: string;
-    image_url?: string;
-    slides?: any[];
-  };
-  settings?: {
-    layout?: string;
-    form_type?: 'general' | 'inscripcion';
-    default_amount?: number;
-  };
-}
 
 export interface Class {
   id: string;
