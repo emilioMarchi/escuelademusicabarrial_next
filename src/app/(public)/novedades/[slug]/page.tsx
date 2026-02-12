@@ -1,8 +1,10 @@
 import { getCollectionAdmin } from "@/services/admin-services";
 import Contact from "@/components/sections/contact/Contact";
+import DynamicSection from "@/components/DynamicSection/DynamicSection";
 import { ArrowLeft, Calendar, Share2 } from "lucide-react";
 import Link from "next/link";
 import { Metadata } from "next";
+import { UniversalCardData } from "@/types";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -24,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `https://escuelademusicabarrial.ar/novedades/${slug}`,
       images: [
         {
-          url: "/favicon.png", // Forzamos el favicon como miniatura
+          url: "/favicon.png",
           width: 1200,
           height: 630,
         },
@@ -41,17 +43,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function NewsDetailPage({ params }: Props) {
   const { slug } = await params;
   const { data: news } = await getCollectionAdmin("noticias");
-  const newsItem = news?.find((n: any) => n.slug === slug);
+  const allItems = (news as any[]) || [];
+  const newsItem = allItems.find((n: any) => n.slug === slug);
 
   if (!newsItem) return <div className="p-20 text-center font-bold text-slate-400 uppercase tracking-widest text-sm">Noticia no encontrada</div>;
 
   const pubDate = new Date(newsItem.date);
   const dateString = pubDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
 
+  // Preparamos las otras noticias para el slider
+  const otherNewsData: UniversalCardData[] = allItems
+    .filter((n: any) => n.slug !== slug)
+    .map((n: any) => ({
+      id: n.id,
+      slug: n.slug,
+      title: n.title,
+      description: n.excerpt || n.description?.substring(0, 100),
+      image_url: n.image_url,
+      color: "orange",
+      label: "Novedades"
+    }));
+
   return (
     <article className="w-full bg-white">
       <nav className="w-full pt-8 pb-4 px-6 md:px-16 flex justify-between items-center max-w-7xl mx-auto">
-        <Link href="/noticias" className="flex items-center gap-2 text-slate-400 hover:text-orange-600 transition-colors group">
+        <Link href="/novedades" className="flex items-center gap-2 text-slate-400 hover:text-orange-600 transition-colors group">
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           <span className="text-[9px] font-black uppercase tracking-[0.2em]">Novedades</span>
         </Link>
@@ -105,6 +121,17 @@ export default async function NewsDetailPage({ params }: Props) {
           )}
         </div>
       </section>
+
+      {/* SECCIÓN DINÁMICA DE OTRAS NOTICIAS */}
+      {otherNewsData.length > 0 && (
+        <DynamicSection 
+          title="Más Novedades"
+          description="Mantenete al tanto de todo lo que sucede en nuestra comunidad musical."
+          items={otherNewsData}
+          layout="slider"
+          basePath="/novedades" // <--- CORREGIDO AQUÍ
+        />
+      )}
 
       <Contact 
         category="contacto" 

@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: `https://escuelademusicabarrial.ar/clases/${slug}`,
       images: [
         {
-          url: "/favicon.png", // Forzamos el favicon como miniatura
+          url: "/favicon.png",
           width: 1200,
           height: 630,
         },
@@ -56,7 +56,8 @@ export default async function ClassDetailPage({ params }: PageProps) {
       slug: c.slug,
       title: c.name,
       description: c.teacher_name,
-      image: c.image_url,
+      // EL CAMBIO ESTÁ AQUÍ: Usamos 'image_url' para que CardItem lo reconozca
+      image_url: c.image_url, 
       color: "green",
       label: c.instrument || "Música"
     }));
