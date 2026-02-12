@@ -7,6 +7,7 @@ import { Metadata } from "next";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>; // Agregamos esto
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -14,7 +15,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   
   if (slug === "gracias") return { title: "¡Gracias por tu donación!" };
   
-  // Intentar obtener data de página
   const pageData = await getPageBySlug(slug);
   if (pageData) {
     return {
@@ -28,7 +28,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  // Intentar obtener detalle de ítem (Noticia o Clase si cae aquí)
   const element = await getElementBySlug(slug);
   if (element) {
     const title = element.name || element.title;
@@ -36,19 +35,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: `${title} | Escuela de Música Barrial`,
       description: desc?.substring(0, 160),
-      openGraph: {
-        title: title,
-        description: desc,
-        images: element.image_url ? [{ url: element.image_url }] : [],
-      }
     };
   }
   
   return { title: "Escuela de Música Barrial" };
 }
 
-export default async function DynamicRouterPage({ params }: Props) {
+export default async function DynamicRouterPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const sParams = await searchParams; // Obtenemos los parámetros de búsqueda
 
   if (slug === "inicio") redirect("/");
 
@@ -89,6 +84,7 @@ export default async function DynamicRouterPage({ params }: Props) {
               pageCategory={pageData.category}
               rawItems={itemsToPass}
               id={section.content?.anchor_id}
+              urlFormMode={sParams.form as string} // Pasamos el valor de la URL
             />
           );
         })}
@@ -97,7 +93,6 @@ export default async function DynamicRouterPage({ params }: Props) {
   }
 
   const element = await getElementBySlug(slug); 
-  
   if (element) {
     return (
       <div className="pt-40 pb-20 container mx-auto px-4">

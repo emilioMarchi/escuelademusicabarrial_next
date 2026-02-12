@@ -1,4 +1,3 @@
-// src/components/sections/SectionRenderer.tsx
 import Hero from "./sections/hero/Hero";
 import DynamicSection from "./DynamicSection/DynamicSection";
 import Contact from "./sections/contact/Contact";
@@ -19,13 +18,15 @@ interface SectionRendererProps {
   pageCategory?: CategoryType; 
   rawItems?: (Class | News)[];
   id?: string; 
+  urlFormMode?: string; // Nueva prop
 }
 
 export default function SectionRenderer({ 
   sectionData, 
   pageCategory, 
   rawItems = [], 
-  id 
+  id,
+  urlFormMode 
 }: SectionRendererProps) {
 
   if (!sectionData) return null;
@@ -105,20 +106,23 @@ export default function SectionRenderer({
     }
 
     case "contacto": {
-      // 1. Buscamos en settings (nuevo) y luego en content (viejo/db actual)
       const adminSelection = sectionData.settings?.form_type || sectionData.content?.form_type;
-      
-      // Valor por defecto
       let effectiveCategory = pageCategory || "contacto";
       
-      // CORRECCIÓN AQUÍ:
-      // En la DB dice "clases", así que tenemos que chequear por "clases", no por "inscripcion".
-      if (adminSelection === 'clases' || adminSelection === 'inscripcion') {
-          effectiveCategory = 'clases';
-      }
-      
-      if (adminSelection === 'general' || adminSelection === 'contacto') {
-          effectiveCategory = 'contacto';
+      // PRIORIDAD 1: Parámetro en la URL (?form=inscripcion)
+      if (urlFormMode === 'inscripcion' || urlFormMode === 'clases') {
+        effectiveCategory = 'clases';
+      } else if (urlFormMode === 'contacto' || urlFormMode === 'general') {
+        effectiveCategory = 'contacto';
+      } 
+      // PRIORIDAD 2: Selección del administrador si no hay parámetro en URL
+      else {
+        if (adminSelection === 'clases' || adminSelection === 'inscripcion') {
+            effectiveCategory = 'clases';
+        }
+        if (adminSelection === 'general' || adminSelection === 'contacto') {
+            effectiveCategory = 'contacto';
+        }
       }
 
       return (

@@ -1,11 +1,10 @@
 // src/app/(public)/galeria/page.tsx
-import { getGalleryImagesAdmin, addGalleryLinkAdmin } from "@/services/admin-services";
+import { getGalleryImagesAdmin } from "@/services/admin-services";
 import { getPageBySlug } from "@/services/content";
 import GalleryClient from "./GalleryClient";
 import { Metadata } from "next";
 import Image from "next/image";
 
-// --- METADATA DINÁMICA ---
 export async function generateMetadata(): Promise<Metadata> {
   const pageData = await getPageBySlug("galeria");
   
@@ -24,11 +23,11 @@ export default async function GaleriaPage() {
   const images = imagesRes.success ? imagesRes.data : [];
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* --- HERO SECTION: Portada dinámica --- */}
-      <section className="relative h-[60vh] min-h-[450px] w-full flex items-center overflow-hidden bg-slate-950">
+    <main className="min-h-screen bg-slate-950 text-white">
+      {/* --- HERO SECTION --- */}
+      {/* Aumenté un poco la altura (h-[65vh]) para dar más espacio al degradado */}
+      <section className="relative h-[65vh] min-h-[500px] w-full flex items-center justify-center overflow-hidden bg-slate-950">
         
-        {/* Imagen de Fondo */}
         {pageData?.header_image_url ? (
           <>
             <Image
@@ -36,38 +35,52 @@ export default async function GaleriaPage() {
               alt={pageData.header_title || "Portada Galería"}
               fill
               priority
-              className="object-cover object-center"
+              // Le damos un poco más de presencia a la foto base
+              className="object-cover object-center opacity-80" 
             />
-            {/* Overlay para legibilidad */}
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/40 to-white" />
+            
+            {/* CAPA 1: Overlay general para oscurecer y dar legibilidad al texto */}
+            <div className="absolute inset-0 bg-slate-950/60" />
+
+            {/* CAPA 2 (LA CLAVE): Degradado inferior intenso para fusión */}
+            {/* Este div se ocupa el 40% inferior (h-2/5) y hace una transición fuerte de negro sólido a transparente hacia arriba */}
+            <div className="absolute bottom-0 left-0 w-full h-2/5 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent z-0" />
+            
+            {/* CAPA 3: Viñeta superior sutil para cerrar el encuadre */}
+            <div className="absolute top-0 left-0 w-full h-1/4 bg-gradient-to-b from-slate-950/80 to-transparent z-0" />
           </>
         ) : (
           <div className="absolute inset-0 bg-slate-950" />
         )}
 
-        <div className="container mx-auto px-6 relative z-10 pt-20">
-          <div className="max-w-4xl">
-            <p className="text-white/60 font-black uppercase text-[10px] tracking-[0.4em] mb-4">
+        {/* Contenido de texto (con z-10 para estar sobre los degradados) */}
+        <div className="container mx-auto px-6 relative z-10 mt-20 text-center">
+          <div className="max-w-4xl mx-auto">
+            <p className="text-white/70 font-black uppercase text-[10px] tracking-[0.4em] mb-6">
               Escuela de música barrial • registros
             </p>
 
-            <h1 className="font-serif italic text-4xl md:text-6xl lg:text-7xl text-white mb-6 tracking-tight leading-[1.1]">
-              {pageData?.header_title || "Nuestra Galería de Momentos"}
+            <h1 className="font-serif italic text-5xl md:text-7xl lg:text-8xl text-white mb-8 tracking-tight leading-none drop-shadow-2xl">
+              {pageData?.header_title || "Galería de Momentos"}
             </h1>
             
-            <div className="w-16 h-[1px] bg-green-500 mb-6" />
+            <div className="w-24 h-[2px] bg-green-500/80 mx-auto mb-8" />
             
-            <p className="text-white/80 font-medium text-sm md:text-base lg:text-lg max-w-xl leading-relaxed italic">
-              {pageData?.header_description || "Un recorrido visual por las actividades y el día a día en el corazón del barrio."}
+            <p className="text-white/80 font-medium text-base md:text-xl max-w-2xl mx-auto leading-relaxed italic drop-shadow-lg">
+              {pageData?.header_description }
             </p>
           </div>
         </div>
       </section>
 
-      {/* --- EL MOSAICO DE FOTOS (Mantenemos GalleryClient intacto) --- */}
-      <section className="relative z-20 -mt-10 pb-20">
-        <div className="container mx-auto">
-           <GalleryClient images={images || []} />
+      {/* --- EL MOSAICO DE FOTOS --- */}
+      {/* El margen negativo (-mt-24) ahora es mayor para superponerse más a la zona negra del héroe */}
+      <section className="relative z-20 -mt-24 pb-32">
+        {/* Un pequeño degradado superior en la sección de galería para asegurar la fusión si la primera fila de fotos es clara */}
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-slate-950 to-transparent -z-10" />
+        
+        <div className="container mx-auto pt-8 px-4">
+            <GalleryClient images={images || []} />
         </div>
       </section>
     </main>

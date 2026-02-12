@@ -96,7 +96,7 @@ export default function Navbar() {
           })}
           
           <Link 
-            href="/contacto"
+            href="/contacto?form=inscripcion"
             className={`bg-orange-400 text-white font-black uppercase text-[10px] tracking-widest hover:bg-green-600 transition-all shadow-lg active:scale-95 flex items-center justify-center ${
               isScrolled ? "px-3 py-1.5 rounded-lg" : "px-4 py-2 rounded-xl"
             }`}
