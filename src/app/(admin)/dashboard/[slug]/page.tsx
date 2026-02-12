@@ -70,10 +70,17 @@ export default function PageEditor() {
     setDirty(true);
   };
 
-  const handleReorder = (newOrder: any[]) => {
+  const handleReorder = async (newOrder: any[]) => {
     if (!pageData) return;
-    setPageData({ ...pageData, sections: newOrder as SectionData[] });
-    setDirty(true);
+    const updatedPage = { ...pageData, sections: newOrder as SectionData[] };
+    setPageData(updatedPage);
+    
+    setIsSaving(true);
+    const res = await savePageConfigAdmin(slug as string, updatedPage);
+    if (res.success) {
+      setDirty(false);
+    }
+    setIsSaving(false);
   };
 
   const handleSectionChange = (id: string, updatedContent: any, updatedSettings?: any) => {
@@ -89,8 +96,9 @@ export default function PageEditor() {
     setDirty(true);
   };
 
-  const handleAddSection = (type: 'hero' | 'texto-bloque' | 'clases' | 'noticias' | 'contacto') => {
-    if (!pageData) return;
+  const handleAddSection = async (type: 'hero' | 'texto-bloque' | 'clases' | 'noticias' | 'contacto') => {
+    if (!pageData || !slug) return;
+
     const newId = Math.random().toString(36).substr(2, 9);
     const newSection: SectionData = {
       id: newId,
@@ -104,14 +112,43 @@ export default function PageEditor() {
       },
       settings: { layout: 'image-left', form_type: 'general' }
     };
-    setPageData({ ...pageData, sections: [newSection, ...pageData.sections] });
-    setDirty(true);
+
+    const updatedPage = { ...pageData, sections: [newSection, ...pageData.sections] };
+    setPageData(updatedPage);
+    
+    setIsSaving(true);
+    try {
+      const res = await savePageConfigAdmin(slug as string, updatedPage);
+      if (res.success) {
+        setStatus({ type: 'success', msg: 'Bloque agregado y guardado' });
+        setDirty(false);
+      } else { throw new Error(); }
+    } catch (e) {
+      setStatus({ type: 'error', msg: 'Error al agregar bloque' });
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setStatus(null), 3000);
+    }
   };
 
-  const handleDeleteSection = (id: string) => {
+  const handleDeleteSection = async (id: string) => {
     if (!pageData || !confirm("¿Estás seguro de eliminar este bloque?")) return;
-    setPageData({ ...pageData, sections: pageData.sections.filter(s => (s as SectionData).id !== id) });
-    setDirty(true);
+    
+    const updatedSections = pageData.sections.filter(s => (s as SectionData).id !== id);
+    const updatedPage = { ...pageData, sections: updatedSections };
+    
+    setPageData(updatedPage);
+    setIsSaving(true);
+    
+    const res = await savePageConfigAdmin(slug as string, updatedPage);
+    if (res.success) {
+      setStatus({ type: 'success', msg: 'Bloque eliminado correctamente' });
+      setDirty(false);
+    } else {
+      setStatus({ type: 'error', msg: 'Error al eliminar el bloque' });
+    }
+    setIsSaving(false);
+    setTimeout(() => setStatus(null), 3000);
   };
 
   const handleSave = async () => {
@@ -148,7 +185,7 @@ export default function PageEditor() {
         </button>
       </header>
 
-      {/* Alerta de SEO con Z-INDEX corregido */}
+      {/* SEO Section */}
       <section className={`bg-white p-10 rounded-[3rem] border-2 transition-all duration-500 relative ${hasChangesSEO ? 'border-orange-400 shadow-2xl shadow-orange-50 z-10' : 'border-slate-100 shadow-sm'}`}>
         <AnimatePresence>
           {hasChangesSEO && (
@@ -187,14 +224,31 @@ export default function PageEditor() {
         </div>
       </section>
 
-      {/* BARRA STICKY - z-40 está bien para la barra interna */}
-      <div className="p-4 bg-slate-100 rounded-[2rem] flex flex-wrap gap-4 items-center justify-center sticky top-4 z-40 shadow-lg border-2 border-white/50 backdrop-blur-md">
+      {/* BARRA FLOTANTE CON BOTÓN DE GUARDADO RÁPIDO */}
+      <div className="p-4 bg-slate-100 rounded-[2rem] flex flex-wrap gap-4 items-center justify-center sticky top-4 z-40 shadow-lg border-2 border-white/50 backdrop-blur-md transition-all">
         <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest mr-4">Agregar Bloque:</span>
         {[{ type: 'hero', label: 'Hero Slider' }, { type: 'texto-bloque', label: 'Texto + Foto' }, { type: 'clases', label: 'Grilla Clases' }, { type: 'noticias', label: 'Grilla Noticias' }, { type: 'contacto', label: 'Form Contacto' }].map((btn) => (
           <button key={btn.type} onClick={() => handleAddSection(btn.type as any)} className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-sm border border-slate-200 hover:bg-slate-900 hover:text-white hover:scale-105 transition-all">
             <Plus size={12} /> {btn.label}
           </button>
         ))}
+
+        {/* BOTÓN GUARDAR DINÁMICO */}
+        <AnimatePresence>
+          {isDirty && (
+            <motion.button
+              initial={{ opacity: 0, x: 20, scale: 0.8 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 20, scale: 0.8 }}
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-green-700 transition-all active:scale-95 ml-4"
+            >
+              {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+              {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="space-y-8 pl-12"> 
@@ -224,7 +278,6 @@ export default function PageEditor() {
         </Reorder.Group>
       </div>
 
-      {/* TOAST DE ESTADO - z-[100] para estar sobre la barra pero bajo el modal de salida */}
       <AnimatePresence>
         {status && (
           <motion.div 

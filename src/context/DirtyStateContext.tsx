@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 
 interface DirtyContextType {
   isDirty: boolean;
@@ -11,17 +11,9 @@ const DirtyContext = createContext<DirtyContextType | undefined>(undefined);
 export function DirtyStateProvider({ children }: { children: React.ReactNode }) {
   const [isDirty, setDirty] = useState(false);
 
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
-
+  // Se elimina el listener de 'beforeunload' para evitar que el navegador 
+  // dispare su alerta nativa al recargar o cerrar la pestaña.
+  
   return (
     <DirtyContext.Provider value={{ isDirty, setDirty }}>
       {children}

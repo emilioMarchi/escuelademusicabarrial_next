@@ -130,12 +130,10 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
   // --- VALOR SEGURO PARA FORM TYPE ---
   const currentFormType = settings.form_type || content.form_type || 'general';
 
-return (
+  return (
     <div className={`relative transition-all duration-500 rounded-[3.5rem] border-2 bg-white overflow-hidden
       ${hasChanges ? 'border-orange-400 shadow-2xl shadow-orange-100/50 z-10' : 'border-slate-100 shadow-sm z-0'}`}>
       
-      {/* ALERTA VISUAL - z-20 para que no tape la barra sticky z-40 */}
-
       <div className="p-8 md:p-12">
         <div className="flex items-center gap-4 mb-10 border-b border-slate-50 pb-8">
           <div className={`p-4 rounded-2xl transition-colors duration-500 ${hasChanges ? 'bg-orange-500 text-white' : 'bg-slate-900 text-white'}`}>
