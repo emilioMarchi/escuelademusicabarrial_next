@@ -127,14 +127,18 @@ export type FormSubmission = ContactSubmission | EnrollmentSubmission;
 export interface UniversalCardData {
   id?: string;
   slug: string;
-  title: string;         // Usamos title como principal
+  title: string;
   description?: string;
   image_url?: string;
-  label?: string;        // Agregamos esto
-  // Limitamos los colores a los que tenés en el componente para que sea seguro
+  label?: string;
   color?: "green" | "orange" | "purple" | "blue" | "yellow"; 
-  name?: string;         // Por compatibilidad con Clases
-  excerpt?: string;      // Por compatibilidad con Noticias
+  name?: string;         
+  excerpt?: string;      
+  // Campos dinámicos de la DB
+  date?: string;         
+  schedule?: string;     
+  teacher_name?: string; 
+  max_capacity?: number; 
 }
 export interface PageWithSections extends PageContent {
   renderedSections: SectionData[];

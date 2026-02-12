@@ -18,7 +18,7 @@ interface SectionRendererProps {
   pageCategory?: CategoryType; 
   rawItems?: (Class | News)[];
   id?: string; 
-  urlFormMode?: string; // Nueva prop
+  urlFormMode?: string; 
 }
 
 export default function SectionRenderer({ 
@@ -65,7 +65,11 @@ export default function SectionRenderer({
         label: c.instrument, 
         image_url: c.image_url, 
         slug: (c as any).slug || slugify(c.name), 
-        color: "orange" as const 
+        color: "orange" as const,
+        // CORRECCIÓN: Mapeo de datos para que CardItem los vea
+        schedule: c.schedule,
+        teacher_name: c.teacher_name,
+        max_capacity: c.max_capacity
       }));
 
       return (
@@ -89,7 +93,9 @@ export default function SectionRenderer({
         label: "Novedades", 
         image_url: n.image_url, 
         slug: (n as any).slug || slugify(n.title), 
-        color: "green" as const 
+        color: "green" as const,
+        // CORRECCIÓN: Mapeo de datos para que CardItem los vea
+        date: n.date
       }));
 
       return (
@@ -109,13 +115,11 @@ export default function SectionRenderer({
       const adminSelection = sectionData.settings?.form_type || sectionData.content?.form_type;
       let effectiveCategory = pageCategory || "contacto";
       
-      // PRIORIDAD 1: Parámetro en la URL (?form=inscripcion)
       if (urlFormMode === 'inscripcion' || urlFormMode === 'clases') {
         effectiveCategory = 'clases';
       } else if (urlFormMode === 'contacto' || urlFormMode === 'general') {
         effectiveCategory = 'contacto';
       } 
-      // PRIORIDAD 2: Selección del administrador si no hay parámetro en URL
       else {
         if (adminSelection === 'clases' || adminSelection === 'inscripcion') {
             effectiveCategory = 'clases';

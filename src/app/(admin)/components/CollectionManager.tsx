@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { Plus, Trash2, Image as ImageIcon, X, Edit3, Camera, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Image as ImageIcon, X, Edit3, Camera, Loader2, AlertCircle, Clock, Users, CheckCircle2, Circle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { uploadImageToStorage } from "@/lib/StoreUtils";
 
@@ -62,7 +62,6 @@ export default function CollectionManager({ type, items, teachers = [], instrume
   const handleSave = async () => {
     let cleanItem = { ...editingItem };
 
-    // Limpieza de datos según el tipo para evitar incongruencias en la DB
     if (type === "noticias") {
       delete (cleanItem as any).instrument;
       delete (cleanItem as any).teacher_name;
@@ -103,13 +102,19 @@ export default function CollectionManager({ type, items, teachers = [], instrume
           {items.map((it) => {
             const isOrphan = type === 'clases' && !teachers.includes(it.teacher_name);
             return (
-              <div key={it.id} className="bg-white p-5 rounded-[2.5rem] border border-slate-200 shadow-sm group relative flex flex-col">
+              <div key={it.id} className={`bg-white p-5 rounded-[2.5rem] border shadow-sm group relative flex flex-col transition-opacity ${!it.is_active ? 'opacity-60 border-slate-200' : 'border-slate-200'}`}>
                 <div className="aspect-square bg-slate-100 rounded-[2rem] overflow-hidden relative mb-5">
                   {it.image_url ? (
-                    <img src={it.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"/>
+                    <img src={it.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 shadow-inner"/>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon size={40} /></div>
                   )}
+                  
+                  {/* Badge de Inactivo */}
+                  {!it.is_active && (
+                    <div className="absolute top-4 right-4 bg-slate-900/80 text-white text-[8px] font-black uppercase px-3 py-1 rounded-full backdrop-blur-md">Pausado</div>
+                  )}
+
                   <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3 backdrop-blur-sm">
                     <button onClick={() => openModal(it)} className="p-4 bg-white text-slate-900 rounded-2xl hover:scale-110 transition-all shadow-xl"><Edit3 size={20}/></button>
                     <button onClick={() => confirm("¿Eliminar permanentemente?") && onDelete(it.id)} className="p-4 bg-white text-red-500 rounded-2xl hover:scale-110 transition-all shadow-xl"><Trash2 size={20}/></button>
@@ -132,12 +137,23 @@ export default function CollectionManager({ type, items, teachers = [], instrume
       <AnimatePresence>
         {editingItem && (
           <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white w-full max-w-xl rounded-[3rem] p-10 relative shadow-2xl">
+            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-[3rem] p-10 relative shadow-2xl scrollbar-hide">
               <button onClick={() => setEditingItem(null)} className="absolute top-8 right-8 p-2 bg-slate-100 rounded-full text-slate-500"><X size={18}/></button>
               
-              <h3 className="text-2xl font-black uppercase text-slate-900 mb-8 tracking-tighter">
-                {editingItem.id ? 'Editar' : 'Crear'} {type}
-              </h3>
+              <div className="flex justify-between items-start mb-8">
+                <h3 className="text-2xl font-black uppercase text-slate-900 tracking-tighter">
+                  {editingItem.id ? 'Editar' : 'Crear'} {type}
+                </h3>
+                
+                {/* Switch de Activo/Inactivo */}
+                <button 
+                  onClick={() => setEditingItem({...editingItem, is_active: !editingItem.is_active})}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${editingItem.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}
+                >
+                  {editingItem.is_active ? <CheckCircle2 size={14}/> : <Circle size={14}/>}
+                  <span className="text-[9px] font-black uppercase tracking-widest">{editingItem.is_active ? 'Activo' : 'Pausado'}</span>
+                </button>
+              </div>
               
               <div className="space-y-6">
                 {/* Imagen */}
@@ -162,34 +178,58 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                 </div>
                 
                 {type === 'clases' ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                       <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Instrumento</label>
-                       <select 
-                        value={editingItem.instrument} 
-                        onChange={(e) => setEditingItem({ ...editingItem, instrument: e.target.value })} 
-                        className="w-full p-4 bg-slate-50 rounded-2xl text-xs font-bold text-slate-900 border-none ring-2 ring-slate-100"
-                       >
-                         {!instruments.includes(editingItem.instrument) && editingItem.instrument && (
-                            <option value={editingItem.instrument}>{editingItem.instrument} (Inactivo)</option>
-                         )}
-                         {instruments.map(i => <option key={i} value={i}>{i}</option>)}
-                       </select>
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                         <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Instrumento</label>
+                         <select 
+                          value={editingItem.instrument} 
+                          onChange={(e) => setEditingItem({ ...editingItem, instrument: e.target.value })} 
+                          className="w-full p-4 bg-slate-50 rounded-2xl text-xs font-bold text-slate-900 border-none ring-2 ring-slate-100"
+                         >
+                           {!instruments.includes(editingItem.instrument) && editingItem.instrument && (
+                             <option value={editingItem.instrument}>{editingItem.instrument} (Inactivo)</option>
+                           )}
+                           {instruments.map(i => <option key={i} value={i}>{i}</option>)}
+                         </select>
+                      </div>
+                      <div>
+                         <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Docente</label>
+                         <select 
+                          value={editingItem.teacher_name} 
+                          onChange={(e) => setEditingItem({ ...editingItem, teacher_name: e.target.value })} 
+                          className={`w-full p-4 rounded-2xl text-xs font-bold border-none ring-2 ${!teachers.includes(editingItem.teacher_name) ? 'bg-red-50 text-red-600 ring-red-100' : 'bg-slate-50 text-slate-900 ring-slate-100'}`}
+                         >
+                           {editingItem.teacher_name && !teachers.includes(editingItem.teacher_name) && (
+                             <option value={editingItem.teacher_name}>{editingItem.teacher_name} (No staff)</option>
+                           )}
+                           {teachers.map(t => <option key={t} value={t}>{t}</option>)}
+                         </select>
+                      </div>
                     </div>
-                    <div>
-                       <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Docente</label>
-                       <select 
-                        value={editingItem.teacher_name} 
-                        onChange={(e) => setEditingItem({ ...editingItem, teacher_name: e.target.value })} 
-                        className={`w-full p-4 rounded-2xl text-xs font-bold border-none ring-2 ${!teachers.includes(editingItem.teacher_name) ? 'bg-red-50 text-red-600 ring-red-100' : 'bg-slate-50 text-slate-900 ring-slate-100'}`}
-                       >
-                         {editingItem.teacher_name && !teachers.includes(editingItem.teacher_name) && (
-                            <option value={editingItem.teacher_name}>{editingItem.teacher_name} (No staff)</option>
-                         )}
-                         {teachers.map(t => <option key={t} value={t}>{t}</option>)}
-                       </select>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                         <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block flex gap-1 items-center"><Clock size={10}/> Horario</label>
+                         <input 
+                           type="text" 
+                           placeholder="Ej: Lun y Mie 18hs"
+                           value={editingItem.schedule || ""} 
+                           onChange={(e) => setEditingItem({ ...editingItem, schedule: e.target.value })} 
+                           className="w-full p-4 bg-slate-50 rounded-2xl text-xs font-bold text-slate-900 border-none ring-2 ring-slate-100 focus:ring-green-500 transition-all outline-none" 
+                         />
+                      </div>
+                      <div>
+                         <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block flex gap-1 items-center"><Users size={10}/> Capacidad Máx.</label>
+                         <input 
+                           type="number" 
+                           value={editingItem.max_capacity || 0} 
+                           onChange={(e) => setEditingItem({ ...editingItem, max_capacity: parseInt(e.target.value) })} 
+                           className="w-full p-4 bg-slate-50 rounded-2xl text-xs font-bold text-slate-900 border-none ring-2 ring-slate-100 focus:ring-green-500 transition-all outline-none" 
+                         />
+                      </div>
                     </div>
-                  </div>
+                  </>
                 ) : (
                   <div>
                     <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Fecha de Publicación</label>
@@ -199,7 +239,7 @@ export default function CollectionManager({ type, items, teachers = [], instrume
 
                 <div>
                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Descripción</label>
-                   <textarea rows={3} value={editingItem.description || ""} onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })} className="w-full p-4 bg-slate-50 rounded-2xl text-xs font-medium text-slate-700 border-none ring-2 ring-slate-100" />
+                   <textarea rows={4} value={editingItem.description || ""} onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })} className="w-full p-4 bg-slate-50 rounded-2xl text-xs font-medium text-slate-700 border-none ring-2 ring-slate-100" />
                 </div>
 
                 <button onClick={handleSave} className="w-full py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] shadow-xl shadow-green-900/20 hover:bg-green-700 transition-all transform active:scale-95">

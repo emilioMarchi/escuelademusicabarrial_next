@@ -24,19 +24,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: newsItem.title,
       description: newsItem.excerpt || newsItem.description?.substring(0, 160),
       url: `https://escuelademusicabarrial.ar/novedades/${slug}`,
-      images: [
-        {
-          url: "/favicon.png",
-          width: 1200,
-          height: 630,
-        },
-      ],
+      images: [{ url: "/favicon.png", width: 1200, height: 630 }],
       type: 'article',
     },
-    twitter: {
-      card: "summary",
-      images: ["/favicon.png"],
-    }
+    twitter: { card: "summary", images: ["/favicon.png"] }
   };
 }
 
@@ -44,24 +35,26 @@ export default async function NewsDetailPage({ params }: Props) {
   const { slug } = await params;
   const { data: news } = await getCollectionAdmin("noticias");
   const allItems = (news as any[]) || [];
-  const newsItem = allItems.find((n: any) => n.slug === slug);
+  
+  const newsItem = allItems.find((n: any) => n.slug === slug && n.is_active);
 
   if (!newsItem) return <div className="p-20 text-center font-bold text-slate-400 uppercase tracking-widest text-sm">Noticia no encontrada</div>;
 
   const pubDate = new Date(newsItem.date);
   const dateString = pubDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  // Preparamos las otras noticias para el slider
   const otherNewsData: UniversalCardData[] = allItems
-    .filter((n: any) => n.slug !== slug)
+    .filter((n: any) => n.slug !== slug && n.is_active)
     .map((n: any) => ({
       id: n.id,
       slug: n.slug,
       title: n.title,
-      description: n.excerpt || n.description?.substring(0, 100),
       image_url: n.image_url,
+      description: n.excerpt || n.description?.substring(0, 100),
       color: "orange",
-      label: "Novedades"
+      label: "Novedades",
+      // DATA PARA EL CARDITEM
+      date: n.date 
     }));
 
   return (
@@ -94,51 +87,27 @@ export default async function NewsDetailPage({ params }: Props) {
                 </p>
               )}
             </header>
-
             <div className="prose prose-slate prose-xl max-w-none text-slate-700 leading-relaxed first-letter:text-7xl first-letter:font-black first-letter:text-slate-900 first-letter:mr-3 first-letter:float-left first-letter:leading-[0.8]">
               <div className="whitespace-pre-line font-serif selection:bg-orange-100">
                 {newsItem.description}
               </div>
             </div>
-
-            <div className="mt-12 pt-6 border-t border-slate-50 flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-xs">M</div>
-              <p className="text-sm font-bold text-slate-800 font-serif">Redacción La Escuela</p>
-            </div>
           </div>
-
           {newsItem.image_url && (
             <div className="lg:col-span-5 order-1 lg:order-2 lg:sticky lg:top-8">
               <div className="relative">
-                <img 
-                  src={newsItem.image_url} 
-                  className="w-full h-auto aspect-[4/5] lg:aspect-square object-cover rounded-[2.5rem] shadow-2xl shadow-slate-200" 
-                  alt={newsItem.title} 
-                />
-                <div className="absolute -top-4 -right-4 w-24 h-24 bg-orange-50 rounded-full -z-10 blur-2xl opacity-60"></div>
+                <img src={newsItem.image_url} className="w-full h-auto aspect-[4/5] lg:aspect-square object-cover rounded-[2.5rem] shadow-2xl shadow-slate-200" alt={newsItem.title} />
               </div>
             </div>
           )}
         </div>
       </section>
 
-      {/* SECCIÓN DINÁMICA DE OTRAS NOTICIAS */}
       {otherNewsData.length > 0 && (
-        <DynamicSection 
-          title="Más Novedades"
-          description="Mantenete al tanto de todo lo que sucede en nuestra comunidad musical."
-          items={otherNewsData}
-          layout="slider"
-          basePath="/novedades" // <--- CORREGIDO AQUÍ
-        />
+        <DynamicSection title="Más Novedades" items={otherNewsData} layout="slider" basePath="/novedades" />
       )}
 
-      <Contact 
-        category="contacto" 
-        hasForm={true} 
-        customTitle="Participá en la comunidad"
-        customDescription="Suscribite a nuestro newsletter o escribinos si tenés alguna propuesta."
-      />
+      <Contact category="contacto" hasForm={true} />
     </article>
   );
 }
