@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { Plus, Trash2, Image as ImageIcon, X, Edit3, Camera, Loader2, AlertCircle, Clock, Users, CheckCircle2, Circle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { uploadImageToStorage } from "@/lib/StoreUtils";
+import { getOptimizedImage } from "@/lib/image-utils"; // <--- NUEVA IMPORTACIÓN
 
 interface Props {
   type: "clases" | "noticias";
@@ -168,8 +169,31 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                     </button>
                     <p className="text-[9px] text-slate-400 font-bold uppercase mt-3 tracking-wider">JPG o PNG. Máx 2MB.</p>
                   </div>
-                  <input type="file" ref={fileRef} className="hidden" onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} />
-                </div>
+                  <input 
+  type="file" 
+  ref={fileRef} 
+  className="hidden" 
+  accept="image/*" 
+  onChange={async (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploading(true);
+      try {
+        // Optimizamos antes de llamar a la utilidad de subida
+        const optimizedFile = await getOptimizedImage(file); // <--- OPTIMIZACIÓN
+        const url = await uploadImageToStorage(optimizedFile);
+        if (url) {
+          setEditingItem({ ...editingItem, image_url: url });
+        }
+      } catch (err) {
+        console.error("Error al optimizar/subir:", err);
+      } finally {
+        setUploading(false);
+      }
+    }
+  }} 
+/>
+                  </div>
 
                 {/* Título/Nombre */}
                 <div>

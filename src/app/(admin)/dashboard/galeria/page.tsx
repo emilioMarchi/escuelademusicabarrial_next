@@ -19,6 +19,7 @@ import {
   Play, Video, Link as LinkIcon, X, Globe
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { getOptimizedImage } from "@/lib/image-utils"; // Asegúrate de que esta ruta sea correcta
 
 export default function AdminGaleria() {
   const { setDirty: setGlobalDirty } = useDirtyState();
@@ -41,7 +42,6 @@ export default function AdminGaleria() {
   const headerFileRef = useRef<HTMLInputElement>(null);
   const mediaFileRef = useRef<HTMLInputElement>(null);
 
-  // --- FUNCIÓN HELPER PARA YOUTUBE ---
   const getYoutubeId = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
@@ -61,18 +61,29 @@ export default function AdminGaleria() {
 
   useEffect(() => { loadData(); }, []);
 
+  // --- GUARDADO DE CONFIGURACIÓN Y HEADER ---
   const handleSaveAll = async () => {
     setIsSaving(true);
     try {
       if (hasChangesConfig) {
         let currentImageUrl = pageConfig?.header_image_url;
+        
+        // Si hay una foto de header nueva seleccionada
         if (headerFileRef.current?.files?.[0]) {
+          const originalFile = headerFileRef.current.files[0];
+          // OPTIMIZACIÓN ANTES DE SUBIR EL HEADER
+          const optimizedHeader = await getOptimizedImage(originalFile);
+          
           const formData = new FormData();
-          formData.append("file", headerFileRef.current.files[0]);
+          formData.append("file", optimizedHeader);
           const uploadRes = await uploadFileOnlyAdmin(formData);
           if (uploadRes.success) currentImageUrl = uploadRes.url || "";
         }
-        await savePageConfigAdmin("galeria", { ...pageConfig, header_image_url: currentImageUrl });
+
+        await savePageConfigAdmin("galeria", { 
+            ...pageConfig, 
+            header_image_url: currentImageUrl 
+        } as PageContent);
       }
 
       if (hasChangesOrder) {
@@ -98,39 +109,46 @@ export default function AdminGaleria() {
     }
   };
 
+  // --- SUBIDA DE NUEVO CONTENIDO (MULTIPLE) ---
   const handleMediaUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsUploading(true);
-    
-    const formData = new FormData(e.currentTarget);
-    let res;
+    const form = e.currentTarget;
+    const formDataRaw = new FormData(form);
+    const caption = formDataRaw.get("caption") as string;
+    const linkUrl = formDataRaw.get("link_url") as string;
 
-    if (uploadType === 'link') {
-      const url = formData.get("link_url") as string;
-      const caption = formData.get("caption") as string || "";
-      
-      if (!url) {
-        setStatus({ type: 'error', message: "Falta la URL del video" });
-        setIsUploading(false);
-        return;
+    setIsUploading(true);
+    try {
+      if (uploadType === 'link') {
+        if (!linkUrl) throw new Error("URL requerida");
+        await addGalleryLinkAdmin(linkUrl, caption);
+      } else {
+        const files = mediaFileRef.current?.files;
+        if (!files || files.length === 0) return;
+
+        const fileList = Array.from(files);
+        
+        for (const f of fileList) {
+            // OPTIMIZACIÓN: Solo comprime si es imagen, si es video pasa directo
+            const optimizedFile = await getOptimizedImage(f);
+            
+            const formData = new FormData();
+            formData.append("file", optimizedFile);
+            formData.append("caption", caption); // Enviamos el pie de foto
+            
+            await uploadAndAddImageAdmin(formData);
+        }
       }
       
-      res = await addGalleryLinkAdmin(url, caption);
-    } else {
-      res = await uploadAndAddImageAdmin(formData);
-    }
-
-    if (res.success) {
-      await loadData(true);
+      setStatus({ type: 'success', message: 'Contenido publicado' });
       setPhotoPreview(null);
-      (e.target as HTMLFormElement).reset();
-      setStatus({ type: 'success', message: "Contenido publicado" });
-    } else {
-      setStatus({ type: 'error', message: "Error al publicar" });
+      form.reset();
+      loadData(true);
+    } catch (error) {
+        setStatus({ type: 'error', message: 'Error al publicar' });
+    } finally {
+        setIsUploading(false);
     }
-    
-    setIsUploading(false);
-    setTimeout(() => setStatus(null), 3000);
   };
 
   if (loading) return <div className="p-20 text-center font-black uppercase text-slate-900 animate-pulse tracking-widest">Sincronizando Galería...</div>;
@@ -163,7 +181,7 @@ export default function AdminGaleria() {
         )}
       </header>
 
-      {/* SECCIÓN 1: TEXTOS Y PORTADA (HERO) */}
+      {/* SECCIÓN 1: TEXTOS Y PORTADA */}
       <section className={`p-10 rounded-[3.5rem] border-2 transition-all duration-500 relative bg-white ${hasChangesConfig ? 'border-orange-400 shadow-2xl shadow-orange-50' : 'border-slate-100 shadow-sm'}`}>
         <div className="flex items-center justify-between border-b-2 border-slate-50 pb-8 mb-8">
           <div className="flex items-center gap-3">
@@ -217,7 +235,7 @@ export default function AdminGaleria() {
               ) : (
                 <ImageIcon className="text-slate-200" size={48}/>
               )}
-              <button onClick={() => headerFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2">
+              <button type="button" onClick={() => headerFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2">
                 <Camera size={24} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Cambiar Fondo</span>
               </button>
@@ -229,10 +247,6 @@ export default function AdminGaleria() {
 
       {/* SECCIÓN 2: SUBIDA MULTIMEDIA */}
       <section className="bg-slate-900 p-10 rounded-[4rem] text-white shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
-            <Video size={120} />
-        </div>
-
         <form onSubmit={handleMediaUpload} className="relative z-10 flex flex-col md:flex-row items-center gap-10">
           <div className="flex flex-col gap-3">
              <div 
@@ -260,18 +274,18 @@ export default function AdminGaleria() {
 
           <input 
             type="file" 
-            name="file" 
             ref={mediaFileRef} 
             className="hidden" 
             accept={uploadType === 'image' ? 'image/*' : 'video/mp4,video/x-m4v,video/*'} 
+            multiple={uploadType === 'image'} // Permitimos subir varias fotos juntas
             onChange={e => e.target.files?.[0] && setPhotoPreview(URL.createObjectURL(e.target.files[0]))} 
           />
           
           <div className="flex-1 w-full space-y-6">
             <div className="space-y-2">
-               <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Publicar {uploadType === 'image' ? 'Nueva Foto' : 'Nuevo Video'}</h3>
+               <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Publicar {uploadType === 'image' ? 'Nuevas Fotos' : 'Nuevo Contenido'}</h3>
                <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
-                  {uploadType === 'link' ? "Pega el enlace de YouTube o Vimeo" : "Formatos soportados: JPG, PNG, MP4, MOV"}
+                  {uploadType === 'link' ? "Pega el enlace de YouTube o Vimeo" : "Formatos optimizados a WebP automáticamente"}
                </p>
             </div>
 
@@ -279,10 +293,10 @@ export default function AdminGaleria() {
                 {uploadType === 'link' && (
                     <input name="link_url" type="text" placeholder="https://youtube.com/watch?v=..." className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-sm outline-none focus:border-white/40 font-medium text-white transition-all" />
                 )}
-                <input name="caption" type="text" placeholder={`Escribe un pie de ${uploadType === 'image' ? 'foto' : 'video'}...`} className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-sm outline-none focus:border-white/40 font-medium text-white transition-all" />
+                <input name="caption" type="text" placeholder={`Escribe un pie de multimedia...`} className="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-sm outline-none focus:border-white/40 font-medium text-white transition-all" />
             </div>
 
-            <button disabled={isUploading} className="w-full md:w-auto px-12 py-5 bg-white text-slate-900 font-black uppercase text-[10px] tracking-[0.2em] rounded-2xl hover:bg-green-400 transition-all flex items-center justify-center gap-3 shadow-xl">
+            <button type="submit" disabled={isUploading} className="w-full md:w-auto px-12 py-5 bg-white text-slate-900 font-black uppercase text-[10px] tracking-[0.2em] rounded-2xl hover:bg-green-400 transition-all flex items-center justify-center gap-3 shadow-xl">
               {isUploading ? <Loader2 className="animate-spin" size={16}/> : <Plus size={16}/>}
               Publicar en Galería
             </button>
@@ -299,26 +313,19 @@ export default function AdminGaleria() {
 
         <Reorder.Group axis="y" values={images} onReorder={(newOrder) => { setImages(newOrder); setHasChangesOrder(true); setGlobalDirty(true); }} className="space-y-4">
           {images.map((img, idx) => {
-            // Lógica para detectar el tipo de miniatura en el listado
             const ytId = getYoutubeId(img.url);
             const isLocalVideo = img.url.match(/\.(mp4|mov|webm|m4v)$/i);
 
             return (
               <Reorder.Item key={img.id} value={img}>
                 <div className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-50 flex flex-col md:flex-row items-center gap-8 group hover:border-slate-900 transition-all shadow-sm">
-                  
                   <div className="cursor-grab active:cursor-grabbing text-slate-200 hover:text-slate-900 transition-colors">
                       <GripVertical size={28} />
                   </div>
-                  
                   <div className="w-24 h-24 rounded-[1.8rem] overflow-hidden bg-slate-900 shrink-0 border-2 border-slate-100 shadow-inner flex items-center justify-center relative">
                       {ytId ? (
                           <>
-                            <img 
-                              src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`} 
-                              className="w-full h-full object-cover opacity-80" 
-                              alt="YouTube Thumbnail" 
-                            />
+                            <img src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`} className="w-full h-full object-cover opacity-80" alt="YouTube" />
                             <Play size={20} className="absolute text-white drop-shadow-lg" fill="currentColor"/>
                           </>
                       ) : isLocalVideo ? (
@@ -330,7 +337,6 @@ export default function AdminGaleria() {
                           <img src={img.url} className="w-full h-full object-cover object-center" alt="" />
                       )}
                   </div>
-
                   <div className="flex-1 w-full space-y-2">
                       <div className="flex items-center gap-2">
                          <Type size={12} className="text-slate-300" />
@@ -346,18 +352,12 @@ export default function AdminGaleria() {
                           setHasChangesOrder(true);
                           setGlobalDirty(true);
                         }}
-                        placeholder="Sin descripción..."
                         className="w-full bg-slate-50 border-2 border-transparent focus:border-slate-900 p-3 rounded-xl text-sm font-bold text-slate-900 outline-none transition-all"
                       />
                   </div>
-
-                  <button 
-                    onClick={() => deleteImageAdmin(img.id, img.url).then(() => loadData(true))}
-                    className="p-4 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
-                  >
+                  <button onClick={() => deleteImageAdmin(img.id, img.url).then(() => loadData(true))} className="p-4 text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
                     <Trash2 size={22} />
                   </button>
-
                 </div>
               </Reorder.Item>
             );
@@ -365,19 +365,14 @@ export default function AdminGaleria() {
         </Reorder.Group>
       </section>
 
-      {/* NOTIFICACIÓN FLOTANTE */}
       <AnimatePresence>
         {status && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[250] px-10 py-5 bg-slate-900 text-white rounded-full shadow-2xl flex items-center gap-4 border border-white/10"
-          >
+          <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[250] px-10 py-5 bg-slate-900 text-white rounded-full shadow-2xl flex items-center gap-4 border border-white/10">
             {status.type === 'success' ? <CheckCircle className="text-green-400" size={20}/> : <AlertCircle className="text-red-400" size={20}/>}
             <span className="text-xs font-black uppercase tracking-widest">{status.message}</span>
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }

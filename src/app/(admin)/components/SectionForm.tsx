@@ -5,6 +5,8 @@ import { SectionData } from "@/types";
 import { AnimatePresence, motion } from "framer-motion"; 
 import { useDirtyState } from "@/context/DirtyStateContext";
 import { uploadImageToStorage } from "@/lib/StoreUtils";
+import { getOptimizedImage } from "@/lib/image-utils";
+
 import { 
   Plus, Trash2, Image as ImageIcon, Camera, 
   Music, Newspaper, FileText, AlertCircle, Loader2, 
@@ -67,29 +69,35 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
     onChange(newContent, newSettings || settings);
   };
 
-  const handleImageUpload = async (file: File, isSlide = false) => {
-    setUploading(true);
-    try {
-      const url = await uploadImageToStorage(file);
-      if (url) {
-        if (isSlide) {
-          const ns = [...slides];
-          ns[activeSlideIdx] = { ...ns[activeSlideIdx], image_url: url };
-          handleUpdate({ ...content, slides: ns });
-        } else {
-          handleUpdate({ ...content, image_url: url });
-        }
-        
-        if (onSave) {
-          setTimeout(() => onSave(), 100);
-        }
+ const handleImageUpload = async (file: File, isSlide = false) => {
+  setUploading(true);
+  try {
+    // --- AQUÍ SE APLICA LA OPTIMIZACIÓN ---
+    // Comprimimos y convertimos a WebP antes de enviar al Storage
+    const optimizedFile = await getOptimizedImage(file);
+
+    // Enviamos el archivo ya optimizado (pesa mucho menos)
+    const url = await uploadImageToStorage(optimizedFile);
+    
+    if (url) {
+      if (isSlide) {
+        const ns = [...slides];
+        ns[activeSlideIdx] = { ...ns[activeSlideIdx], image_url: url };
+        handleUpdate({ ...content, slides: ns });
+      } else {
+        handleUpdate({ ...content, image_url: url });
       }
-    } catch (e) { 
-      console.error(e); 
-    } finally { 
-      setUploading(false); 
+      
+      if (onSave) {
+        setTimeout(() => onSave(), 100);
+      }
     }
-  };
+  } catch (e) { 
+    console.error("Error en la subida optimizada:", e); 
+  } finally { 
+    setUploading(false); 
+  }
+};
 
   // --- HELPERS PARA HERO ---
   const addSlide = () => {

@@ -5,7 +5,7 @@ import { useDirtyState } from "@/context/DirtyStateContext";
 import { useAuth } from "@/context/AuthContext";
 import { 
   LayoutDashboard, ChevronDown, ChevronRight, 
-  LogOut, AlertCircle, Layers, DollarSign, Image as ImageIcon 
+  LogOut, AlertCircle, Layers, DollarSign, Image as ImageIcon, X 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,7 +18,7 @@ const pages = [
   { name: "Donaciones", path: "/dashboard/como-ayudar" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { isDirty, setDirty } = useDirtyState();
@@ -34,8 +34,9 @@ export default function Sidebar() {
 
   const handleNavigation = (path: string) => {
     if (isDirty && pathname !== path) {
-      setPendingPath(path); // Abrir modal si hay cambios
+      setPendingPath(path);
     } else {
+      if (onClose) onClose(); // Cerramos el sidebar en mobile
       router.push(path);
     }
   };
@@ -51,9 +52,15 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="w-72 bg-white border-r border-slate-100 flex flex-col h-screen sticky top-0">
-        <div className="p-8 flex flex-col h-full">
-          <div className="flex items-center gap-3 mb-10">
+      <aside className="w-full bg-white border-r border-slate-100 flex flex-col h-full relative">
+        <div className="p-8 flex flex-col h-full overflow-y-auto">
+          
+          {/* Botón Cerrar (Solo Mobile) */}
+          <button onClick={onClose} className="lg:hidden absolute top-8 right-8 text-slate-300 hover:text-slate-900">
+            <X size={20} />
+          </button>
+
+          <div className="flex items-center gap-3 mb-10 shrink-0">
             <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
               <span className="text-white font-black text-xl">E</span>
             </div>
@@ -124,7 +131,7 @@ export default function Sidebar() {
             </div>
           </nav>
 
-          <div className="pt-6 border-t border-slate-50">
+          <div className="pt-6 border-t border-slate-50 shrink-0">
             <button 
               onClick={handleLogout}
               className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-red-400 hover:bg-red-50 transition-all"
@@ -135,53 +142,35 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* MODAL DE ADVERTENCIA DE SALIDA - BOMB PROOF Z-INDEX */}
+      {/* MODAL DE ADVERTENCIA (Se mantiene igual, pero con el onClose al navegar) */}
       <AnimatePresence>
         {pendingPath && (
           <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
-            {/* Overlay con blur */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setPendingPath(null)}
-              className="absolute inset-0 bg-slate-900/80 backdrop-blur-md"
-            />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setPendingPath(null)} className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" />
             
-            {/* Card del Modal */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white p-10 rounded-[3rem] max-w-sm w-full shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] border border-slate-100"
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+              className="relative bg-white p-10 rounded-[3rem] max-w-sm w-full shadow-2xl border border-slate-100"
             >
               <div className="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-8">
                 <AlertCircle size={40} />
               </div>
-              
-              <h3 className="text-2xl font-black uppercase text-slate-900 leading-tight mb-4 text-center tracking-tighter">
-                ¿Abandonar edición?
-              </h3>
-              
-              <p className="text-slate-500 text-sm font-medium mb-10 text-center leading-relaxed">
-                Tenés cambios sin guardar. Si salís ahora, perderás todo lo que editaste en esta sesión.
-              </p>
+              <h3 className="text-2xl font-black uppercase text-slate-900 text-center mb-4 tracking-tighter">¿Abandonar edición?</h3>
+              <p className="text-slate-500 text-sm font-medium mb-10 text-center leading-relaxed">Tenés cambios sin guardar. Si salís ahora, perderás todo lo editado.</p>
               
               <div className="flex flex-col gap-3">
-                <button 
-                  onClick={() => setPendingPath(null)}
-                  className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95"
-                >
+                <button onClick={() => setPendingPath(null)} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl">
                   Seguir Editando
                 </button>
                 <button 
                   onClick={() => {
                     const path = pendingPath;
-                    setDirty(false); // IMPORTANTE: Apagamos el dirty antes de navegar
+                    setDirty(false);
                     setPendingPath(null);
+                    if (onClose) onClose(); // Cerramos sidebar al confirmar salida
                     router.push(path);
                   }}
-                  className="w-full py-5 bg-white border-2 border-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all active:scale-95"
+                  className="w-full py-5 bg-white border-2 border-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:text-red-500"
                 >
                   Salir sin guardar
                 </button>
