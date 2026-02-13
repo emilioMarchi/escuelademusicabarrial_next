@@ -59,16 +59,21 @@ export default async function ClassDetailPage({ params }: PageProps) {
     );
   }
 
+  // --- CORRECCIÓN DEL MAPEO DE CARDS ---
   const otherClassesData: UniversalCardData[] = allItems
     .filter((c: any) => c.slug !== slug && c.is_active)
     .map((c: any) => ({
       id: c.id,
       slug: c.slug,
       title: c.name,
-      description: c.teacher_name,
       image_url: c.image_url, 
-      color: "orange", // CAMBIO: Ahora el slider será naranja
+      color: "orange",
       label: c.instrument || "Música",
+      // Pasamos las propiedades que CardItem necesita para los iconos:
+      teacher_name: c.teacher_name,
+      schedule: c.schedule,
+      max_capacity: c.max_capacity,
+      description: c.teacher_name, // Opcional: lo que se muestra en el cuerpo de la card
     }));
 
   return (
