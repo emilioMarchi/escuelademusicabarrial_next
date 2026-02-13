@@ -1,6 +1,7 @@
+// src/components/sections/donations/DonationForm.tsx
 "use client";
 import React, { useState } from "react";
-import { Loader2, CreditCard, Calendar, ShieldCheck, Info, CheckCircle2, ArrowRight, Sparkles, Camera } from "lucide-react";
+import { Loader2, CreditCard, Calendar, ShieldCheck, Info, CheckCircle2, ArrowRight, Sparkles, Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 
@@ -8,7 +9,7 @@ interface Props {
   title?: string;
   description?: string;
   initialAmount?: number;
-  backgroundImage?: string; // Corregido: Prop añadida para evitar el error de tipos
+  backgroundImage?: string;
 }
 
 export default function DonationForm({ title, description, initialAmount, backgroundImage }: Props) {
@@ -40,22 +41,21 @@ export default function DonationForm({ title, description, initialAmount, backgr
 
   if (isSubmitted) {
     return (
-        <section className="py-20 px-6 flex items-center justify-center bg-slate-50 min-h-[600px] relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,_rgba(34,197,94,0.08),transparent_50%)]" />
+        <section className="py-24 px-6 flex items-center justify-center bg-[#fdfbf7] min-h-[700px] relative overflow-hidden">
             <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }} 
+                initial={{ opacity: 0, scale: 0.9 }} 
                 animate={{ opacity: 1, scale: 1 }} 
-                className="max-w-md w-full mx-auto bg-white/90 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-2xl shadow-slate-200 text-center border border-white relative z-10"
+                className="max-w-md w-full mx-auto bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-orange-100 text-center border border-orange-50 relative z-10"
             >
-                <div className="w-16 h-16 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-100">
-                    <CheckCircle2 size={32} strokeWidth={1.5} />
+                <div className="w-20 h-20 bg-orange-500 text-white rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl shadow-orange-200">
+                    <Heart size={40} fill="currentColor" />
                 </div>
-                <h2 className="text-2xl font-black uppercase tracking-tighter mb-3 text-slate-900">¡Pestaña de pago abierta!</h2>
-                <p className="text-slate-500 font-medium text-sm mb-8 leading-relaxed">
-                  Completá la operación en la ventana de Mercado Pago para confirmar tu apoyo.
+                <h2 className="font-serif italic text-4xl mb-4 text-slate-900">¡Muchas gracias!</h2>
+                <p className="text-slate-500 font-medium text-sm mb-10 leading-relaxed">
+                  Tu generosidad nos ayuda a que más chicos sigan transformando su realidad a través de la música.
                 </p>
-                <button onClick={() => setIsSubmitted(false)} className="px-8 py-4 bg-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-green-600 transition-all shadow-lg active:scale-95">
-                  Volver al formulario
+                <button onClick={() => setIsSubmitted(false)} className="w-full py-5 bg-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-orange-600 transition-all active:scale-95">
+                  Realizar otro aporte
                 </button>
             </motion.div>
         </section>
@@ -63,142 +63,133 @@ export default function DonationForm({ title, description, initialAmount, backgr
   }
 
   return (
-    <section className="relative py-24 px-6 overflow-hidden bg-slate-950 min-h-[80vh] flex items-center">
+    <section className="relative py-32 px-6 overflow-hidden bg-slate-950 flex items-center justify-center min-h-screen">
       
-      {/* --- BACKGROUND LOGIC --- */}
+      {/* --- BACKGROUND AMBIENTAL --- */}
       <div className="absolute inset-0 z-0">
-        {backgroundImage ? (
-          <>
+        {backgroundImage && (
+          <div className="relative w-full h-full">
             <img 
               src={backgroundImage} 
-              className="w-full h-full object-cover opacity-40" 
-              alt="Background" 
+              className="w-full h-full object-cover scale-110 blur-xl opacity-30" 
+              alt="Background Ambient" 
             />
-            {/* Overlay gradiente para asegurar contraste del texto */}
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
-          </>
-        ) : (
-          /* Fallback mesh gradient si no hay imagen */
-          <div className="absolute inset-0 bg-slate-900">
-            <motion.div 
-              animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-              transition={{ duration: 10, repeat: Infinity }}
-              className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_20%_30%,_rgba(59,130,246,0.15),transparent_50%)]" 
-            />
+            <div className="absolute inset-0 bg-radial-gradient from-transparent via-slate-950/60 to-slate-950" />
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-transparent to-slate-950" />
           </div>
         )}
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 items-center">
           
           {/* COLUMNA INFO */}
           <div className="lg:col-span-5 space-y-8 text-center lg:text-left">
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2.5 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/10"
+              className="inline-flex items-center gap-3 px-4 py-1.5 bg-orange-500 rounded-full"
             >
-              <Sparkles size={12} className="text-orange-400" />
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/70">Haz que la música suene</span>
+              <Sparkles size={14} className="text-white" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Proyecto Colectivo</span>
             </motion.div>
             
-            <h2 className="text-5xl md:text-6xl lg:text-7xl font-black uppercase tracking-tighter leading-[0.85] text-white">
-              {title || "Tu ayuda"} <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400">es el motor</span>
-            </h2>
+            <div className="space-y-4">
+                <h2 className="font-serif italic text-4xl md:text-6xl lg:text-7xl tracking-tight leading-[0.9] text-white">
+                  {title ? title : (
+                    <>
+                      Sumate a nuestro <br/>
+                      <span className="text-orange-400">proyecto.</span>
+                    </>
+                  )}
+                </h2>
+                <div className="h-1 w-20 bg-orange-500/30 rounded-full mx-auto lg:mx-0"></div>
+            </div>
             
-            <p className="font-serif italic text-xl text-white/70 leading-relaxed max-w-sm mx-auto lg:mx-0">
-              {description || "Acompañanos a seguir construyendo este espacio de formación y contención a través del arte."}
+            <p className="text-base md:text-lg font-medium text-white/60 max-w-sm mx-auto lg:mx-0 leading-relaxed">
+              {description || "Tu aporte es fundamental para mantener los instrumentos y el equipo docente que hace posible la Escuela."}
             </p>
 
-            <div className="flex flex-col gap-4 max-w-[280px] mx-auto lg:mx-0 pt-4">
-               <div className="grid grid-cols-2 gap-3">
-                  {['payment', 'subscription'].map((btnType) => {
-                      const isActive = type === btnType;
-                      return (
-                          <button key={btnType} type="button" onClick={() => setType(btnType as any)} 
-                              className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all duration-300
-                              ${isActive 
-                                  ? 'border-blue-500 bg-blue-500 text-white shadow-xl shadow-blue-900/20' 
-                                  : 'border-white/10 bg-white/5 text-white/40 hover:border-white/20 hover:text-white/60'}`}>
-                              {btnType === 'payment' ? <CreditCard size={18} /> : <Calendar size={18} />}
-                              <span className="text-[8px] font-black uppercase tracking-widest">{btnType === 'payment' ? 'Único' : 'Mensual'}</span>
-                          </button>
-                      )
-                  })}
-               </div>
+            <div className="flex justify-center lg:justify-start pt-4">
+                <div className="inline-flex p-1.5 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                    {[
+                      { id: 'payment', label: 'Aporte Único', icon: CreditCard },
+                      { id: 'subscription', label: 'Mensual', icon: Calendar }
+                    ].map((btn) => (
+                        <button 
+                          key={btn.id}
+                          onClick={() => setType(btn.id as any)}
+                          className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                            ${type === btn.id 
+                                ? 'bg-white text-slate-950 shadow-lg' 
+                                : 'text-white/40 hover:text-white'}`}
+                        >
+                            <btn.icon size={14} />
+                            {btn.label}
+                        </button>
+                    ))}
+                </div>
             </div>
           </div>
 
           {/* COLUMNA FORMULARIO */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 relative">
+            <div className="absolute -inset-10 bg-orange-500/10 rounded-full blur-[100px] pointer-events-none" />
+            
             <motion.div 
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              className="bg-white p-8 md:p-12 rounded-[3.5rem] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)]"
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              className="relative bg-white/10 backdrop-blur-3xl p-8 md:p-14 rounded-[3.5rem] border border-white/10 shadow-2xl"
             >
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    {['name', 'email'].map((field) => (
-                      <div key={field} className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                            {field === 'name' ? 'Tu Nombre' : 'Tu Email'}
+                      <div key={field} className="space-y-3">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-4">
+                            {field === 'name' ? 'Nombre Completo' : 'Correo Electrónico'}
                           </label>
                           <input 
                               type={field === 'email' ? 'email' : 'text'} 
-                              placeholder={field === 'name' ? "Juan Pérez" : "hola@tuemail.com"} required
-                              className="w-full p-4 rounded-2xl border-2 border-slate-50 bg-slate-50 focus:bg-white focus:border-blue-500 text-slate-900 text-sm font-bold outline-none transition-all"
+                              required
+                              className="w-full p-5 rounded-2xl bg-white/5 border border-white/10 text-white text-sm font-bold outline-none focus:border-orange-500 focus:bg-white/10 transition-all placeholder:text-white/10"
                               onChange={(e) => setFormData({...formData, [field]: e.target.value})}
                           />
                       </div>
                    ))}
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-4">Monto del aporte</label>
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 ml-4">Monto a donar</label>
                   <div className="relative group">
-                    <div className="absolute left-6 top-1/2 -translate-y-1/2 text-xl font-black text-slate-300 group-focus-within:text-blue-500 transition-colors">$</div>
+                    <span className="absolute left-8 top-1/2 -translate-y-1/2 text-3xl font-serif italic text-orange-500">$</span>
                     <input 
-                        type="number" placeholder="0" required min="100"
-                        className="w-full p-6 pl-12 rounded-[2rem] border-2 border-slate-50 bg-slate-50 focus:border-green-500 text-slate-900 text-4xl font-black outline-none transition-all shadow-inner"
+                        type="number" required min="100"
+                        className="w-full p-8 pl-16 rounded-[2.5rem] bg-white/5 border border-white/10 text-white text-5xl font-black outline-none focus:border-orange-500 transition-all shadow-inner"
                         value={formData.amount}
                         onChange={(e) => setFormData({...formData, amount: parseInt(e.target.value)})}
                     />
                   </div>
                 </div>
 
-                <AnimatePresence mode="wait">
-                  <motion.div 
-                    key={type} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 border border-blue-100"
-                  >
-                    <Info size={16} className="text-blue-600 shrink-0" />
-                    <p className="text-[9px] font-bold leading-tight uppercase tracking-widest text-blue-900/60">
-                      {type === "payment" ? "Aporte único mediante Mercado Pago." : "Suscripción mensual. Podés cancelarla cuando quieras."}
-                    </p>
-                  </motion.div>
-                </AnimatePresence>
-
-                <div className="pt-2 space-y-4">
+                <div className="space-y-6">
                     <button 
                       type="submit" disabled={loading}
-                      className="w-full py-6 rounded-[2rem] bg-slate-900 text-white font-black uppercase text-[11px] tracking-[0.3em] transition-all shadow-xl hover:bg-green-600 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 group"
+                      className="w-full py-6 rounded-3xl bg-orange-500 text-white font-black uppercase text-[11px] tracking-[0.3em] transition-all shadow-xl shadow-orange-950/20 hover:bg-orange-600 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
                     >
-                      {loading ? <Loader2 className="animate-spin" size={18} /> : (
-                      <>
-                          Confirmar Donación <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                      </>
+                      {loading ? <Loader2 className="animate-spin" size={20} /> : (
+                        <>Confirmar y Pagar <ArrowRight size={18} /></>
                       )}
                     </button>
 
-                    <div className="flex items-center justify-center gap-4 opacity-40">
-                      <div className="flex items-center gap-1.5">
-                        <ShieldCheck size={14} className="text-green-600" />
-                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Pago Seguro</span>
-                      </div>
-                      <div className="h-3 w-[1px] bg-slate-200" />
-                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Mercado Pago</span>
+                    <div className="flex items-center justify-center gap-6">
+                        <div className="flex items-center gap-2 text-white/30">
+                            <ShieldCheck size={16} />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Pago Encriptado</span>
+                        </div>
+                        <div className="w-1.5 h-1.5 bg-white/10 rounded-full" />
+                        <div className="text-[9px] font-black uppercase tracking-widest text-white/30">
+                            Mercado Pago
+                        </div>
                     </div>
                 </div>
               </form>
