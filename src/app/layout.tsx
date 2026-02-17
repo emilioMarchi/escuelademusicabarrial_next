@@ -19,16 +19,22 @@ export const metadata: Metadata = {
     canonical: '/', 
   },
   title: {
-    // Esto evita que se duplique: el template solo se usa en páginas hijas
     template: "%s | Escuela de Música Barrial",
     default: "Escuela de Música Barrial",
   },
   description: "Espacio de formación, contención y arte en el corazón del barrio.",
+  
+ 
   icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
+    icon: [
+      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.png', sizes: '192x192', type: 'image/png' }, // Para Android y Chrome
+    ],
+    apple: [
+      { url: '/favicon.png', sizes: '180x180', type: 'image/png' }, // Para iPhone
+    ],
   },
+  // -----------------------------------------------------------
 };
 
 export default function RootLayout({

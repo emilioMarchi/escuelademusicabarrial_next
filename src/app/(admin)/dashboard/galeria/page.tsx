@@ -375,4 +375,4 @@ export default function AdminGaleria() {
       </AnimatePresence>
     </div>
   );
-}
+} 
