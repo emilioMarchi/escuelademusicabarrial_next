@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.escuelademusicabarrial.ar'),
   alternates: {
-    canonical: '/', 
+    canonical: './', 
   },
   title: {
     template: "%s | Escuela de Música Barrial",
@@ -24,6 +24,15 @@ export const metadata: Metadata = {
   },
   description: "Espacio de formación, contención y arte en el corazón del barrio.",
   
+  // AGREGADO: Configuración base para redes sociales y Google Discover
+  openGraph: {
+    title: "Escuela de Música Barrial",
+    description: "Espacio de formación, contención y arte en el corazón del barrio.",
+    url: 'https://www.escuelademusicabarrial.ar',
+    siteName: 'Escuela de Música Barrial',
+    locale: 'es_AR',
+    type: 'website',
+  },
  
   icons: {
     icon: [

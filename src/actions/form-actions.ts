@@ -43,7 +43,7 @@ export async function submitForm(data: FormSubmission) {
     // 0. Validación de datos en el servidor (Seguridad extra)
     const validation = SubmissionSchema.safeParse(data);
     if (!validation.success) {
-      const errorMessage = validation.error.errors.map(e => e.message).join(", ");
+      const errorMessage = validation.error.issues.map(e => e.message).join(", ");
       return { success: false, error: `Datos inválidos: ${errorMessage}` };
     }
 
