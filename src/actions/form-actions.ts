@@ -52,15 +52,23 @@ export async function submitForm(data: FormSubmission) {
     const submissionsRef = adminDb.collection("submissions");
 
     // --- RATE LIMITING (Anti-Spam) ---
-    // Verificar si este email ya envió más de 3 formularios en los últimos 10 minutos
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const recentSubmissions = await submissionsRef
-      .where("email", "==", data.email)
-      .where("created_at", ">=", tenMinutesAgo)
-      .get();
+    // Requiere índice compuesto en Firestore: submissions(email ASC, created_at ASC)
+    // Si el índice aún no existe, el fallback omite el rate limiting (no bloquea el envío)
+    try {
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const recentSubmissions = await submissionsRef
+        .where("email", "==", data.email)
+        .where("created_at", ">=", tenMinutesAgo)
+        .get();
 
-    if (recentSubmissions.size >= 3) {
-      return { success: false, error: "Demasiados intentos recientes. Por favor espera unos minutos." };
+      if (recentSubmissions.size >= 3) {
+        return { success: false, error: "Demasiados intentos recientes. Por favor espera unos minutos." };
+      }
+    } catch (rateLimitError: any) {
+      // El índice compuesto aún no existe en Firestore — se omite el rate limiting
+      // hasta que el índice esté disponible. Crear en:
+      // Firebase Console → Firestore → Indexes → submissions(email, created_at)
+      console.warn("Rate limiting omitido (índice pendiente):", rateLimitError.message);
     }
     
     // Creamos el objeto para guardar. TypeScript ya reconoce 'data.type'
