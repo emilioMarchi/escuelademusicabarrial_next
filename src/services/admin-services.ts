@@ -1,9 +1,32 @@
 // src/services/admin-services.ts
 "use server";
 
-import { adminDb, adminStorage } from "@/lib/firebase-admin";
+import { adminDb, adminStorage, adminAuth } from "@/lib/firebase-admin";
 import { PageContent, Donation, GalleryImage, GalleryVideo, SectionData } from "@/types";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+
+// --- MIDDLEWARE DE SEGURIDAD (SIMULADO) ---
+const verifyAdminAccess = async () => {
+  // IMPORTANTE: Aquí debes verificar la cookie de sesión de Firebase.
+  // Como usas Auth del lado del cliente, las Server Actions NO saben quién eres automáticamente.
+  // Necesitas implementar un flujo de cookies o pasar el token como argumento.
+  
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("session")?.value;
+
+  if (!sessionCookie) {
+    // Por seguridad, lanzamos error si no hay sesión (esto bloqueará llamadas externas)
+    // throw new Error("Acceso denegado: No autenticado");
+    
+    // NOTA PARA EL DESARROLLADOR: Descomenta la línea de arriba cuando implementes
+    // la creación de cookies en tu login. Por ahora, esto es un recordatorio visual.
+    console.warn("⚠️ ADVERTENCIA DE SEGURIDAD: Server Action llamada sin verificación de sesión.");
+  }
+
+  // Si tuvieras la cookie, aquí harías:
+  // await adminAuth.verifySessionCookie(sessionCookie, true);
+};
 
 /**
  * UTILS: Generador de Slugs
@@ -42,6 +65,7 @@ const serializeData = (data: any) => {
 
 export const getPageAdmin = async (slug: string) => {
   try {
+    await verifyAdminAccess();
     const snapshot = await adminDb.collection("pages").where("slug", "==", slug).limit(1).get();
     if (snapshot.empty) return { success: false, error: "Página no encontrada" };
     const doc = snapshot.docs[0];
@@ -54,6 +78,7 @@ export const getPageAdmin = async (slug: string) => {
 // --- FUNCIÓN CORREGIDA Y ROBUSTA ---
 export const savePageConfigAdmin = async (slug: string, data: any) => {
   try {
+    await verifyAdminAccess();
     // 1. Buscamos el documento por slug
     const snapshot = await adminDb.collection("pages").where("slug", "==", slug).limit(1).get();
     
@@ -97,6 +122,7 @@ export const savePageConfigAdmin = async (slug: string, data: any) => {
 
 export const getCollectionAdmin = async (collectionName: string) => {
   try {
+    await verifyAdminAccess();
     const snapshot = await adminDb.collection(collectionName).orderBy("last_updated", "desc").get();
     const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) }));
     return { success: true, data };
@@ -110,6 +136,7 @@ export const getCollectionAdmin = async (collectionName: string) => {
 
 export const upsertItemAdmin = async (collectionName: string, item: any) => {
   try {
+    await verifyAdminAccess();
     const { id, ...rest } = item;
     
     // GENERACIÓN AUTOMÁTICA DE SLUG
@@ -142,6 +169,7 @@ export const upsertItemAdmin = async (collectionName: string, item: any) => {
 
 export const deleteItemAdmin = async (collectionName: string, id: string) => {
   try {
+    await verifyAdminAccess();
     await adminDb.collection(collectionName).doc(id).delete();
     revalidatePath("/");
     revalidatePath("/clases");
@@ -156,6 +184,7 @@ export const deleteItemAdmin = async (collectionName: string, id: string) => {
 
 export const getGalleryImagesAdmin = async () => {
   try {
+    await verifyAdminAccess();
     const snapshot = await adminDb.collection("gallery").orderBy("order", "asc").get();
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
     return { success: true, data };
@@ -168,6 +197,7 @@ export const getGalleryImagesAdmin = async () => {
 
 export const uploadAndAddImageAdmin = async (formData: FormData) => {
   try {
+    await verifyAdminAccess();
     const file = formData.get("file") as File;
     const bucket = adminStorage.bucket("escuelita-db.firebasestorage.app");
     const path = `galeria/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
@@ -195,6 +225,7 @@ export const uploadAndAddImageAdmin = async (formData: FormData) => {
 
 export const deleteImageAdmin = async (id: string, url: string) => {
   try {
+    await verifyAdminAccess();
     await adminDb.collection("gallery").doc(id).delete();
     const fileName = url.split("/").pop()?.split("?")[0];
     if (fileName) {
@@ -210,6 +241,7 @@ export const deleteImageAdmin = async (id: string, url: string) => {
 
 export const updateImageOrderAdmin = async (images: {id: string, order: number, caption?: string}[]) => {
   try {
+    await verifyAdminAccess();
     const batch = adminDb.batch();
     images.forEach((img) => {
       const docRef = adminDb.collection("gallery").doc(img.id);
@@ -226,33 +258,39 @@ export const updateImageOrderAdmin = async (images: {id: string, order: number, 
 // --- AJUSTES GLOBALES Y LISTAS (DOCENTES / INSTRUMENTOS) ---
 
 export const getInstrumentsAdmin = async () => {
+  await verifyAdminAccess();
   const doc = await adminDb.collection("settings").doc("instruments").get();
   return { success: true, data: doc.exists ? doc.data()?.list || [] : [] };
 };
 
 export const updateInstrumentsAdmin = async (list: string[]) => {
+  await verifyAdminAccess();
   await adminDb.collection("settings").doc("instruments").set({ list });
   revalidatePath("/", "layout");
   return { success: true };
 };
 
 export const getTeachersAdmin = async () => {
+  await verifyAdminAccess();
   const doc = await adminDb.collection("settings").doc("teachers").get();
   return { success: true, data: doc.exists ? doc.data()?.list || [] : [] };
 };
 
 export const updateTeachersAdmin = async (list: string[]) => {
+  await verifyAdminAccess();
   await adminDb.collection("settings").doc("teachers").set({ list });
   revalidatePath("/", "layout");
   return { success: true };
 };
 
 export const getGlobalSettingsAdmin = async () => {
+  await verifyAdminAccess();
   const doc = await adminDb.collection("settings").doc("general").get();
   return { success: true, data: doc.exists ? serializeData(doc.data()) : {} };
 };
 
 export const updateGlobalSettingsAdmin = async (data: any) => {
+  await verifyAdminAccess();
   await adminDb.collection("settings").doc("general").set({ ...data, last_updated: new Date() }, { merge: true });
   revalidatePath("/", "layout");
   return { success: true };
@@ -262,6 +300,7 @@ export const updateGlobalSettingsAdmin = async (data: any) => {
 
 export const getDonationsAdmin = async () => {
   try {
+    await verifyAdminAccess();
     const snapshot = await adminDb.collection("donations").orderBy("created_at", "desc").get();
     const donations = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
     return { success: true, data: donations };
@@ -271,6 +310,7 @@ export const getDonationsAdmin = async () => {
 };
 
 export const deleteDonationAdmin = async (id: string) => {
+  await verifyAdminAccess();
   await adminDb.collection("donations").doc(id).delete();
   revalidatePath("/dashboard/balances");
   return { success: true };
@@ -280,6 +320,7 @@ export const deleteDonationAdmin = async (id: string) => {
 
 export const uploadFileOnlyAdmin = async (formData: FormData) => {
   try {
+    await verifyAdminAccess();
     const file = formData.get("file") as File;
     const bucket = adminStorage.bucket("escuelita-db.firebasestorage.app");
     const path = `headers/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
@@ -296,6 +337,7 @@ export const uploadFileOnlyAdmin = async (formData: FormData) => {
 
 export const getAdminsAdmin = async () => {
   try {
+    await verifyAdminAccess();
     const doc = await adminDb.collection("settings").doc("admins").get();
     return { success: true, data: doc.exists ? doc.data()?.emails || [] : [] };
   } catch (error) {
@@ -305,6 +347,7 @@ export const getAdminsAdmin = async () => {
 
 export const updateAdminsAdmin = async (emails: string[]) => {
   try {
+    await verifyAdminAccess();
     await adminDb.collection("settings").doc("admins").set({ emails }, { merge: true });
     return { success: true };
   } catch (error) {
@@ -316,6 +359,7 @@ export const updateAdminsAdmin = async (emails: string[]) => {
 
 export const getGalleryVideosAdmin = async () => {
   try {
+    await verifyAdminAccess();
     const snapshot = await adminDb.collection("gallery_videos").orderBy("order", "asc").get();
     const videos = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
     return { success: true, data: videos as GalleryVideo[] };
@@ -326,6 +370,7 @@ export const getGalleryVideosAdmin = async () => {
 
 export const addVideoAdmin = async (video: Omit<GalleryVideo, 'id'>) => {
   try {
+    await verifyAdminAccess();
     const slug = video.title ? generateSlug(video.title) : "";
     const docRef = await adminDb.collection("gallery_videos").add({
       ...video,
@@ -341,6 +386,7 @@ export const addVideoAdmin = async (video: Omit<GalleryVideo, 'id'>) => {
 
 export const deleteVideoAdmin = async (id: string, url: string, type: 'file' | 'link') => {
   try {
+    await verifyAdminAccess();
     await adminDb.collection("gallery_videos").doc(id).delete();
     if (type === 'file') {
       const bucket = adminStorage.bucket("escuelita-db.firebasestorage.app");
@@ -356,6 +402,7 @@ export const deleteVideoAdmin = async (id: string, url: string, type: 'file' | '
 
 export const addGalleryLinkAdmin = async (url: string, caption: string) => {
   try {
+    await verifyAdminAccess();
     const slug = caption ? generateSlug(caption) : "";
     await adminDb.collection("gallery").add({
       url,
@@ -374,6 +421,7 @@ export const addGalleryLinkAdmin = async (url: string, caption: string) => {
 
 export const getAdminCollectionItems = async (collectionName: string) => {
   try {
+    await verifyAdminAccess();
     const snapshot = await adminDb.collection(collectionName).get();
     
     // CORRECCIÓN CRÍTICA:

@@ -4,7 +4,7 @@ import { getCollectionAdmin } from '@/services/admin-services';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // USAMOS SIEMPRE EL DOMINIO OFICIAL
-  const baseUrl = 'https://escuelademusicabarrial.ar';
+  const baseUrl = 'https://www.escuelademusicabarrial.ar';
 
   // 1. Rutas Estáticas
   const staticRoutes = [
