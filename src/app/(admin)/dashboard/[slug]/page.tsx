@@ -96,7 +96,7 @@ export default function PageEditor() {
     setDirty(true);
   };
 
-  const handleAddSection = async (type: 'hero' | 'texto-bloque' | 'clases' | 'noticias' | 'contacto') => {
+  const handleAddSection = async (type: 'hero' | 'texto-bloque' | 'clases' | 'noticias' | 'contacto' | 'donaciones') => {
     if (!pageData || !slug) return;
 
     const newId = Math.random().toString(36).substr(2, 9);
@@ -227,7 +227,7 @@ export default function PageEditor() {
       {/* BARRA FLOTANTE CON BOTÓN DE GUARDADO RÁPIDO */}
       <div className="p-4 bg-slate-100 rounded-[2rem] flex flex-wrap gap-4 items-center justify-center sticky top-4 z-40 shadow-lg border-2 border-white/50 backdrop-blur-md transition-all">
         <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest mr-4">Agregar Bloque:</span>
-        {[{ type: 'hero', label: 'Hero Slider' }, { type: 'texto-bloque', label: 'Texto + Foto' }, { type: 'clases', label: 'Grilla Clases' }, { type: 'noticias', label: 'Grilla Noticias' }, { type: 'contacto', label: 'Form Contacto' }].map((btn) => (
+        {[{ type: 'hero', label: 'Hero Slider' }, { type: 'texto-bloque', label: 'Texto + Foto' }, { type: 'clases', label: 'Grilla Clases' }, { type: 'noticias', label: 'Grilla Noticias' }, { type: 'contacto', label: 'Form Contacto' }, { type: 'donaciones', label: 'Form Donaciones' }].map((btn) => (
           <button key={btn.type} onClick={() => handleAddSection(btn.type as any)} className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-sm border border-slate-200 hover:bg-slate-900 hover:text-white hover:scale-105 transition-all">
             <Plus size={12} /> {btn.label}
           </button>

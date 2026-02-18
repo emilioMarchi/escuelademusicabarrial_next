@@ -11,7 +11,7 @@ import {
   Plus, Trash2, Image as ImageIcon, Camera, 
   Music, Newspaper, FileText, AlertCircle, Loader2, 
   AlignLeft, AlignRight, Mail, UserPlus, 
-  MessageSquare, Type, Hash
+  MessageSquare, Type, Hash, Heart
 } from "lucide-react";
 
 interface Props {
@@ -150,6 +150,7 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
             {section.type === 'clases' && <Music size={24}/>}
             {section.type === 'noticias' && <Newspaper size={24}/>}
             {section.type === 'contacto' && <Mail size={24}/>}
+            {section.type === 'donaciones' && <Heart size={24}/>}
           </div>
           <div>
             <h3 className="text-xl font-black uppercase tracking-tighter text-slate-900">Bloque: {section.type}</h3>
@@ -319,6 +320,32 @@ export default function SectionForm({ section, items = [], onChange, onSave }: P
                     {section.type === 'clases' ? 'Clases publicadas' : 'Noticias activas'}
                   </p>
                </div>
+            </div>
+          )}
+
+          {section.type === 'donaciones' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <div className="space-y-6">
+                <input type="text" value={content.title || ""} onChange={(e) => handleUpdate({ ...content, title: e.target.value })}
+                  placeholder="Título (ej: Colabora con la escuela)" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-black text-slate-900 text-xl outline-none transition-all"/>
+                <textarea rows={5} value={content.description || ""} onChange={(e) => handleUpdate({ ...content, description: e.target.value })}
+                  placeholder="Descripción (ej: Podés donar por única vez o suscribirte...)" className="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-slate-900 rounded-2xl font-bold text-slate-900 outline-none transition-all resize-none leading-relaxed"/>
+                <div className="p-4 bg-pink-50 border border-pink-100 rounded-2xl">
+                  <p className="text-[10px] font-black uppercase text-pink-400 tracking-widest">💡 Info</p>
+                  <p className="text-xs text-pink-500 mt-1">Los montos y la lógica del formulario de donación se manejan desde el código. Aquí solo se edita el contenido visual de la sección.</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="aspect-square bg-slate-100 rounded-[3.5rem] overflow-hidden relative group border-2 border-slate-100 flex items-center justify-center shadow-inner">
+                  {content.image_url ? (
+                    <img src={content.image_url} className="w-full h-full object-cover" alt="Vista previa" />
+                  ) : (<Heart size={48} className="text-slate-200" />)}
+                  <button type="button" onClick={() => blockFileRef.current?.click()} className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white gap-2 font-black uppercase text-[10px] tracking-widest">
+                    {uploading ? <Loader2 className="animate-spin" /> : <Camera size={24} />} {uploading ? "Subiendo..." : "Cambiar Foto"}
+                  </button>
+                  <input type="file" ref={blockFileRef} className="hidden" accept="image/*" onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} />
+                </div>
+              </div>
             </div>
           )}
 
