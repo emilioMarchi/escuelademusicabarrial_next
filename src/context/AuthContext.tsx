@@ -11,6 +11,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -56,8 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         alert(errorData.error || "Error al iniciar sesión como administrador.");
         throw new Error(errorData.error || "Error en el servidor de autenticación");
       }
-      // Si todo va bien, el usuario está logueado en cliente y servidor.
-      // El `onAuthStateChanged` ya habrá actualizado el estado `user`.
+
+      // Login exitoso: redirigir al dashboard explícitamente.
+      // No podemos depender solo del useEffect en LoginPage porque `user`
+      // ya puede estar seteado antes de que se cree la cookie.
+      router.push('/dashboard');
+
     } catch (error) {
       console.error("Auth error:", error);
       // Nos aseguramos de que el usuario esté deslogueado si algo falla.
@@ -71,6 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetch('/api/auth/logout', { method: 'POST' });
       // Desloguear del SDK de cliente de Firebase.
       await signOut(auth);
+      // Redirigir al login después del logout.
+      router.push('/login');
     } catch (error) {
       console.error("Logout error:", error);
     }
