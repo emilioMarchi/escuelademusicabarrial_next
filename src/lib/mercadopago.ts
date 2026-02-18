@@ -21,10 +21,11 @@ export const createMPPreference = async (data: {
     },
     items: [
       {
+        id: "donacion-unica",
         title: "Donación de pago único - Escuela de Música Barrial",
-        category_id: "donaciones",
+        category_id: "services",
         quantity: 1,
-        unit_price: data.amount,
+        unit_price: Number(data.amount),
         currency_id: "ARS"
       }
     ],

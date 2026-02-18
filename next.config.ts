@@ -6,7 +6,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '50mb', // Aumentamos el límite a 50MB para soportar videos y fotos pesadas
       allowedOrigins: [
-        "2590-2803-9800-b802-81b2-3596-f3c1-55e4-f2bb.ngrok-free.app"
+        "www.escuelademusicabarrial.ar",
+        "escuelademusicabarrial.ar"
       ],
     },
   },
