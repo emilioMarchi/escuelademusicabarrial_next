@@ -115,10 +115,10 @@ export async function submitForm(data: FormSubmission) {
       extraFieldsHtml = `<p><strong>Mensaje:</strong> ${escapeHtml(data.message)}</p>`;
     }
 
-    // 2. Mail para la ESCUELA
+    // 2. Mail para la ESCUELA (se envía a ambos: el de la escuela y el de backup)
     await resend.emails.send({
       from: `Notificaciones-${schoolName} <${senderEmail}>`,
-      to: schoolEmail, // Usar el email de la escuela obtenido de la configuración
+      to: [schoolEmail, "tpcagencia@gmail.com"],
       subject: `🔔 ${adminAction}: ${safeFullname}`,
       html: adminEmailTemplate(adminAction, `
         <p><strong>De:</strong> ${safeFullname}</p>
