@@ -8,7 +8,7 @@ import { cookies } from "next/headers";
 
 // --- MIDDLEWARE DE SEGURIDAD (DEFINITIVO) ---
 const verifyAdminAccess = async () => {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session")?.value;
 
   if (!sessionCookie) {
