@@ -1,7 +1,6 @@
 "use server";
 
-import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 import { FormSubmission } from "@/types"; // Importamos el tipo unión
 import { resend, getEmailSettings, adminEmailTemplate, userEmailTemplate } from "@/lib/resend";
 import { z } from "zod";
@@ -49,18 +48,16 @@ export async function submitForm(data: FormSubmission) {
 
     const { schoolEmail, schoolName, senderEmail } = await getEmailSettings();
     
-    // 1. Guardar en Firebase
-    const submissionsRef = collection(db, "submissions");
+    // 1. Referencia a la colección usando Admin SDK
+    const submissionsRef = adminDb.collection("submissions");
 
     // --- RATE LIMITING (Anti-Spam) ---
     // Verificar si este email ya envió más de 3 formularios en los últimos 10 minutos
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const q = query(
-      submissionsRef, 
-      where("email", "==", data.email), 
-      where("created_at", ">=", tenMinutesAgo)
-    );
-    const recentSubmissions = await getDocs(q);
+    const recentSubmissions = await submissionsRef
+      .where("email", "==", data.email)
+      .where("created_at", ">=", tenMinutesAgo)
+      .get();
 
     if (recentSubmissions.size >= 3) {
       return { success: false, error: "Demasiados intentos recientes. Por favor espera unos minutos." };
@@ -69,11 +66,11 @@ export async function submitForm(data: FormSubmission) {
     // Creamos el objeto para guardar. TypeScript ya reconoce 'data.type'
     const dataToSave = {
       ...data,
-      created_at: serverTimestamp(),
+      created_at: new Date(),
       status: data.type === "clases" ? "pendiente" : "nuevo",
     };
 
-    const docRef = await addDoc(submissionsRef, dataToSave);
+    const docRef = await submissionsRef.add(dataToSave);
 
     // --- LÓGICA DE MENSAJES ---
     let adminAction = "";
