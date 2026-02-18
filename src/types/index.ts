@@ -116,10 +116,10 @@ export interface EnrollmentSubmission {
   email: string;
   phone: string;
   instrument: string;
-  level_or_experience: string; // Agregado (lo que viene del select)
-  role: "estudiante" | "docente"; // Cambiado a 'estudiante' para coincidir con el form
-  status: "pendiente" | "aceptado" | "rechazado"; // Agregado
-  created_at: any; // Agregado
+  level_or_experience?: string;
+  role: "alumno" | "docente"; // Alineado con el schema Zod en form-actions.ts
+  status: "pendiente" | "aceptado" | "rechazado";
+  created_at: any;
 }
 
 export type FormSubmission = ContactSubmission | EnrollmentSubmission;

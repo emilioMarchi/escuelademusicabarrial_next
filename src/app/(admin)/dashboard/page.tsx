@@ -59,8 +59,8 @@ export default function AdminDashboard() {
     ]);
     
     setData({
-      clases: resC.data || [],
-      noticias: resN.data || [],
+      clases: (resC.data || []) as Class[],
+      noticias: (resN.data || []) as News[],
       submissions: resS.data || [],
       instruments: resI.data || [],
       teachers: resT.data || [],

@@ -6,7 +6,7 @@ import { ContactSubmission, EnrollmentSubmission } from "@/types";
 
 export default function DynamicForm({ type }: { type: string }) {
   // Tipamos el estado para que solo acepte los valores válidos
-  const [role, setRole] = useState<"estudiante" | "docente">("estudiante");
+  const [role, setRole] = useState<"alumno" | "docente">("alumno");
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -98,9 +98,9 @@ export default function DynamicForm({ type }: { type: string }) {
         <div className="md:col-span-2 flex gap-2 p-1 bg-slate-100 rounded-2xl">
           <button
             type="button"
-            onClick={() => setRole("estudiante")}
+            onClick={() => setRole("alumno")}
             className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-tighter transition-all ${
-              role === "estudiante" ? "bg-white text-green-600 shadow-sm" : "text-slate-500 opacity-60"
+              role === "alumno" ? "bg-white text-green-600 shadow-sm" : "text-slate-500 opacity-60"
             }`}
           >
             Quiero Estudiar
@@ -133,10 +133,10 @@ export default function DynamicForm({ type }: { type: string }) {
           
           <div className="md:col-span-1 flex flex-col">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block min-h-[1.25rem]">
-              {role === "estudiante" ? "Nivel previo" : "Años de experiencia"}
+            {role === "alumno" ? "Nivel previo" : "Años de experiencia"}
             </label>
             <select name="level" className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-green-400 outline-none transition-all mt-auto">
-              {role === "estudiante" ? (
+              {role === "alumno" ? (
                 <>
                   <option>Principiante</option>
                   <option>Intermedio</option>
@@ -173,7 +173,7 @@ export default function DynamicForm({ type }: { type: string }) {
               : (role === "docente" && type === "clases" ? "bg-orange-500 hover:bg-orange-600 shadow-orange-100" : "bg-green-600 hover:bg-green-700 shadow-green-100")
           }`}
         >
-          {isPending ? "Enviando..." : (type === "contacto" ? "Enviar Mensaje" : role === "estudiante" ? "Solicitar Vacante" : "Enviar Postulación")}
+          {isPending ? "Enviando..." : (type === "contacto" ? "Enviar Mensaje" : role === "alumno" ? "Solicitar Vacante" : "Enviar Postulación")}
         </button>
       </div>
     </form>

@@ -22,7 +22,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const { data: news } = await getCollectionAdmin("noticias");
-  const item = news?.find((n: any) => n.slug === slug);
+  const item = (news as any[])?.find((n: any) => n.slug === slug);
 
   if (!item) return { title: "Noticia no encontrada" };
 

@@ -1,7 +1,7 @@
 // src/services/admin-services.ts
 "use server";
 
-import { adminDb, adminStorage, adminAuth } from "@/lib/firebase-admin";
+import { adminDb, adminStorage, adminAuth, STORAGE_BUCKET } from "@/lib/firebase-admin";
 import { PageContent, Donation, GalleryImage, GalleryVideo, SectionData } from "@/types";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
@@ -54,20 +54,24 @@ const generateSlug = (text: string) => {
 
 /**
  * UTILS: Serialización de datos
+ * Usa genérico <T> para preservar el tipo del objeto de entrada en la salida.
  */
-const serializeData = (data: any) => {
+const serializeData = <T extends Record<string, any>>(data: T): T => {
   if (!data) return data;
-  const serialized = { ...data };
+  const serialized = { ...data } as Record<string, any>;
   Object.keys(data).forEach((key) => {
-    if (data[key] && typeof data[key].toDate === "function") {
-      serialized[key] = data[key].toDate().toISOString();
-    } else if (Array.isArray(data[key])) {
-      serialized[key] = data[key].map((item: any) => serializeData(item));
-    } else if (typeof data[key] === "object" && data[key] !== null) {
-      serialized[key] = serializeData(data[key]);
+    const value = data[key];
+    if (value && typeof value.toDate === "function") {
+      serialized[key] = (value.toDate() as Date).toISOString();
+    } else if (Array.isArray(value)) {
+      serialized[key] = value.map((item: unknown) =>
+        item && typeof item === "object" ? serializeData(item as Record<string, any>) : item
+      );
+    } else if (value && typeof value === "object") {
+      serialized[key] = serializeData(value as Record<string, any>);
     }
   });
-  return serialized;
+  return serialized as T;
 };
 
 // --- GESTIÓN DE PÁGINAS (CONTENIDOS DINÁMICOS) ---
@@ -130,16 +134,23 @@ export const savePageConfigAdmin = async (slug: string, data: any) => {
 // --- GESTIÓN DE COLECCIONES GENÉRICAS (CLASES, NOTICIAS) ---
 
 export const getCollectionAdmin = async (collectionName: string) => {
+  // Verificamos acceso ANTES de cualquier operación de DB
+  await verifyAdminAccess();
   try {
-    await verifyAdminAccess();
     const snapshot = await adminDb.collection(collectionName).orderBy("last_updated", "desc").get();
-    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) }));
+    // Cast a unknown[] porque Firestore no conoce el tipo concreto (Class, News, etc.)
+    // El llamador es responsable de hacer el cast correcto (ej: as Class[])
+    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) })) as unknown[];
     return { success: true, data };
   } catch (error) {
-    // Fallback sin ordenamiento si falla el índice
-    const snapshot = await adminDb.collection(collectionName).get();
-    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) }));
-    return { success: true, data };
+    // Fallback sin ordenamiento solo si falla el índice (error de Firestore, no de auth)
+    try {
+      const snapshot = await adminDb.collection(collectionName).get();
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) })) as unknown[];
+      return { success: true, data };
+    } catch (fallbackError) {
+      return { success: false, error: String(fallbackError) };
+    }
   }
 };
 
@@ -192,15 +203,21 @@ export const deleteItemAdmin = async (collectionName: string, id: string) => {
 // --- GESTIÓN DE GALERÍA ---
 
 export const getGalleryImagesAdmin = async () => {
+  // Verificamos acceso ANTES de cualquier operación de DB
+  await verifyAdminAccess();
   try {
-    await verifyAdminAccess();
     const snapshot = await adminDb.collection("gallery").orderBy("order", "asc").get();
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
     return { success: true, data };
   } catch (error) {
-    const snapshot = await adminDb.collection("gallery").get();
-    const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
-    return { success: true, data };
+    // Fallback sin ordenamiento solo si falla el índice (error de Firestore, no de auth)
+    try {
+      const snapshot = await adminDb.collection("gallery").get();
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
+      return { success: true, data };
+    } catch (fallbackError) {
+      return { success: false, error: String(fallbackError) };
+    }
   }
 };
 
@@ -208,7 +225,7 @@ export const uploadAndAddImageAdmin = async (formData: FormData) => {
   try {
     await verifyAdminAccess();
     const file = formData.get("file") as File;
-    const bucket = adminStorage.bucket("escuelita-db.firebasestorage.app");
+    const bucket = adminStorage.bucket(STORAGE_BUCKET);
     const path = `galeria/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
     const fileRef = bucket.file(path);
 
@@ -238,7 +255,7 @@ export const deleteImageAdmin = async (id: string, url: string) => {
     await adminDb.collection("gallery").doc(id).delete();
     const fileName = url.split("/").pop()?.split("?")[0];
     if (fileName) {
-      await adminStorage.bucket("escuelita-db.firebasestorage.app").file(`galeria/${fileName}`).delete();
+      await adminStorage.bucket(STORAGE_BUCKET).file(`galeria/${fileName}`).delete();
     }
     revalidatePath("/galeria");
     revalidatePath("/");
@@ -295,7 +312,7 @@ export const updateTeachersAdmin = async (list: string[]) => {
 export const getGlobalSettingsAdmin = async () => {
   await verifyAdminAccess();
   const doc = await adminDb.collection("settings").doc("general").get();
-  return { success: true, data: doc.exists ? serializeData(doc.data()) : {} };
+  return { success: true, data: doc.exists && doc.data() ? serializeData(doc.data()!) : {} };
 };
 
 export const updateGlobalSettingsAdmin = async (data: any) => {
@@ -331,7 +348,7 @@ export const uploadFileOnlyAdmin = async (formData: FormData) => {
   try {
     await verifyAdminAccess();
     const file = formData.get("file") as File;
-    const bucket = adminStorage.bucket("escuelita-db.firebasestorage.app");
+    const bucket = adminStorage.bucket(STORAGE_BUCKET);
     const path = `headers/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
     const fileRef = bucket.file(path);
     await fileRef.save(Buffer.from(await file.arrayBuffer()), { metadata: { contentType: file.type } });
@@ -398,7 +415,7 @@ export const deleteVideoAdmin = async (id: string, url: string, type: 'file' | '
     await verifyAdminAccess();
     await adminDb.collection("gallery_videos").doc(id).delete();
     if (type === 'file') {
-      const bucket = adminStorage.bucket("escuelita-db.firebasestorage.app");
+      const bucket = adminStorage.bucket(STORAGE_BUCKET);
       const fileName = url.split('/').pop()?.split('?')[0];
       if (fileName) await bucket.file(`gallery/${fileName}`).delete();
     }

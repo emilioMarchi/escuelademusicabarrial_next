@@ -14,6 +14,22 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(requestUrl);
   }
 
+  // Si hay cookie pero parece inválida (muy corta o malformada), redirigir con aviso.
+  // Nota: el Edge Runtime no puede verificar la firma JWT de Firebase,
+  // eso lo hace verifyAdminAccess() en cada Server Action.
+  // Aquí solo hacemos una validación superficial de formato.
+  if (isDashboardRoute && sessionCookie) {
+    const parts = sessionCookie.split('.');
+    if (parts.length !== 3) {
+      // Cookie con formato inválido (no es un JWT): limpiarla y redirigir
+      requestUrl.pathname = '/login';
+      requestUrl.searchParams.set('error', 'session_invalid');
+      const response = NextResponse.redirect(requestUrl);
+      response.cookies.delete('session');
+      return response;
+    }
+  }
+
   // Si hay cookie y se intenta acceder a /login, redirigir al dashboard
   if (isLoginRoute && sessionCookie) {
     requestUrl.pathname = '/dashboard';

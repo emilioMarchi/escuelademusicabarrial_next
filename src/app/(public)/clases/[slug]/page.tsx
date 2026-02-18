@@ -24,7 +24,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const { data: classes } = await getCollectionAdmin("clases");
-  const classItem = classes?.find((c: any) => c.slug === slug);
+  const classItem = (classes as any[])?.find((c: any) => c.slug === slug) as any;
 
   if (!classItem) return { title: "Clase no encontrada" };
 
