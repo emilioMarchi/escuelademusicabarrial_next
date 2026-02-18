@@ -6,26 +6,35 @@ import { PageContent, Donation, GalleryImage, GalleryVideo, SectionData } from "
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
-// --- MIDDLEWARE DE SEGURIDAD (SIMULADO) ---
+// --- MIDDLEWARE DE SEGURIDAD (DEFINITIVO) ---
 const verifyAdminAccess = async () => {
-  // IMPORTANTE: Aquí debes verificar la cookie de sesión de Firebase.
-  // Como usas Auth del lado del cliente, las Server Actions NO saben quién eres automáticamente.
-  // Necesitas implementar un flujo de cookies o pasar el token como argumento.
-  
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
   const sessionCookie = cookieStore.get("session")?.value;
 
   if (!sessionCookie) {
-    // Por seguridad, lanzamos error si no hay sesión (esto bloqueará llamadas externas)
-    // throw new Error("Acceso denegado: No autenticado");
-    
-    // NOTA PARA EL DESARROLLADOR: Descomenta la línea de arriba cuando implementes
-    // la creación de cookies en tu login. Por ahora, esto es un recordatorio visual.
-    console.warn("⚠️ ADVERTENCIA DE SEGURIDAD: Server Action llamada sin verificación de sesión.");
+    throw new Error("Acceso denegado: No autenticado.");
   }
 
-  // Si tuvieras la cookie, aquí harías:
-  // await adminAuth.verifySessionCookie(sessionCookie, true);
+  try {
+    // 1. Verificar la cookie de sesión con Firebase Admin SDK
+    const decodedClaims = await adminAuth.verifySessionCookie(
+      sessionCookie,
+      true
+    );
+
+    // 2. (Extra de seguridad) Verificar si el email del usuario está en la lista de admins autorizados en Firestore
+    const adminDoc = await adminDb.collection("settings").doc("admins").get();
+    const allowedEmails = adminDoc.data()?.emails || [];
+
+    if (!decodedClaims.email || !allowedEmails.includes(decodedClaims.email)) {
+      throw new Error("Acceso denegado: El usuario no es un administrador autorizado.");
+    }
+
+    // Si todo está bien, la acción puede continuar.
+  } catch (error) {
+    // La cookie es inválida, expiró o fue revocada.
+    throw new Error("Acceso denegado: Sesión inválida o expirada.");
+  }
 };
 
 /**
