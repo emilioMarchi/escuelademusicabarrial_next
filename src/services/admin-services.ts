@@ -227,6 +227,29 @@ export const deleteItemAdmin = async (collectionName: string, id: string) => {
 
 // --- GESTIÓN DE GALERÍA ---
 
+/**
+ * Función PÚBLICA para obtener imágenes de galería SIN autenticación.
+ * Usada por las páginas públicas.
+ */
+export const getGalleryImagesPublic = async () => {
+  try {
+    const snapshot = await adminDb.collection("gallery").orderBy("order", "asc").get();
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
+    return { success: true, data };
+  } catch (error) {
+    try {
+      const snapshot = await adminDb.collection("gallery").get();
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
+      return { success: true, data };
+    } catch (fallbackError) {
+      return { success: false, error: String(fallbackError) };
+    }
+  }
+};
+
+/**
+ * Función ADMIN para obtener imágenes de galería CON autenticación.
+ */
 export const getGalleryImagesAdmin = async () => {
   // Verificamos acceso ANTES de cualquier operación de DB
   await verifyAdminAccess();

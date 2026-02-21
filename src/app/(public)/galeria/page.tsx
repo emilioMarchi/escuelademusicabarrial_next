@@ -1,5 +1,5 @@
 // src/app/(public)/galeria/page.tsx
-import { getGalleryImagesAdmin } from "@/services/admin-services";
+import { getGalleryImagesPublic } from "@/services/admin-services";
 import { getPageBySlug } from "@/services/content";
 import GalleryClient from "./GalleryClient";
 import { Metadata } from "next";
@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function GaleriaPage() {
   const [imagesRes, pageData] = await Promise.all([
-    getGalleryImagesAdmin(),
+    getGalleryImagesPublic(),
     getPageBySlug("galeria")
   ]);
 

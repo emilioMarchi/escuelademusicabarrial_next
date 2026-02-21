@@ -1,6 +1,6 @@
 // src/app/sitemap.ts
 import { MetadataRoute } from 'next';
-import { getCollectionAdmin } from '@/services/admin-services';
+import { getCollectionPublic } from '@/services/admin-services';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // USAMOS SIEMPRE EL DOMINIO OFICIAL
@@ -22,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // 2. Rutas Dinámicas (Clases)
-  const { data: classes } = await getCollectionAdmin("clases");
+  const { data: classes } = await getCollectionPublic("clases");
   const classRoutes = ((classes as any[]) || []).map((item: any) => ({
     url: `${baseUrl}/clases/${item.slug}`,
     lastModified: new Date(item.last_updated || new Date()),
@@ -30,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // 3. Rutas Dinámicas (Noticias)
-  const { data: news } = await getCollectionAdmin("noticias");
+  const { data: news } = await getCollectionPublic("noticias");
   const newsRoutes = ((news as any[]) || []).map((item: any) => ({
     url: `${baseUrl}/novedades/${item.slug}`,
     lastModified: new Date(item.date || new Date()),
