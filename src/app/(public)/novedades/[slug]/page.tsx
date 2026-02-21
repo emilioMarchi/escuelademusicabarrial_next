@@ -1,5 +1,5 @@
 // src/app/(public)/novedades/[slug]/page.tsx
-import { getCollectionAdmin } from "@/services/admin-services";
+import { getCollectionPublic } from "@/services/admin-services";
 import Contact from "@/components/sections/contact/Contact";
 import DynamicSection from "@/components/DynamicSection/DynamicSection";
 import { 
@@ -21,7 +21,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const { data: news } = await getCollectionAdmin("noticias");
+  const { data: news } = await getCollectionPublic("noticias");
   const item = (news as any[])?.find((n: any) => n.slug === slug);
 
   if (!item) return { title: "Noticia no encontrada" };
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function NewsDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const { data: news } = await getCollectionAdmin("noticias");
+  const { data: news } = await getCollectionPublic("noticias");
 
   const allItems = (news as any[]) || [];
   const item = allItems.find((n: any) => n.slug === slug && n.is_active);

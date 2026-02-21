@@ -1,4 +1,4 @@
-import { getCollectionAdmin, getGlobalSettingsAdmin } from "@/services/admin-services";
+import { getCollectionPublic, getGlobalSettingsPublic } from "@/services/admin-services";
 import Contact from "@/components/sections/contact/Contact";
 import DynamicSection from "@/components/DynamicSection/DynamicSection";
 import { 
@@ -23,7 +23,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const { data: classes } = await getCollectionAdmin("clases");
+  const { data: classes } = await getCollectionPublic("clases");
   const classItem = (classes as any[])?.find((c: any) => c.slug === slug) as any;
 
   if (!classItem) return { title: "Clase no encontrada" };
@@ -44,8 +44,8 @@ export default async function ClassDetailPage({ params }: PageProps) {
   const { slug } = await params;
   
   const [{ data: classes }, { data: settings }] = await Promise.all([
-    getCollectionAdmin("clases"),
-    getGlobalSettingsAdmin()
+    getCollectionPublic("clases"),
+    getGlobalSettingsPublic()
   ]);
 
   const allItems = (classes as any[]) || [];

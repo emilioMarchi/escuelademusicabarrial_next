@@ -133,6 +133,31 @@ export const savePageConfigAdmin = async (slug: string, data: any) => {
 
 // --- GESTIÓN DE COLECCIONES GENÉRICAS (CLASES, NOTICIAS) ---
 
+/**
+ * Función PÚBLICA para obtener colecciones SIN autenticación.
+ * Usada por las páginas públicas (novedades, clases) para visitantes.
+ */
+export const getCollectionPublic = async (collectionName: string) => {
+  try {
+    const snapshot = await adminDb.collection(collectionName).orderBy("last_updated", "desc").get();
+    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) })) as unknown[];
+    return { success: true, data };
+  } catch (error) {
+    // Fallback sin ordenamiento solo si falla el índice
+    try {
+      const snapshot = await adminDb.collection(collectionName).get();
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) })) as unknown[];
+      return { success: true, data };
+    } catch (fallbackError) {
+      return { success: false, error: String(fallbackError) };
+    }
+  }
+};
+
+/**
+ * Función ADMIN para obtener colecciones CON autenticación.
+ * Usada por el panel de administración.
+ */
 export const getCollectionAdmin = async (collectionName: string) => {
   // Verificamos acceso ANTES de cualquier operación de DB
   await verifyAdminAccess();
@@ -309,6 +334,23 @@ export const updateTeachersAdmin = async (list: string[]) => {
   return { success: true };
 };
 
+/**
+ * Función PÚBLICA para obtener settings SIN autenticación.
+ * Usada por las páginas públicas.
+ */
+export const getGlobalSettingsPublic = async () => {
+  try {
+    const doc = await adminDb.collection("settings").doc("general").get();
+    return { success: true, data: doc.exists && doc.data() ? serializeData(doc.data()!) : {} };
+  } catch (error) {
+    return { success: false, error: String(error), data: {} };
+  }
+};
+
+/**
+ * Función ADMIN para obtener settings CON autenticación.
+ * Usada por el panel de administración.
+ */
 export const getGlobalSettingsAdmin = async () => {
   await verifyAdminAccess();
   const doc = await adminDb.collection("settings").doc("general").get();
