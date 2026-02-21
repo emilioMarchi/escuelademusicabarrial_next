@@ -49,6 +49,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
   ]);
 
   const allItems = (classes as any[]) || [];
+  const settingsData = settings as { address?: string };
   const classItem = allItems.find((c: any) => c.slug === slug && c.is_active);
 
   if (!classItem) {
@@ -133,7 +134,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
                    <MapPin size={20} className="text-orange-600 shrink-0" />
                    <div>
                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Sede</p>
-                     <p className="text-sm font-bold text-slate-900 leading-snug">{settings?.address || "Escuela Principal"}</p>
+                     <p className="text-sm font-bold text-slate-900 leading-snug">{settingsData?.address || "Escuela Principal"}</p>
                    </div>
                 </div>
               </div>
