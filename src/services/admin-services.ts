@@ -8,8 +8,14 @@ import { cookies } from "next/headers";
 
 // --- MIDDLEWARE DE SEGURIDAD (DEFINITIVO) ---
 const verifyAdminAccess = async () => {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session")?.value;
+  let sessionCookie: string | undefined;
+  
+  try {
+    const cookieStore = await cookies();
+    sessionCookie = cookieStore.get("session")?.value;
+  } catch (e) {
+    throw new Error("Error interno al leer la sesión.");
+  }
 
   if (!sessionCookie) {
     throw new Error("Acceso denegado: No autenticado.");

@@ -28,6 +28,8 @@ export default function CollectionManager({ type, items, teachers = [], instrume
         setEditingItem({
           name: "",
           teacher_name: teachers[0] || "",
+          teachers: [], // Multi-teacher support
+          group: "",    // Age range or other classification
           instrument: instruments[0] || "",
           schedule: "",
           description: "",
@@ -116,6 +118,11 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                     <div className="absolute top-4 right-4 bg-slate-900/80 text-white text-[8px] font-black uppercase px-3 py-1 rounded-full backdrop-blur-md">Pausado</div>
                   )}
 
+                  {/* Badge de Grupo */}
+                  {it.group && (
+                    <div className="absolute top-4 left-4 bg-orange-500 text-white text-[7px] font-black uppercase px-2 py-1 rounded-md shadow-lg">{it.group}</div>
+                  )}
+
                   <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3 backdrop-blur-sm">
                     <button onClick={() => openModal(it)} className="p-4 bg-white text-slate-900 rounded-2xl hover:scale-110 transition-all shadow-xl"><Edit3 size={20}/></button>
                     <button onClick={() => confirm("¿Eliminar permanentemente?") && onDelete(it.id)} className="p-4 bg-white text-red-500 rounded-2xl hover:scale-110 transition-all shadow-xl"><Trash2 size={20}/></button>
@@ -125,7 +132,7 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                 <div className="mt-auto">
                    <p className={`text-[9px] font-bold uppercase flex items-center gap-1 ${isOrphan ? 'text-red-500' : 'text-slate-400'}`}>
                     {isOrphan && <AlertCircle size={10} />}
-                    {type === 'clases' ? `${it.instrument} • ${it.teacher_name}` : it.date?.split('T')[0]}
+                    {type === 'clases' ? `${it.instrument} • ${it.teacher_name}${it.teachers?.length > 0 ? ` +${it.teachers.length}` : ''}` : it.date?.split('T')[0]}
                   </p>
                 </div>
               </div>
@@ -196,14 +203,28 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                   </div>
 
                 {/* Título/Nombre */}
-                <div>
-                   <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Título</label>
-                   <input type="text" value={type === 'clases' ? editingItem.name : editingItem.title} onChange={(e) => setEditingItem({ ...editingItem, [type === 'clases' ? 'name' : 'title']: e.target.value })} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-slate-900 border-none ring-2 ring-slate-100 focus:ring-green-500 transition-all outline-none" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Título / Nombre</label>
+                    <input type="text" value={type === 'clases' ? editingItem.name : editingItem.title} onChange={(e) => setEditingItem({ ...editingItem, [type === 'clases' ? 'name' : 'title']: e.target.value })} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-slate-900 border-none ring-2 ring-slate-100 focus:ring-green-500 transition-all outline-none" />
+                  </div>
+                  {type === 'clases' && (
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Grupo / Clasificación</label>
+                      <input 
+                        type="text" 
+                        placeholder="Ej: Niños (6-12 años)"
+                        value={editingItem.group || ""} 
+                        onChange={(e) => setEditingItem({ ...editingItem, group: e.target.value })} 
+                        className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-slate-900 border-none ring-2 ring-slate-100 focus:ring-green-500 transition-all outline-none" 
+                      />
+                    </div>
+                  )}
                 </div>
                 
                 {type === 'clases' ? (
                   <>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                          <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Instrumento</label>
                          <select 
@@ -218,7 +239,7 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                          </select>
                       </div>
                       <div>
-                         <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Docente</label>
+                         <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Docente Principal</label>
                          <select 
                           value={editingItem.teacher_name} 
                           onChange={(e) => setEditingItem({ ...editingItem, teacher_name: e.target.value })} 
@@ -230,6 +251,34 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                            {teachers.map(t => <option key={t} value={t}>{t}</option>)}
                          </select>
                       </div>
+                    </div>
+
+                    {/* Multi-profesor */}
+                    <div className="bg-slate-50 p-6 rounded-[2rem] ring-2 ring-slate-100">
+                      <label className="text-[10px] font-black uppercase text-slate-400 mb-4 block">Docentes adicionales (Multi)</label>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {(editingItem.teachers || []).map((t: string) => (
+                          <span key={t} className="bg-white px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-900 border border-slate-200 flex items-center gap-2">
+                            {t}
+                            <button onClick={() => setEditingItem({ ...editingItem, teachers: editingItem.teachers.filter((item: string) => item !== t) })} className="text-slate-400 hover:text-red-500">
+                              <X size={12}/>
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <select 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val && !editingItem.teachers?.includes(val)) {
+                            setEditingItem({ ...editingItem, teachers: [...(editingItem.teachers || []), val] });
+                          }
+                        }}
+                        className="w-full p-3 bg-white rounded-xl text-[10px] font-bold text-slate-500 border-none ring-1 ring-slate-200"
+                        value=""
+                      >
+                        <option value="">Añadir docente...</option>
+                        {teachers.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

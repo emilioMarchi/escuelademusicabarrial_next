@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${classItem.name} | Escuela de Música Barrial`,
-    description: classItem.description?.substring(0, 160),
+    description: `${classItem.group ? `[${classItem.group}] ` : ""}${classItem.description?.substring(0, 160)}`,
     openGraph: {
       title: classItem.name,
       description: classItem.description?.substring(0, 160),
@@ -72,10 +72,17 @@ export default async function ClassDetailPage({ params }: PageProps) {
       label: c.instrument || "Música",
       // Pasamos las propiedades que CardItem necesita para los iconos:
       teacher_name: c.teacher_name,
+      teachers: c.teachers,
+      group: c.group,
       schedule: c.schedule,
       max_capacity: c.max_capacity,
-      description: c.teacher_name, // Opcional: lo que se muestra en el cuerpo de la card
+      description: c.group ? `Grupo: ${c.group}` : c.teacher_name, 
     }));
+
+  // Lógica para mostrar uno o varios profesores
+  const teachersDisplay = classItem.teachers && classItem.teachers.length > 0 
+    ? classItem.teachers.join(" & ")
+    : classItem.teacher_name;
 
   return (
     <article className="w-full bg-white">
@@ -99,16 +106,26 @@ export default async function ClassDetailPage({ params }: PageProps) {
                 <span>Formación Musical Activa</span>
               </div>
               
-              <h1 className="text-5xl md:text-7xl font-serif italic text-slate-900 leading-[0.95] mb-12 tracking-tight">
+              <h1 className="text-5xl md:text-7xl font-serif italic text-slate-900 leading-[0.95] mb-4 tracking-tight">
                 {classItem.name}
               </h1>
+
+              {classItem.group && (
+                <div className="mb-8">
+                  <span className="bg-orange-100 text-orange-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-orange-200 shadow-sm">
+                    {classItem.group}
+                  </span>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 items-stretch">
                 <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex flex-col gap-4 h-full">
                    <User size={20} className="text-orange-600 shrink-0" />
                    <div>
-                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Docente</p>
-                     <p className="text-sm font-bold text-slate-900 leading-snug">{classItem.teacher_name}</p>
+                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">
+                       {classItem.teachers && classItem.teachers.length > 1 ? "Docentes" : "Docente"}
+                     </p>
+                     <p className="text-sm font-bold text-slate-900 leading-snug">{teachersDisplay}</p>
                    </div>
                 </div>
 
@@ -174,7 +191,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
 
           {classItem.image_url && (
             <div className="lg:col-span-5 order-1 lg:order-2 lg:sticky lg:top-12">
-              <div className="relative aspect-[3/4] overflow-hidden rounded-[3.5rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)] group">
+              <div className="relative aspect-square md:aspect-[4/3] overflow-hidden rounded-[3.5rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)] group">
                 <Image src={classItem.image_url} alt={classItem.name} fill className="object-cover transition-transform duration-700 group-hover:scale-105" sizes="(max-w-768px) 100vw, 40vw" priority />
                 <div className="absolute top-8 left-8">
                    <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-white shadow-xl flex items-center gap-2">

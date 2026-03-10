@@ -137,7 +137,7 @@ export default function AdminDashboard() {
                 <Music size={32} />
               </div>
               <div>
-                <h3 className="font-black uppercase text-2xl tracking-tighter text-slate-900 leading-none">Clases y Talleres</h3>
+                <h3 className="font-black uppercase text-2xl tracking-tighter text-slate-900 leading-none">Clases y Grupos</h3>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{data.clases.length} Publicaciones activas</p>
               </div>
             </button>

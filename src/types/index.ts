@@ -68,6 +68,8 @@ export interface Class {
   id: string;
   name: string;
   teacher_name: string;
+  teachers?: string[]; // Added for multi-teacher support
+  group?: string;      // Added for age range or other group classifications
   schedule: string;
   description: string;
   instrument: string;
@@ -138,6 +140,8 @@ export interface UniversalCardData {
   date?: string;         
   schedule?: string;     
   teacher_name?: string; 
+  teachers?: string[];   // Added for multi-teacher support
+  group?: string;        // Added for age range or other group classifications
   max_capacity?: number; 
 }
 export interface PageWithSections extends PageContent {
