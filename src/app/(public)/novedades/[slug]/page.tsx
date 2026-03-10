@@ -131,7 +131,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
 
             <div className="prose prose-slate max-w-none">
               <div className="whitespace-pre-line font-serif text-xl md:text-2xl text-slate-700 leading-relaxed first-letter:text-8xl first-letter:font-black first-letter:text-slate-900 first-letter:mr-4 first-letter:float-left first-letter:leading-[0.7] selection:bg-green-100">
-                {item.description?.split(/(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:\S+)?)/g).map((part, index) => {
+                {item.description?.split(/(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:\S+)?)/g).map((part: string, index: number) => {
                   const youtubeMatch = part.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
                   if (youtubeMatch) {
                     return (
