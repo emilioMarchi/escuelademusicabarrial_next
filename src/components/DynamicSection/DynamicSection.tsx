@@ -75,7 +75,7 @@ export default function DynamicSection({ title, description, items, layout, base
                 <CardItem 
                   data={item} 
                   basePath={basePath} 
-                  hideDescription={true} 
+                  hideDescription={false} 
                 />
               </div>
             ))}

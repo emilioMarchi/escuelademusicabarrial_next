@@ -94,8 +94,10 @@ export default function SectionRenderer({
         image_url: n.image_url, 
         slug: (n as any).slug || slugify(n.title), 
         color: "green" as const,
-        // CORRECCIÓN: Mapeo de datos para que CardItem los vea
-        date: n.date
+        // CORRECCIÓN: Mapeo de datos formateados para que CardItem los vea
+        date: n.date 
+          ? new Date(n.date + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+          : undefined
       }));
 
       return (

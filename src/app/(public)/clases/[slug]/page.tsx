@@ -148,7 +148,26 @@ export default async function ClassDetailPage({ params }: PageProps) {
 
             <div className="prose prose-slate max-w-none">
               <div className="whitespace-pre-line font-serif text-xl md:text-2xl text-slate-700 leading-relaxed first-letter:text-8xl first-letter:font-black first-letter:text-slate-900 first-letter:mr-4 first-letter:float-left first-letter:leading-[0.7] selection:bg-orange-100">
-                {classItem.description}
+                {classItem.description?.split(/(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:\S+)?)/g).map((part: string, index: number) => {
+                  const youtubeMatch = part.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                  if (youtubeMatch) {
+                    return (
+                      <div key={index} className="my-12 aspect-video w-full overflow-hidden rounded-[2rem] shadow-2xl shadow-slate-200 border border-slate-100">
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={`https://www.youtube.com/embed/${youtubeMatch[1]}`}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="w-full h-full"
+                        ></iframe>
+                      </div>
+                    );
+                  }
+                  return part;
+                })}
               </div>
             </div>
           </div>

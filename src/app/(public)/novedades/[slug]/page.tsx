@@ -62,10 +62,13 @@ export default async function NewsDetailPage({ params }: PageProps) {
       id: n.id,
       slug: n.slug,
       title: n.title,
-      description: n.description?.substring(0, 80) + "...",
+      description: n.excerpt || (n.description?.length > 80 ? n.description.substring(0, 80) + "..." : n.description),
       image_url: n.image_url, 
       color: "green",
       label: "Novedad",
+      date: n.date 
+        ? new Date(n.date + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+        : "Reciente",
     }));
 
   return (
@@ -100,7 +103,9 @@ export default async function NewsDetailPage({ params }: PageProps) {
                    <div>
                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Publicado el</p>
                      <p className="text-sm font-bold text-slate-900 leading-snug">
-                        {item.date || "Reciente"}
+                        {item.date 
+                          ? new Date(item.date + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+                          : "Reciente"}
                      </p>
                    </div>
                 </div>
@@ -126,7 +131,26 @@ export default async function NewsDetailPage({ params }: PageProps) {
 
             <div className="prose prose-slate max-w-none">
               <div className="whitespace-pre-line font-serif text-xl md:text-2xl text-slate-700 leading-relaxed first-letter:text-8xl first-letter:font-black first-letter:text-slate-900 first-letter:mr-4 first-letter:float-left first-letter:leading-[0.7] selection:bg-green-100">
-                {item.description}
+                {item.description?.split(/(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:\S+)?)/g).map((part, index) => {
+                  const youtubeMatch = part.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                  if (youtubeMatch) {
+                    return (
+                      <div key={index} className="my-12 aspect-video w-full overflow-hidden rounded-[2rem] shadow-2xl shadow-slate-200 border border-slate-100">
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={`https://www.youtube.com/embed/${youtubeMatch[1]}`}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="w-full h-full"
+                        ></iframe>
+                      </div>
+                    );
+                  }
+                  return part;
+                })}
               </div>
             </div>
           </div>
