@@ -18,6 +18,9 @@ Este archivo contiene las directrices fundamentales para el desarrollo del proye
 - **Firebase Admin SDK:** Para operaciones de limpieza en cascada y transacciones batch.
 - **Framer Motion:** Para transiciones de modales y estados de carga.
 
-## 📂 Convenciones de Estilo
-- **Tablas:** Usar el diseño denso de `CollectionManager.tsx` para todas las colecciones de gestión masiva.
-- **Acciones:** Botones de edición/borrado con opacidad 0 inicial, visibles solo al `:hover` de la fila.
+## 🌐 Alcance de la Aplicación
+El proyecto no es solo un panel administrativo; es una plataforma de dos caras:
+1.  **Sitio Público:** `/` (Home), `/clases`, `/novedades`, `/galeria`, `/donaciones`. Gestionado dinámicamente mediante secciones en Firestore.
+2.  **Panel Admin:** `/dashboard`. Protegido por Firebase Auth y Middleware de sesión.
+
+Todas las configuraciones de API (Mercado Pago, Resend, Firebase) deben mantenerse sincronizadas entre ambos entornos.

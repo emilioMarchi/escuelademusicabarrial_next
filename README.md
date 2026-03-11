@@ -1,56 +1,91 @@
-# Escuela de Música Barrial - Sistema de Gestión (EMB Admin)
+# Escuela de Música Barrial - Aplicación Completa
 
-Este es el sistema central de gestión para la **Escuela de Música Barrial**, diseñado para administrar clases, comisiones, alumnos, docentes y novedades.
+Este proyecto es una plataforma integral para la **Escuela de Música Barrial**, que incluye tanto el sitio web público como un panel de administración avanzado.
 
 ## 🚀 Versión Actual: **v1.2.9**
 
-### 📋 Contexto del Proyecto
-La aplicación es una plataforma integral construida con **Next.js 16** que permite a los administradores llevar un control total de la oferta educativa y la base de datos de la escuela. El sistema utiliza una arquitectura de **"Fuente Única de Verdad"** centrada en los **Grupos (Comisiones)** para evitar desincronización de datos.
+### 📋 Descripción del Proyecto
+La aplicación permite la gestión total de la oferta educativa, inscripciones, novedades y donaciones. Está construida con **Next.js 16** y utiliza **Firebase** como motor de base de datos y autenticación.
+
+---
+
+## 🏗️ Arquitectura del Sistema
+
+### 1. 🌐 Sitio Público (`src/app/(public)`)
+Diseñado para la comunidad, con alto enfoque en UX y SEO:
+- **Inicio Dinámico:** Secciones configurables desde el admin.
+- **Catálogo de Clases:** Listado de talleres y páginas individuales.
+- **Novedades:** Blog institucional con soporte para video.
+- **Donaciones:** Integración con **Mercado Pago** (Pagos únicos y suscripciones).
+- **Galería:** Visualizador de fotos y actividades de la escuela.
+- **Formularios:** Consultas e inscripciones directas.
+
+### 2. 🔐 Panel de Administración (`src/app/(admin)`)
+Centro de control protegido para la gestión operativa:
+- **Gestión de Colecciones:** Tablas maestras para Clases, Grupos (Comisiones), Alumnos y Novedades.
+- **Sincronización Inteligente:** Basada en la "Fuente Única de Verdad" (Grupos).
+- **Control de Balances:** Visualización de ingresos vía Mercado Pago.
+- **Configuración Web:** Editor de secciones para la página de inicio.
 
 ---
 
 ## 🛠️ Stack Tecnológico
 - **Framework:** Next.js 16 (App Router + Turbopack)
 - **Base de Datos:** Firebase Firestore
-- **Autenticación:** Firebase Auth (vía Cookies de sesión seguras)
+- **Autenticación:** Firebase Auth + Firebase Admin SDK
 - **Almacenamiento:** Firebase Storage
-- **Estilos:** Tailwind CSS 4
-- **Animaciones:** Framer Motion
+- **Pasarela de Pagos:** Mercado Pago SDK / API
+- **Correos:** Resend API
+- **Estilos:** Tailwind CSS 4 + Framer Motion
 - **Iconografía:** Lucide React
 
 ---
 
-## 🏗️ Arquitectura de Datos
-El sistema se organiza en cuatro pilares fundamentales:
+## ⚙️ Configuración e Instalación
 
-1.  **Clases (Talleres):** Contenedores generales (ej: Guitarra, Piano). No guardan datos técnicos, solo descriptivos y estéticos.
-2.  **Grupos (Comisiones):** El núcleo del sistema. Guardan el `class_id`, el `teacher_names`, los `instruments`, el `schedule` y la lista de `students` (IDs).
-3.  **Alumnos/as:** Base de datos centralizada con perfiles individuales. Su relación con las clases es dinámica a través de los grupos.
-4.  **Novedades/Noticias:** Blog institucional con soporte para videos de YouTube embebidos.
-
----
-
-## ✨ Características Principales (Implementadas en v1.2.9)
-- **Buscador Maestro:** Filtros inteligentes que normalizan tildes y buscan por múltiples campos (nombre, docente, instrumento e incluso alumnos dentro de una clase).
-- **Tablas de Gestión:** Vistas de datos densas para manejar grandes volúmenes de información (30+ registros por pantalla).
-- **Sincronización Bidireccional:** El sistema limpia automáticamente referencias a objetos eliminados.
-- **Seguridad Admin:** El panel `/dashboard` está protegido y configurado para no ser indexado por buscadores (Robots: `noindex, nofollow`).
-- **YouTube Auto-Embed:** Detección automática de links de YouTube en descripciones para montar reproductores de video.
-
----
-
-## 🛠️ Comandos de Desarrollo
+### 1. Clonar el repositorio
 ```bash
-npm run dev      # Iniciar servidor local
-npm run build    # Generar build de producción
-npm run lint     # Correr linter
+git clone <url-del-repo>
+cd escuelademusica-website
 ```
 
+### 2. Instalar dependencias
+```bash
+npm install
+```
+
+### 3. Variables de Entorno
+Crea un archivo `.env.local` basado en el archivo `.env.example` provisto:
+```bash
+cp .env.example .env.local
+```
+Completa las variables con tus credenciales de Firebase, Mercado Pago y Resend.
+
+### 4. Configuración de Firebase
+- Crea un proyecto en [Firebase Console](https://console.firebase.google.com/).
+- Habilita **Firestore**, **Authentication** (Email/Password) y **Storage**.
+- Genera una **Clave Privada de Service Account** en `Configuración del Proyecto > Cuentas de Servicio` para las variables de Admin.
+
+### 5. Iniciar Desarrollo
+```bash
+npm run dev
+```
+La aplicación estará disponible en `http://localhost:3000`.
 
 ---
 
-## 📂 Estructura de Archivos Clave
-- `src/app/(admin)/dashboard/page.tsx`: Corazón del panel central.
-- `src/app/(admin)/components/CollectionManager.tsx`: Gestor universal de tablas y formularios.
-- `src/services/admin-services.ts`: Acciones de servidor (Server Actions) para Firebase.
-- `src/types/index.ts`: Definición de interfaces y contratos de datos.
+## 📂 Estructura de Carpetas Clave
+- `src/app/(public)`: Rutas y componentes del sitio para usuarios finales.
+- `src/app/(admin)`: Rutas y componentes del panel de gestión.
+- `src/components`: Componentes compartidos y secciones dinámicas.
+- `src/services`: Capa de servicios (Server Actions) para interacción con APIs y DB.
+- `src/lib`: Configuraciones de librerías (Firebase, Mercado Pago, Resend).
+- `src/types`: Definiciones de TypeScript para todo el proyecto.
+
+---
+
+## ✨ Características de v1.2.9
+- **Buscador Maestro:** Filtros inteligentes con normalización de tildes.
+- **Tablas de Gestión Densa:** Manejo eficiente de grandes volúmenes de datos.
+- **Limpieza en Cascada:** Al eliminar un grupo, se limpian las referencias en el sistema.
+- **YouTube Auto-Embed:** Soporte automático para videos en descripciones de novedades.

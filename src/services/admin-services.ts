@@ -4,7 +4,7 @@
 import admin from "firebase-admin";
 import { adminDb, adminStorage, adminAuth, STORAGE_BUCKET } from "@/lib/firebase-admin";
 import { PageContent, Donation, GalleryImage, GalleryVideo, SectionData } from "@/types";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache, revalidateTag } from "next/cache";
 import { cookies } from "next/headers";
 
 // --- MIDDLEWARE DE SEGURIDAD (DEFINITIVO) ---
@@ -108,13 +108,11 @@ export const savePageConfigAdmin = async (slug: string, data: any) => {
     const docRef = snapshot.docs[0].ref;
 
     // 2. SANEAMIENTO DE SECCIONES (El paso crítico)
-    // Nos aseguramos de que 'settings' se guarde explícitamente, incluso si está vacío.
-    // Si no hacemos esto, Firebase a veces ignora objetos vacíos o mal estructurados.
     const sectionsToSave = (data.sections || []).map((section: any) => ({
       id: section.id,
       type: section.type,
       content: section.content || {},
-      settings: section.settings || {}, // <--- ESTO ES LO QUE ARREGLA EL GUARDADO DEL SWITCH
+      settings: section.settings || {},
     }));
 
     // 3. Actualizamos la base de datos
@@ -124,12 +122,11 @@ export const savePageConfigAdmin = async (slug: string, data: any) => {
       last_updated: new Date()
     });
     
-    // 4. Limpieza de caché (Revalidación)
-    // Esto fuerza a Next.js a reconstruir la página en el frontend
-    revalidatePath(`/${slug}`);          // Ej: /contacto
-    revalidatePath("/");                 // Home
-    revalidatePath(`/dashboard/${slug}`); // Dashboard mismo
-    revalidatePath("/admin/editor/[slug]", "page"); 
+    // 4. Limpieza de caché
+    (revalidateTag as any)("pages");
+    (revalidatePath as any)(`/${slug}`);
+    (revalidatePath as any)("/");
+    (revalidatePath as any)(`/dashboard/${slug}`);
 
     return { success: true };
   } catch (error) {
@@ -138,44 +135,64 @@ export const savePageConfigAdmin = async (slug: string, data: any) => {
   }
 };
 
-// --- GESTIÓN DE COLECCIONES GENÉRICAS (CLASES, NOTICIAS) ---
+// --- GESTIÓN DE COLECCIONES GENÉRICAS (CLASES, NOTICIAS, GRUPOS) ---
 
 /**
- * Función PÚBLICA para obtener colecciones SIN autenticación.
- * Usada por las páginas públicas (novedades, clases) para visitantes.
+ * Función PÚBLICA para obtener colecciones SIN autenticación (CON CACHE).
  */
-export const getCollectionPublic = async (collectionName: string) => {
-  try {
-    const snapshot = await adminDb.collection(collectionName).orderBy("last_updated", "desc").get();
-    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) })) as unknown[];
-    return { success: true, data };
-  } catch (error) {
-    // Fallback sin ordenamiento solo si falla el índice
+export const getCollectionPublic = unstable_cache(
+  async (collectionName: string) => {
     try {
-      const snapshot = await adminDb.collection(collectionName).get();
+      const snapshot = await adminDb.collection(collectionName).orderBy("last_updated", "desc").get();
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) })) as unknown[];
       return { success: true, data };
-    } catch (fallbackError) {
-      return { success: false, error: String(fallbackError) };
+    } catch (error) {
+      try {
+        const snapshot = await adminDb.collection(collectionName).get();
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) })) as unknown[];
+        return { success: true, data };
+      } catch (fallbackError) {
+        return { success: false, error: String(fallbackError) };
+      }
     }
-  }
+  },
+  ["get-collection-public"],
+  { revalidate: 3600, tags: ["collections"] }
+);
+
+/**
+ * Función PÚBLICA específica para Grupos (SSOT) (CON CACHE).
+ * Importante para las vistas de clases.
+ */
+export const getGroupsPublic = unstable_cache(
+  async () => {
+    return getCollectionPublic("grupos");
+  },
+  ["get-groups-public"],
+  { revalidate: 3600, tags: ["collections", "grupos"] }
+);
+
+/**
+ * Función PÚBLICA para obtener grupos de una clase específica (SSOT).
+ */
+export const getGroupsByClassPublic = async (classId: string) => {
+  const { success, data, error } = await getGroupsPublic();
+  if (!success) return { success: false, error };
+  
+  const filtered = (data as any[]).filter(g => g.class_id === classId);
+  return { success: true, data: filtered };
 };
 
 /**
  * Función ADMIN para obtener colecciones CON autenticación.
- * Usada por el panel de administración.
  */
 export const getCollectionAdmin = async (collectionName: string) => {
-  // Verificamos acceso ANTES de cualquier operación de DB
   await verifyAdminAccess();
   try {
     const snapshot = await adminDb.collection(collectionName).orderBy("last_updated", "desc").get();
-    // Cast a unknown[] porque Firestore no conoce el tipo concreto (Class, News, etc.)
-    // El llamador es responsable de hacer el cast correcto (ej: as Class[])
     const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) })) as unknown[];
     return { success: true, data };
   } catch (error) {
-    // Fallback sin ordenamiento solo si falla el índice (error de Firestore, no de auth)
     try {
       const snapshot = await adminDb.collection(collectionName).get();
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...serializeData(doc.data()) })) as unknown[];
@@ -191,10 +208,9 @@ export const upsertItemAdmin = async (collectionName: string, item: any) => {
     await verifyAdminAccess();
     const { id, ...rest } = item;
     
-    // GENERACIÓN AUTOMÁTICA DE SLUG
     let slug = rest.slug;
     const nameOrTitle = rest.name || rest.title;
-    if (nameOrTitle) {
+    if (nameOrTitle && !slug) {
       slug = generateSlug(nameOrTitle);
     }
 
@@ -204,48 +220,36 @@ export const upsertItemAdmin = async (collectionName: string, item: any) => {
       last_updated: new Date() 
     };
 
+    // ELIMINAR CAMPOS PROHIBIDOS POR REGLAS DE ORO (SSOT)
+    // Las clases no deben guardar IDs de grupos, y los alumnos no deben guardar sus grupos vinculados
+    // NOTA: Según GEMINI.md, las relaciones se gestionan EXCLUSIVAMENTE en la colección 'grupos'.
+    if (collectionName === "clases") {
+      delete (dataToSave as any).groupIds;
+    }
+    
+    if (collectionName === "alumnos") {
+      delete (dataToSave as any).groups;
+      if (dataToSave.age) {
+        dataToSave.age = Number(dataToSave.age);
+      }
+    }
+
     let finalId = id;
 
     if (id) {
-      // --- LÓGICA DE SINCRONIZACIÓN PRE-GUARDADO (PARA EDICIÓN) ---
-      if (collectionName === "grupos") {
-        const oldGroupDoc = await adminDb.collection("grupos").doc(id).get();
-        const oldData = oldGroupDoc.data();
-        // Si cambió de clase, lo quitamos de la clase vieja
-        if (oldData && oldData.class_id && oldData.class_id !== rest.class_id) {
-          await adminDb.collection("clases").doc(oldData.class_id).update({
-            groupIds: admin.firestore.FieldValue.arrayRemove(id)
-          });
-        }
-      }
-
       await adminDb.collection(collectionName).doc(id).set(dataToSave, { merge: true });
     } else {
       const docRef = await adminDb.collection(collectionName).add(dataToSave);
       finalId = docRef.id;
     }
 
-    // --- LÓGICA DE SINCRONIZACIÓN POST-GUARDADO (BIDIRECCIONAL) ---
+    // Revalidación global de colecciones
+    (revalidateTag as any)("collections");
+    if (collectionName === "grupos") (revalidateTag as any)("grupos");
     
-    if (collectionName === "grupos" && rest.class_id) {
-      // 1. Asegurar que la clase vinculada tenga el ID de este grupo
-      await adminDb.collection("clases").doc(rest.class_id).update({
-        groupIds: admin.firestore.FieldValue.arrayUnion(finalId)
-      });
-    }
-
-    if (collectionName === "clases" && rest.groupIds) {
-      // 1. Asegurar que todos los grupos en la lista apunten a ESTA clase
-      const batch = adminDb.batch();
-      for (const gid of rest.groupIds) {
-        batch.update(adminDb.collection("grupos").doc(gid), { class_id: finalId });
-      }
-      await batch.commit();
-    }
-    
-    revalidatePath("/");
-    revalidatePath("/clases");
-    revalidatePath("/novedades");
+    (revalidatePath as any)("/");
+    (revalidatePath as any)("/clases");
+    (revalidatePath as any)("/novedades");
     return { success: true, id: finalId };
   } catch (error) {
     console.error("Error en upsertItemAdmin:", error);
@@ -257,60 +261,11 @@ export const deleteItemAdmin = async (collectionName: string, id: string) => {
   try {
     await verifyAdminAccess();
     
-    // --- LÓGICA DE LIMPIEZA EN CASCADA (MÁS ROBUSTA) ---
-    
-    if (collectionName === "alumnos") {
-      // Limpiar el ID del alumno de cualquier grupo
-      const grupos = await adminDb.collection("grupos").get();
-      const batch = adminDb.batch();
-      let updated = false;
-      grupos.forEach(doc => {
-        const data = doc.data();
-        if (data.students && Array.isArray(data.students) && data.students.includes(id)) {
-          batch.update(doc.ref, {
-            students: admin.firestore.FieldValue.arrayRemove(id)
-          });
-          updated = true;
-        }
-      });
-      if (updated) await batch.commit();
-    }
-
-    if (collectionName === "grupos") {
-      // 1. Limpiar el ID del grupo de las clases
-      const clases = await adminDb.collection("clases").get();
-      const batchClases = adminDb.batch();
-      let updatedC = false;
-      clases.forEach(doc => {
-        const data = doc.data();
-        if (data.groupIds && Array.isArray(data.groupIds) && data.groupIds.includes(id)) {
-          batchClases.update(doc.ref, {
-            groupIds: admin.firestore.FieldValue.arrayRemove(id)
-          });
-          updatedC = true;
-        }
-      });
-      if (updatedC) await batchClases.commit();
-
-      // 2. Limpiar el grupo del perfil de los alumnos
-      const alumnos = await adminDb.collection("alumnos").get();
-      const batchAlumnos = adminDb.batch();
-      let updatedA = false;
-      alumnos.forEach(doc => {
-        const data = doc.data();
-        if (data.groups && Array.isArray(data.groups)) {
-          const newGroups = data.groups.filter((g: any) => g.id !== id);
-          if (newGroups.length !== data.groups.length) {
-            batchAlumnos.update(doc.ref, { groups: newGroups });
-            updatedA = true;
-          }
-        }
-      });
-      if (updatedA) await batchAlumnos.commit();
-    }
+    // Al eliminar un objeto, solo nos aseguramos de que no queden referencias huerfanas
+    // en los objetos que apuntan a él (relaciones Many-to-One).
 
     if (collectionName === "clases") {
-      // Limpiar el class_id de todos los grupos que apuntaban a esta clase
+      // Si borro una clase, los grupos que apuntaban a ella quedan sin clase.
       const grupos = await adminDb.collection("grupos").where("class_id", "==", id).get();
       const batch = adminDb.batch();
       grupos.forEach(doc => {
@@ -319,12 +274,18 @@ export const deleteItemAdmin = async (collectionName: string, id: string) => {
       await batch.commit();
     }
 
-    // Finalmente, eliminar el documento principal
+    // Nota: Al borrar un Alumno o un Grupo, no hay arrays que limpiar en Clases
+    // gracias a la regla de SSOT. Los vínculos se calculan filtrando la colección 'grupos'.
+
     await adminDb.collection(collectionName).doc(id).delete();
     
-    revalidatePath("/");
-    revalidatePath("/clases");
-    revalidatePath("/novedades");
+    // Revalidación global
+    (revalidateTag as any)("collections");
+    if (collectionName === "grupos") (revalidateTag as any)("grupos");
+
+    (revalidatePath as any)("/");
+    (revalidatePath as any)("/clases");
+    (revalidatePath as any)("/novedades");
     return { success: true };
   } catch (error) {
     console.error("Error en deleteItemAdmin:", error);
@@ -332,40 +293,127 @@ export const deleteItemAdmin = async (collectionName: string, id: string) => {
   }
 };
 
+/**
+ * FUNCIÓN CRÍTICA: Procesar una inscripción (Alumno o Docente) (SSOT)
+ * Usa transacciones para asegurar que no haya datos huérfanos.
+ */
+export const processEnrollmentAdmin = async (submissionId: string) => {
+  try {
+    await verifyAdminAccess();
+    
+    return await adminDb.runTransaction(async (transaction) => {
+      // 1. Obtener datos de la inscripción
+      const subRef = adminDb.collection("submissions").doc(submissionId);
+      const subDoc = await transaction.get(subRef);
+      
+      if (!subDoc.exists) throw new Error("Inscripción no encontrada");
+      const subData = subDoc.data()!;
+
+      if (subData.type !== "clases") {
+        throw new Error("Solo se pueden procesar inscripciones de clases");
+      }
+
+      const { role, fullname, group_id, age, email, phone, instrument } = subData;
+
+      if (role === "alumno") {
+        // a) Crear referencia para el nuevo Alumno
+        const studentRef = adminDb.collection("alumnos").doc(); // Genera ID automático
+        
+        const newStudent = {
+          name: fullname, 
+          age: age ? Number(age) : null,
+          email: email || "",
+          phone: phone || "",
+          status: "activo",
+          instruments: [], // Para alumnos se deriva del grupo, pero dejamos el array vacío
+          is_active: true,
+          category: "alumnos",
+          created_at: new Date(),
+          last_updated: new Date()
+        };
+
+        transaction.set(studentRef, newStudent);
+
+        // b) Vincular al Grupo
+        if (group_id) {
+          const groupRef = adminDb.collection("grupos").doc(group_id);
+          transaction.update(groupRef, {
+            students: admin.firestore.FieldValue.arrayUnion(studentRef.id)
+          });
+        }
+      } 
+      else if (role === "docente") {
+        // a) Actualizar lista global de docentes (lectura/escritura en transacción)
+        const teacherSettingsRef = adminDb.collection("settings").doc("teachers");
+        const teacherDoc = await transaction.get(teacherSettingsRef);
+        let currentTeachers = teacherDoc.exists ? (teacherDoc.data()?.list || []) : [];
+        
+        if (!currentTeachers.includes(fullname)) {
+          currentTeachers.push(fullname);
+          transaction.set(teacherSettingsRef, { list: currentTeachers }, { merge: true });
+        }
+
+        // b) Vincular al Grupo como docente
+        if (group_id) {
+          const groupRef = adminDb.collection("grupos").doc(group_id);
+          transaction.update(groupRef, {
+            teacher_names: admin.firestore.FieldValue.arrayUnion(fullname)
+          });
+        }
+      }
+
+      // 4. Marcar inscripción como gestionada
+      transaction.update(subRef, { status: "gestionado" });
+
+      return { success: true };
+    });
+
+  } catch (error) {
+    console.error("ERROR EN TRANSACCIÓN processEnrollmentAdmin:", error);
+    return { success: false, error: String(error) };
+  } finally {
+    // Revalidación fuera de la transacción
+    (revalidateTag as any)("collections");
+    (revalidateTag as any)("settings");
+    (revalidatePath as any)("/dashboard");
+  }
+};
+
 // --- GESTIÓN DE GALERÍA ---
 
 /**
- * Función PÚBLICA para obtener imágenes de galería SIN autenticación.
- * Usada por las páginas públicas.
+ * Función PÚBLICA para obtener imágenes de galería SIN autenticación (CON CACHE).
  */
-export const getGalleryImagesPublic = async () => {
-  try {
-    const snapshot = await adminDb.collection("gallery").orderBy("order", "asc").get();
-    const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
-    return { success: true, data };
-  } catch (error) {
+export const getGalleryImagesPublic = unstable_cache(
+  async () => {
     try {
-      const snapshot = await adminDb.collection("gallery").get();
+      const snapshot = await adminDb.collection("gallery").orderBy("order", "asc").get();
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
       return { success: true, data };
-    } catch (fallbackError) {
-      return { success: false, error: String(fallbackError) };
+    } catch (error) {
+      try {
+        const snapshot = await adminDb.collection("gallery").get();
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
+        return { success: true, data };
+      } catch (fallbackError) {
+        return { success: false, error: String(fallbackError) };
+      }
     }
-  }
-};
+  },
+  ["get-gallery-public"],
+  { revalidate: 3600, tags: ["gallery"] }
+);
 
 /**
  * Función ADMIN para obtener imágenes de galería CON autenticación.
  */
 export const getGalleryImagesAdmin = async () => {
-  // Verificamos acceso ANTES de cualquier operación de DB
   await verifyAdminAccess();
   try {
     const snapshot = await adminDb.collection("gallery").orderBy("order", "asc").get();
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
     return { success: true, data };
   } catch (error) {
-    // Fallback sin ordenamiento solo si falla el índice (error de Firestore, no de auth)
     try {
       const snapshot = await adminDb.collection("gallery").get();
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...serializeData(doc.data()) }));
@@ -396,8 +444,9 @@ export const uploadAndAddImageAdmin = async (formData: FormData) => {
       created_at: new Date().toISOString()
     });
 
-    revalidatePath("/galeria");
-    revalidatePath("/");
+    (revalidateTag as any)("gallery");
+    (revalidatePath as any)("/galeria");
+    (revalidatePath as any)("/");
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -412,8 +461,9 @@ export const deleteImageAdmin = async (id: string, url: string) => {
     if (fileName) {
       await adminStorage.bucket(STORAGE_BUCKET).file(`galeria/${fileName}`).delete();
     }
-    revalidatePath("/galeria");
-    revalidatePath("/");
+    (revalidateTag as any)("gallery");
+    (revalidatePath as any)("/galeria");
+    (revalidatePath as any)("/");
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -429,7 +479,8 @@ export const updateImageOrderAdmin = async (images: {id: string, order: number, 
       batch.update(docRef, { order: img.order, caption: img.caption || "" });
     });
     await batch.commit();
-    revalidatePath("/galeria");
+    (revalidateTag as any)("gallery");
+    (revalidatePath as any)("/galeria");
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -444,10 +495,27 @@ export const getInstrumentsAdmin = async () => {
   return { success: true, data: doc.exists ? doc.data()?.list || [] : [] };
 };
 
+/**
+ * Función PÚBLICA para obtener la lista de instrumentos (CON CACHE).
+ */
+export const getInstrumentsPublic = unstable_cache(
+  async () => {
+    try {
+      const doc = await adminDb.collection("settings").doc("instruments").get();
+      return { success: true, data: doc.exists ? doc.data()?.list || [] : [] };
+    } catch (error) {
+      return { success: false, error: String(error), data: [] };
+    }
+  },
+  ["get-instruments-public"],
+  { revalidate: 3600, tags: ["settings", "instruments"] }
+);
+
 export const updateInstrumentsAdmin = async (list: string[]) => {
   await verifyAdminAccess();
   await adminDb.collection("settings").doc("instruments").set({ list });
-  revalidatePath("/", "layout");
+  (revalidateTag as any)("settings");
+  (revalidatePath as any)("/", "layout");
   return { success: true };
 };
 
@@ -460,26 +528,29 @@ export const getTeachersAdmin = async () => {
 export const updateTeachersAdmin = async (list: string[]) => {
   await verifyAdminAccess();
   await adminDb.collection("settings").doc("teachers").set({ list });
-  revalidatePath("/", "layout");
+  (revalidateTag as any)("settings");
+  (revalidatePath as any)("/", "layout");
   return { success: true };
 };
 
 /**
- * Función PÚBLICA para obtener settings SIN autenticación.
- * Usada por las páginas públicas.
+ * Función PÚBLICA para obtener settings SIN autenticación (CON CACHE).
  */
-export const getGlobalSettingsPublic = async () => {
-  try {
-    const doc = await adminDb.collection("settings").doc("general").get();
-    return { success: true, data: doc.exists && doc.data() ? serializeData(doc.data()!) : {} };
-  } catch (error) {
-    return { success: false, error: String(error), data: {} };
-  }
-};
+export const getGlobalSettingsPublic = unstable_cache(
+  async () => {
+    try {
+      const doc = await adminDb.collection("settings").doc("general").get();
+      return { success: true, data: doc.exists && doc.data() ? serializeData(doc.data()!) : {} };
+    } catch (error) {
+      return { success: false, error: String(error), data: {} };
+    }
+  },
+  ["get-settings-public"],
+  { revalidate: 3600, tags: ["settings"] }
+);
 
 /**
  * Función ADMIN para obtener settings CON autenticación.
- * Usada por el panel de administración.
  */
 export const getGlobalSettingsAdmin = async () => {
   await verifyAdminAccess();
@@ -490,7 +561,8 @@ export const getGlobalSettingsAdmin = async () => {
 export const updateGlobalSettingsAdmin = async (data: any) => {
   await verifyAdminAccess();
   await adminDb.collection("settings").doc("general").set({ ...data, last_updated: new Date() }, { merge: true });
-  revalidatePath("/", "layout");
+  (revalidateTag as any)("settings");
+  (revalidatePath as any)("/", "layout");
   return { success: true };
 };
 
@@ -510,7 +582,7 @@ export const getDonationsAdmin = async () => {
 export const deleteDonationAdmin = async (id: string) => {
   await verifyAdminAccess();
   await adminDb.collection("donations").doc(id).delete();
-  revalidatePath("/dashboard/balances");
+  (revalidatePath as any)("/dashboard/balances");
   return { success: true };
 };
 
@@ -575,7 +647,8 @@ export const addVideoAdmin = async (video: Omit<GalleryVideo, 'id'>) => {
       slug,
       created_at: new Date()
     });
-    revalidatePath("/galeria");
+    (revalidateTag as any)("gallery");
+    (revalidatePath as any)("/galeria");
     return { success: true, id: docRef.id };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -591,7 +664,8 @@ export const deleteVideoAdmin = async (id: string, url: string, type: 'file' | '
       const fileName = url.split('/').pop()?.split('?')[0];
       if (fileName) await bucket.file(`gallery/${fileName}`).delete();
     }
-    revalidatePath("/galeria");
+    (revalidateTag as any)("gallery");
+    (revalidatePath as any)("/galeria");
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -609,8 +683,9 @@ export const addGalleryLinkAdmin = async (url: string, caption: string) => {
       order: 0,
       created_at: new Date().toISOString()
     });
-    revalidatePath("/galeria");
-    revalidatePath("/");
+    (revalidateTag as any)("gallery");
+    (revalidatePath as any)("/galeria");
+    (revalidatePath as any)("/");
     return { success: true };
   } catch (error) {
     return { success: false, error: String(error) };
@@ -621,15 +696,10 @@ export const getAdminCollectionItems = async (collectionName: string) => {
   try {
     await verifyAdminAccess();
     const snapshot = await adminDb.collection(collectionName).get();
-    
-    // CORRECCIÓN CRÍTICA:
-    // Antes devolvía doc.data() directo (con Timestamps).
-    // Ahora envolvemos todo en serializeData() para pasar los Timestamps a Strings.
     return snapshot.docs.map((doc) => serializeData({ 
       id: doc.id, 
       ...doc.data() 
     }));
-
   } catch (error) {
     console.error(`Error en getAdminCollectionItems para ${collectionName}:`, error);
     return [];

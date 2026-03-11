@@ -1,4 +1,4 @@
-import { getCollectionPublic, getGlobalSettingsPublic } from "@/services/admin-services";
+import { getCollectionPublic, getGlobalSettingsPublic, getGroupsByClassPublic } from "@/services/admin-services";
 import Contact from "@/components/sections/contact/Contact";
 import DynamicSection from "@/components/DynamicSection/DynamicSection";
 import { 
@@ -10,12 +10,13 @@ import {
   Users, 
   MapPin, 
   Sparkles, 
-  CheckCircle 
+  CheckCircle,
+  ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 import { Metadata } from "next";
 import Image from "next/image";
-import { UniversalCardData } from "@/types";
+import { UniversalCardData, Group } from "@/types";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${classItem.name} | Escuela de Música Barrial`,
-    description: `${classItem.group ? `[${classItem.group}] ` : ""}${classItem.description?.substring(0, 160)}`,
+    description: classItem.description?.substring(0, 160),
     openGraph: {
       title: classItem.name,
       description: classItem.description?.substring(0, 160),
@@ -60,7 +61,11 @@ export default async function ClassDetailPage({ params }: PageProps) {
     );
   }
 
-  // --- CORRECCIÓN DEL MAPEO DE CARDS ---
+  // --- OBTENCIÓN DE GRUPOS (SSOT) ---
+  const { data: groupsData } = await getGroupsByClassPublic(classItem.id);
+  const groups = (groupsData as Group[]) || [];
+
+  // --- CORRECCIÓN DEL MAPEO DE CARDS (OTROS ÍTEMS) ---
   const otherClassesData: UniversalCardData[] = allItems
     .filter((c: any) => c.slug !== slug && c.is_active)
     .map((c: any) => ({
@@ -69,25 +74,13 @@ export default async function ClassDetailPage({ params }: PageProps) {
       title: c.name,
       image_url: c.image_url, 
       color: "orange",
-      label: c.instrument || "Música",
-      // Pasamos las propiedades que CardItem necesita para los iconos:
-      teacher_name: c.teacher_name,
-      teachers: c.teachers,
-      group: c.group,
-      schedule: c.schedule,
-      max_capacity: c.max_capacity,
-      description: c.group ? `Grupo: ${c.group}` : c.teacher_name, 
+      label: "Música",
     }));
-
-  // Lógica para mostrar uno o varios profesores
-  const teachersDisplay = classItem.teachers && classItem.teachers.length > 0 
-    ? classItem.teachers.join(" & ")
-    : classItem.teacher_name;
 
   return (
     <article className="w-full bg-white">
       <nav className="w-full pt-12 pb-6 px-6 md:px-16 flex justify-between items-center max-w-7xl mx-auto">
-        <Link href="/clases" className="flex items-center gap-3 text-slate-400 hover:text-orange-600 transition-colors group">
+        <Link href="/clases" className="flex items-center gap-3 text-slate-400 hover:text-emerald-600 transition-colors group">
           <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
           <span className="text-[10px] font-black uppercase tracking-[0.3em]">Volver a Clases</span>
         </Link>
@@ -101,70 +94,101 @@ export default async function ClassDetailPage({ params }: PageProps) {
           
           <div className="lg:col-span-7 order-2 lg:order-1">
             <header className="mb-12">
-              <div className="flex items-center gap-3 text-orange-600 font-bold text-[11px] mb-6 uppercase tracking-[0.4em]">
+              <div className="flex items-center gap-3 text-emerald-600 font-bold text-[11px] mb-6 uppercase tracking-[0.4em]">
                 <Music size={14} strokeWidth={2.5} />
                 <span>Formación Musical Activa</span>
               </div>
               
-              <h1 className="text-5xl md:text-7xl font-serif italic text-slate-900 leading-[0.95] mb-4 tracking-tight">
+              <h1 className="text-5xl md:text-7xl font-serif italic text-slate-900 leading-[0.95] mb-8 tracking-tight">
                 {classItem.name}
               </h1>
 
-              {classItem.group && (
-                <div className="mb-8">
-                  <span className="bg-orange-100 text-orange-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-orange-200 shadow-sm">
-                    {classItem.group}
-                  </span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 items-stretch">
-                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex flex-col gap-4 h-full">
-                   <User size={20} className="text-orange-600 shrink-0" />
-                   <div>
-                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                       {classItem.teachers && classItem.teachers.length > 1 ? "Docentes" : "Docente"}
-                     </p>
-                     <p className="text-sm font-bold text-slate-900 leading-snug">{teachersDisplay}</p>
-                   </div>
-                </div>
-
-                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex flex-col gap-4 h-full">
-                   <Clock size={20} className="text-orange-600 shrink-0" />
-                   <div>
-                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Horarios</p>
-                     <p className="text-sm font-bold text-slate-900 leading-snug">{classItem.schedule || "A coordinar"}</p>
-                   </div>
-                </div>
-
-                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex flex-col gap-4 h-full">
-                   <Users size={20} className="text-orange-600 shrink-0" />
-                   <div>
-                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Cupos</p>
-                     <p className="text-sm font-bold text-slate-900 leading-snug">
-                        {classItem.max_capacity > 0 ? `${classItem.max_capacity} Vacantes` : "Consultar"}
-                     </p>
-                   </div>
-                </div>
-
-                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex flex-col gap-4 h-full">
-                   <MapPin size={20} className="text-orange-600 shrink-0" />
-                   <div>
-                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Sede</p>
-                     <p className="text-sm font-bold text-slate-900 leading-snug">{settingsData?.address || "Escuela Principal"}</p>
-                   </div>
-                </div>
+              <div className="flex items-center gap-6 mb-12">
+                 <div className="h-[1px] w-16 bg-emerald-500/20"></div>
+                 <Sparkles size={16} className="text-emerald-500/40" />
+                 <div className="h-[1px] flex-grow bg-slate-100"></div>
               </div>
 
-              <div className="flex items-center gap-6 mb-12">
-                 <div className="h-[1px] w-16 bg-orange-500/20"></div>
-                 <Sparkles size={16} className="text-orange-500/40" />
-                 <div className="h-[1px] flex-grow bg-slate-100"></div>
+              {/* --- BLOQUE DE GRUPOS (SSOT INDIVIDUAL) --- */}
+              <div className="space-y-6 mb-16">
+                <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 flex items-center gap-4">
+                  Comisiones Disponibles
+                  <span className="h-[1px] flex-grow bg-slate-50"></span>
+                </h3>
+                
+                {groups.length > 0 ? (
+                  groups.map((group) => {
+                    const availableSpots = (group.max_capacity || 0) - (group.students?.length || 0);
+                    const isFull = availableSpots <= 0;
+
+                    return (
+                      <div key={group.id} className="group/card bg-emerald-50/40 border border-emerald-100/50 rounded-[2.5rem] p-8 transition-all hover:bg-emerald-50 hover:shadow-xl hover:shadow-emerald-900/5">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                          <div className="flex-grow">
+                            <div className="flex items-center gap-3 mb-4">
+                              <h4 className="text-xl font-bold text-slate-900">{group.name}</h4>
+                              {isFull ? (
+                                <span className="bg-slate-200 text-slate-500 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Cupos Completos</span>
+                              ) : (
+                                <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-emerald-200">Inscripción Abierta</span>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+                              <div className="flex items-start gap-3">
+                                <User size={16} className="text-emerald-600 mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Docente</p>
+                                  <p className="text-sm font-bold text-slate-700">{group.teacher_names?.join(" & ") || "A confirmar"}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <Clock size={16} className="text-emerald-600 mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Horario</p>
+                                  <p className="text-sm font-bold text-slate-700">{group.schedule || "A coordinar"}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <Users size={16} className="text-emerald-600 mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Vacantes</p>
+                                  <p className="text-sm font-bold text-slate-700">
+                                    {isFull ? "Sin cupo" : `${availableSpots} libres de ${group.max_capacity}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <MapPin size={16} className="text-emerald-600 mt-0.5 shrink-0" />
+                                {settingsData?.address && (
+                                  <div>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Sede</p>
+                                    <p className="text-sm font-bold text-slate-700">{settingsData.address}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <Link 
+                            href={`?form=inscripcion&comision=${group.id}&cname=${encodeURIComponent(group.name)}#contacto`}
+                            className={`flex items-center justify-center gap-2 px-6 py-4 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${isFull ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200'}`}
+                          >
+                            Inscribirme <ChevronRight size={14} />
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="bg-slate-50 border border-slate-100 rounded-[2.5rem] p-12 text-center">
+                    <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Próximamente nuevas comisiones</p>
+                  </div>
+                )}
               </div>
             </header>
 
             <div className="prose prose-slate max-w-none">
-              <div className="whitespace-pre-line font-serif text-xl md:text-2xl text-slate-700 leading-relaxed first-letter:text-8xl first-letter:font-black first-letter:text-slate-900 first-letter:mr-4 first-letter:float-left first-letter:leading-[0.7] selection:bg-orange-100">
+              <div className="whitespace-pre-line font-serif text-xl md:text-2xl text-slate-700 leading-relaxed first-letter:text-8xl first-letter:font-black first-letter:text-slate-900 first-letter:mr-4 first-letter:float-left first-letter:leading-[0.7] selection:bg-emerald-100">
                 {classItem.description?.split(/(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:\S+)?)/g).map((part: string, index: number) => {
                   const youtubeMatch = part.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
                   if (youtubeMatch) {
@@ -195,7 +219,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
                 <Image src={classItem.image_url} alt={classItem.name} fill className="object-cover transition-transform duration-700 group-hover:scale-105" sizes="(max-w-768px) 100vw, 40vw" priority />
                 <div className="absolute top-8 left-8">
                    <div className="bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-full border border-white shadow-xl flex items-center gap-2">
-                      <CheckCircle size={14} className="text-orange-600" />
+                      <CheckCircle size={14} className="text-emerald-600" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Inscripción Abierta</span>
                    </div>
                 </div>
@@ -207,7 +231,7 @@ export default async function ClassDetailPage({ params }: PageProps) {
       </section>
 
       {otherClassesData.length > 0 && (
-        <div className="bg-orange-50/50 border-t border-orange-100">
+        <div className="bg-slate-50 border-t border-slate-100">
           <DynamicSection 
             title="Otras Clases" 
             description="Explora más disciplinas y encuentra la que mejor se adapte a vos." 
@@ -218,7 +242,15 @@ export default async function ClassDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      <Contact category="clases" hasForm={true} customTitle={`Sumate a ${classItem.name}`} />
+      <div id="contacto">
+        <Contact 
+          category="clases" 
+          hasForm={true} 
+          customTitle={`Sumate a ${classItem.name}`} 
+          classId={classItem.id}
+          className={classItem.name}
+        />
+      </div>
     </article>
   );
 }

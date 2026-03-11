@@ -97,7 +97,11 @@ export default function CardItem({ data, basePath, hideDescription }: Props) {
           {/* FOOTER DE LA CARD */}
           <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-50">
             <div className="flex items-center gap-2">
-              {data.teacher_name ? (
+              {(data.teachers && data.teachers.length > 0) ? (
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1">
+                  <User size={10} className={current.icons} /> {data.teachers.join(" & ")}
+                </span>
+              ) : data.teacher_name ? (
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1">
                   <User size={10} className={current.icons} /> {data.teacher_name}
                 </span>

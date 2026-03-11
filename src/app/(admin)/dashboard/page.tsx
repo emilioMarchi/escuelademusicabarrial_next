@@ -5,7 +5,8 @@ import {
   getInstrumentsAdmin, updateInstrumentsAdmin,
   getTeachersAdmin, updateTeachersAdmin,
   getGlobalSettingsAdmin, updateGlobalSettingsAdmin,
-  getAdminsAdmin, updateAdminsAdmin 
+  getAdminsAdmin, updateAdminsAdmin,
+  processEnrollmentAdmin
 } from "@/services/admin-services";
 import { Class, News } from "@/types";
 import { 
@@ -378,8 +379,31 @@ export default function AdminDashboard() {
                     <p className="font-medium text-slate-700 leading-relaxed text-base italic">{selectedSub.message || `${selectedSub.instrument} - ${selectedSub.level_or_experience}`}</p>
                 </div>
                 <div className="flex flex-col md:flex-row gap-5 pt-6">
+                  {selectedSub.type === 'clases' && selectedSub.status !== 'gestionado' && (
+                    <button 
+                      onClick={async () => {
+                        const confirmMsg = selectedSub.role === 'alumno' 
+                          ? "¿Confirmar alta de alumno y vincular al grupo?" 
+                          : "¿Confirmar postulación docente? El nombre se añadirá a la lista de profesores y al grupo.";
+                        
+                        if(!confirm(confirmMsg)) return;
+                        
+                        const res = await processEnrollmentAdmin(selectedSub.id);
+                        if(res.success) {
+                          showStatus('success', selectedSub.role === 'alumno' ? 'Alumno creado y vinculado' : 'Docente añadido y vinculado');
+                          refreshData();
+                          setSelectedSub(null);
+                        } else {
+                          showStatus('error', res.error || 'Error al procesar alta');
+                        }
+                      }}
+                      className="flex-[2] py-6 bg-emerald-600 text-white rounded-[2.2rem] font-black uppercase text-[11px] tracking-widest flex items-center justify-center gap-3 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
+                    >
+                      <GraduationCap size={20}/> {selectedSub.role === 'alumno' ? 'Aceptar Inscripción' : 'Aceptar Postulación'}
+                    </button>
+                  )}
                   <button onClick={() => updateSubStatus(selectedSub)} className={`flex-1 py-6 rounded-[2.2rem] font-black uppercase text-[11px] tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl ${selectedSub.status === 'gestionado' ? 'bg-slate-200 text-slate-500' : 'bg-slate-900 text-white hover:bg-green-600'}`}>
-                    <CheckCircle size={20}/> {selectedSub.status === 'gestionado' ? "Marcar como Pendiente" : "Completar Gestión"}
+                    <CheckCircle size={20}/> {selectedSub.status === 'gestionado' ? "Reabrir" : "Marcar Leído"}
                   </button>
                   <button onClick={() => deleteSubmission(selectedSub.id)} className="p-6 bg-red-50 text-red-500 rounded-[2.2rem] hover:bg-red-500 hover:text-white transition-all shadow-xl"><Trash2 size={24} /></button>
                 </div>

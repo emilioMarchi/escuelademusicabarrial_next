@@ -1,6 +1,7 @@
 import { getPageBySlug } from "@/services/content";
 import { getCollectionByCategory } from "@/services/pages-services";
-import { Class, News, SectionData } from "@/types";
+import { getGroupsPublic } from "@/services/admin-services";
+import { Class, News, SectionData, Group } from "@/types";
 import SectionRenderer from "@/components/SectionRenderer";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
@@ -21,10 +22,13 @@ export default async function HomePage() {
   
   if (!pageData) return notFound();
 
-  const [dbClasses, dbNews] = await Promise.all([
+  const [dbClasses, dbNews, dbGroups] = await Promise.all([
     getCollectionByCategory<Class>("clases", "clases"),
-    getCollectionByCategory<News>("noticias", "noticias")
+    getCollectionByCategory<News>("noticias", "noticias"),
+    getGroupsPublic()
   ]);
+
+  const groups = (dbGroups.success ? dbGroups.data : []) as Group[];
 
   return (
     <main>
@@ -39,6 +43,7 @@ export default async function HomePage() {
             sectionData={section} 
             pageCategory={pageData.category}
             rawItems={itemsToPass}
+            allGroups={groups}
           />
         );
       })}

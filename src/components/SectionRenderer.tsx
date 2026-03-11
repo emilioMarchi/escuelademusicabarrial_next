@@ -10,7 +10,8 @@ import {
   News, 
   UniversalCardData, 
   SectionData, 
-  CategoryType 
+  CategoryType,
+  Group
 } from "@/types";
 
 interface SectionRendererProps {
@@ -19,6 +20,7 @@ interface SectionRendererProps {
   rawItems?: (Class | News)[];
   id?: string; 
   urlFormMode?: string; 
+  allGroups?: Group[];
 }
 
 export default function SectionRenderer({ 
@@ -26,7 +28,8 @@ export default function SectionRenderer({
   pageCategory, 
   rawItems = [], 
   id,
-  urlFormMode 
+  urlFormMode,
+  allGroups = []
 }: SectionRendererProps) {
 
   if (!sectionData) return null;
@@ -58,15 +61,29 @@ export default function SectionRenderer({
       );
 
     case "clases": {
-      const classesData: UniversalCardData[] = (rawItems as Class[]).map(c => ({
-        id: c.id, 
-        title: c.name, 
-        description: c.description,
-        label: "Clases", 
-        image_url: c.image_url, 
-        slug: (c as any).slug || slugify(c.name), 
-        color: "orange" as const
-      }));
+      const classesData: UniversalCardData[] = (rawItems as Class[]).map(c => {
+        // SSOT: Filtramos los grupos que pertenecen a esta clase
+        const classGroups = allGroups.filter(g => g.class_id === c.id);
+        
+        // Derivamos docentes
+        const teachers = Array.from(new Set(classGroups.flatMap(g => g.teacher_names || [])));
+        
+        // Derivamos horario (resumen consolidado para la card)
+        const schedules = Array.from(new Set(classGroups.map(g => g.schedule).filter(Boolean)));
+        const scheduleSummary = schedules.length > 0 ? schedules.join(" / ") : undefined;
+
+        return {
+          id: c.id, 
+          title: c.name, 
+          description: c.description,
+          label: classGroups.length > 0 ? `${classGroups.length} comisiones` : "Clases", 
+          image_url: c.image_url, 
+          slug: (c as any).slug || slugify(c.name), 
+          color: "orange" as const,
+          teachers: teachers.length > 0 ? teachers : undefined,
+          schedule: scheduleSummary
+        };
+      });
 
       return (
         <section id={id}>
@@ -134,6 +151,8 @@ export default function SectionRenderer({
             hasForm={true} 
             customTitle={sectionData.content?.title}
             customDescription={sectionData.content?.description}
+            classId={sectionData.content?.class_id}
+            className={sectionData.content?.class_name}
           />
         </section>
       );

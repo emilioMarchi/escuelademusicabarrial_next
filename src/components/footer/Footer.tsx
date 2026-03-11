@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mail, Phone, MapPin, Instagram, Facebook, Youtube } from "lucide-react";
-import { getAllPagesForMenu } from "@/services/pages-services";
+import { getAllPagesForMenuRaw } from "@/services/pages-services";
 import { PageContent } from "@/types";
 
 // Mantenemos el mismo orden que en el Navbar para que el sitio sea coherente
@@ -29,7 +29,7 @@ export default function Footer({ data }: { data: FooterData }) {
 
   // 2. Carga dinámica del menú (Igual que en el Navbar)
   useEffect(() => {
-    getAllPagesForMenu().then((data) => {
+    getAllPagesForMenuRaw().then((data) => {
       const sorted = data.sort((a, b) => {
         const indexA = MENU_ORDER.indexOf(a.slug);
         const indexB = MENU_ORDER.indexOf(b.slug);

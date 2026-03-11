@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getAllPagesForMenu } from "@/services/pages-services";
+import { getAllPagesForMenuRaw } from "@/services/pages-services";
 import { PageContent } from "@/types";
 
 const MENU_ORDER = ["inicio", "nosotros", "clases", "novedades", "noticias", "contacto", "galeria", "como-ayudar"];
@@ -24,7 +24,7 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    getAllPagesForMenu().then((data) => {
+    getAllPagesForMenuRaw().then((data) => {
       const sorted = data.sort((a, b) => {
         const indexA = MENU_ORDER.indexOf(a.slug);
         const indexB = MENU_ORDER.indexOf(b.slug);

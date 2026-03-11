@@ -129,10 +129,15 @@ export interface EnrollmentSubmission {
   fullname: string;
   email: string;
   phone: string;
-  instrument: string;
+  age?: number;        // Añadido para inscripciones de alumnos
+  instrument?: string; // Ahora es opcional (solo para docentes)
   level_or_experience?: string;
-  role: "alumno" | "docente"; // Alineado con el schema Zod en form-actions.ts
-  status: "pendiente" | "aceptado" | "rechazado";
+  role: "alumno" | "docente"; 
+  status: "pendiente" | "aceptado" | "rechazado" | "gestionado";
+  class_id?: string;   
+  class_name?: string; 
+  group_id?: string;   
+  group_name?: string; 
   created_at: any;
 }
 

@@ -28,10 +28,9 @@ export default function CollectionManager({ type, items, teachers = [], instrume
   const openModal = (item: any = null) => {
     if (item) {
       const cleanedItem = { ...item };
-      if (type === 'clases' && item.groupIds) {
-        cleanedItem.groupIds = item.groupIds.filter((gid: string) => groupList?.some(g => g.id === gid));
-      }
+      // Ya no usamos cleanedItem.groupIds porque la clase no es dueña del vínculo (SSOT)
       if (type === 'alumnos' && item.groups) {
+        // Mantenemos esto por compatibilidad, aunque la verdad es que los grupos son dueños del vínculo
         cleanedItem.groups = item.groups.filter((g: any) => groupList?.some(gl => gl.id === g.id));
       }
       setEditingItem(cleanedItem);

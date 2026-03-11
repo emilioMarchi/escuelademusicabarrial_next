@@ -9,9 +9,11 @@ interface Props {
   customTitle?: string;
   customDescription?: string;
   anchorId?: string;
+  classId?: string;
+  className?: string;
 }
 
-export default function Contact({ category, hasForm, customTitle, customDescription, anchorId }: Props) {
+export default function Contact({ category, hasForm, customTitle, customDescription, anchorId, classId, className }: Props) {
   
   const defaultContent = {
     contacto: {
@@ -80,7 +82,7 @@ export default function Contact({ category, hasForm, customTitle, customDescript
             
             <div className="relative bg-white p-8 md:p-12 rounded-[3.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.04)] border border-slate-100 text-slate-900">
               {hasForm ? (
-                <DynamicForm type={category} />
+                <DynamicForm type={category} classId={classId} className={className} />
               ) : (
                 <div className="py-20 text-center space-y-4">
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">

@@ -1,13 +1,14 @@
 import { getPageBySlug, getElementBySlug } from "@/services/content"; 
 import { getCollectionByCategory } from "@/services/pages-services";
-import { Class, News, SectionData } from "@/types";
+import { getGroupsPublic } from "@/services/admin-services";
+import { Class, News, SectionData, Group } from "@/types";
 import SectionRenderer from "@/components/SectionRenderer";
 import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>; // Agregamos esto
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>; 
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -43,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function DynamicRouterPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const sParams = await searchParams; // Obtenemos los parámetros de búsqueda
+  const sParams = await searchParams; 
 
   if (slug === "inicio") redirect("/");
 
@@ -65,10 +66,13 @@ export default async function DynamicRouterPage({ params, searchParams }: Props)
   const pageData = await getPageBySlug(slug);
 
   if (pageData) {
-    const [dbClasses, dbNews] = await Promise.all([
+    const [dbClasses, dbNews, dbGroups] = await Promise.all([
       getCollectionByCategory<Class>("clases", "clases"),
-      getCollectionByCategory<News>("noticias", "noticias")
+      getCollectionByCategory<News>("noticias", "noticias"),
+      getGroupsPublic()
     ]);
+
+    const groups = (dbGroups.success ? dbGroups.data : []) as Group[];
 
     return (
       <main>
@@ -84,7 +88,8 @@ export default async function DynamicRouterPage({ params, searchParams }: Props)
               pageCategory={pageData.category}
               rawItems={itemsToPass}
               id={section.content?.anchor_id}
-              urlFormMode={sParams.form as string} // Pasamos el valor de la URL
+              urlFormMode={sParams.form as string} 
+              allGroups={groups}
             />
           );
         })}
