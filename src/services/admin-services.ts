@@ -309,6 +309,16 @@ export const deleteItemAdmin = async (collectionName: string, id: string) => {
       if (updatedA) await batchAlumnos.commit();
     }
 
+    if (collectionName === "clases") {
+      // Limpiar el class_id de todos los grupos que apuntaban a esta clase
+      const grupos = await adminDb.collection("grupos").where("class_id", "==", id).get();
+      const batch = adminDb.batch();
+      grupos.forEach(doc => {
+        batch.update(doc.ref, { class_id: "" });
+      });
+      await batch.commit();
+    }
+
     // Finalmente, eliminar el documento principal
     await adminDb.collection(collectionName).doc(id).delete();
     

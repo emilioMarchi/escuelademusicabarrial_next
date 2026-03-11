@@ -26,7 +26,15 @@ export default function CollectionManager({ type, items, teachers = [], instrume
 
   const openModal = (item: any = null) => {
     if (item) {
-      setEditingItem({ ...item });
+      // LIMPIEZA PREVENTIVA AL ABRIR: Filtramos referencias a objetos eliminados
+      const cleanedItem = { ...item };
+      if (type === 'clases' && item.groupIds) {
+        cleanedItem.groupIds = item.groupIds.filter((gid: string) => groupList?.some(g => g.id === gid));
+      }
+      if (type === 'alumnos' && item.groups) {
+        cleanedItem.groups = item.groups.filter((g: any) => groupList?.some(gl => gl.id === g.id));
+      }
+      setEditingItem(cleanedItem);
     } else {
       if (type === "clases") {
         setEditingItem({ name: "", description: "", image_url: "", image_alt: "", is_active: true, category: "clases" });
@@ -57,7 +65,6 @@ export default function CollectionManager({ type, items, teachers = [], instrume
       delete (cleanItem as any).title;
       delete (cleanItem as any).date;
     }
-    // AHORA: Simplemente guardamos el item. Las relaciones se mantienen por IDs en Grupos.
     await onUpsert(cleanItem);
     setEditingItem(null);
   };
@@ -69,7 +76,7 @@ export default function CollectionManager({ type, items, teachers = [], instrume
         {/* Header */}
         <div className="p-8 bg-white border-b border-slate-200 flex justify-between items-center">
           <div>
-            <h2 className="text-3xl font-black uppercase text-slate-900 tracking-tighter">Gestionar {type === 'clases' ? 'Clases' : type === 'alumnos' ? 'Alumnos/as' : type}</h2>
+            <h2 className="text-3xl font-black uppercase text-slate-900 tracking-tighter">Gestionar {type === 'clases' ? 'Clases' : type === 'alumnos' ? 'Alumnos/as' : type === 'grupos' ? 'Grupos' : type}</h2>
             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Base de datos centralizada</p>
           </div>
           <div className="flex gap-4">
@@ -88,6 +95,7 @@ export default function CollectionManager({ type, items, teachers = [], instrume
             const associatedGroups = type === 'clases' ? groupList?.filter(g => g.class_id === it.id) : 
                                    type === 'alumnos' ? groupList?.filter(g => g.students?.includes(it.id)) : [];
             
+            const totalStudentsInClass = type === 'clases' ? associatedGroups?.reduce((acc, g) => acc + (g.students?.length || 0), 0) : 0;
             const instrumentsDisplay = associatedGroups?.flatMap(g => g.instruments || []).filter((v, i, a) => a.indexOf(v) === i).join(' • ');
 
             return (
@@ -130,11 +138,18 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                 )}
                 <h4 className="font-black text-slate-900 uppercase text-[11px] tracking-tight mb-1 truncate">{it.name || it.title}</h4>
                 <div className="mt-auto">
-                   <p className={`text-[9px] font-bold uppercase flex items-center gap-1 text-slate-400`}>
-                    {type === 'clases' ? `${associatedGroups?.length || 0} Comisiones vinculadas` : 
+                   <div className={`text-[9px] font-bold uppercase flex items-center gap-1 text-slate-400`}>
+                    {type === 'clases' ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-slate-900 font-black">{totalStudentsInClass}</span>
+                        <span>Alumnos/as</span>
+                        <span className="mx-1 opacity-30">•</span>
+                        <span>{associatedGroups?.length || 0} Comisiones</span>
+                      </div>
+                    ) : 
                      type === 'grupos' ? `${it.instruments?.join(' • ') || 'Sin Instr.'} • ${it.teacher_names?.join(', ')}` : 
                      type === 'alumnos' ? `${it.age ? `${it.age} años` : 'Edad no cargada'}` : it.date?.split('T')[0]}
-                  </p>
+                  </div>
                 </div>
               </div>
             );
@@ -204,7 +219,10 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                           <div key={g.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
                             <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 shrink-0"><BookOpen size={18}/></div>
                             <div className="flex flex-col flex-1">
-                              <span className="text-[11px] font-black text-slate-900 uppercase">{g.name}</span>
+                              <div className="flex justify-between items-start">
+                                <span className="text-[11px] font-black text-slate-900 uppercase">{g.name}</span>
+                                <span className="text-[8px] font-black text-slate-400 uppercase bg-slate-50 px-2 py-1 rounded-md">{g.students?.length || 0} Alumnos/as</span>
+                              </div>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[8px] font-bold text-slate-400 uppercase">{g.instruments?.join(', ')}</span>
                                 <span className="w-1 h-1 bg-slate-200 rounded-full"/>
@@ -281,7 +299,13 @@ export default function CollectionManager({ type, items, teachers = [], instrume
 
                 {type === 'clases' && (
                   <div className="bg-slate-50 p-6 rounded-[3rem] border-2 border-slate-100 space-y-4">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2 block">Comisiones Asociadas</label>
+                    <div className="flex justify-between items-center px-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 block">Comisiones Asociadas</label>
+                      <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
+                        <Users size={12} className="text-slate-400" />
+                        <span className="text-[10px] font-black text-slate-900 uppercase">Total: {groupList?.filter(g => g.class_id === editingItem.id).reduce((acc, g) => acc + (g.students?.length || 0), 0)} Alumnos/as</span>
+                      </div>
+                    </div>
                     <div className="space-y-3 max-h-60 overflow-y-auto pr-2 scrollbar-hide">
                       {groupList?.filter(g => g.class_id === editingItem.id).length === 0 ? (
                         <p className="text-[9px] font-bold text-slate-300 uppercase text-center py-4 italic">No hay grupos vinculados a esta clase aún</p>
@@ -289,7 +313,10 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                         groupList?.filter(g => g.class_id === editingItem.id).map((g: any) => (
                           <div key={g.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex justify-between items-center shadow-sm">
                             <div className="flex flex-col">
-                              <span className="text-[11px] font-black text-slate-900 uppercase">{g.name}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[11px] font-black text-slate-900 uppercase">{g.name}</span>
+                                <span className="text-[8px] font-black text-slate-400 uppercase bg-slate-50 px-2 py-1 rounded-md">{g.students?.length || 0} Alumnos/as</span>
+                              </div>
                               <span className="text-[8px] font-bold text-slate-400 uppercase">{g.instruments?.join(' • ')} • {g.teacher_names?.join(', ')}</span>
                             </div>
                             <div className="p-2 bg-slate-50 rounded-xl text-green-500"><CheckCircle2 size={16}/></div>
