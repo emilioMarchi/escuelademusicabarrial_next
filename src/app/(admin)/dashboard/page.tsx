@@ -23,7 +23,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
-  const [viewManager, setViewManager] = useState<"clases" | "noticias" | "grupos" | "alumnos" | null>(null);
+  const [viewManager, setViewManager] = useState<"clases" | "noticias" | "grupos" | "alumnos" | "docentes" | null>(null);
   const [viewList, setViewList] = useState<"teachers" | "instruments" | "admins" | null>(null);
   const [showClassOptions, setShowClassOptions] = useState(false);
   const [selectedSub, setSelectedSub] = useState<any | null>(null);
@@ -38,6 +38,7 @@ export default function AdminDashboard() {
     noticias: [] as News[],
     grupos: [] as any[],
     alumnos: [] as any[],
+    docentes: [] as any[],
     submissions: [] as any[],
     teachers: [] as string[],
     instruments: [] as string[],
@@ -52,11 +53,12 @@ export default function AdminDashboard() {
 
   const refreshData = async () => {
     setLoading(true);
-    const [resC, resN, resG_items, resAl, resS, resI, resT, resG, resA] = await Promise.all([
+    const [resC, resN, resG_items, resAl, resDoc, resS, resI, resT, resG, resA] = await Promise.all([
       getCollectionAdmin("clases"),
       getCollectionAdmin("noticias"),
       getCollectionAdmin("grupos"),
       getCollectionAdmin("alumnos"),
+      getCollectionAdmin("docentes"),
       getSubmissionsAdmin(),
       getInstrumentsAdmin(),
       getTeachersAdmin(),
@@ -69,6 +71,7 @@ export default function AdminDashboard() {
       noticias: (resN.data || []) as News[],
       grupos: (resG_items.data || []),
       alumnos: (resAl.data || []),
+      docentes: (resDoc.data || []),
       submissions: resS.data || [],
       instruments: resI.data || [],
       teachers: resT.data || [],
@@ -196,7 +199,7 @@ export default function AdminDashboard() {
 
       {/* FILA 2: BASES DE GESTIÓN (Docentes, Alumnos, Instrumentos, Admins) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <button onClick={() => setViewList("teachers")} className="flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-4 group shadow-sm">
+        <button onClick={() => setViewManager("docentes")} className="flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-4 group shadow-sm">
           <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors"><Users size={32} className="text-slate-900 group-hover:text-white" /></div>
           <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 text-center">Base de Docentes</span>
         </button>
@@ -430,9 +433,10 @@ export default function AdminDashboard() {
             viewManager === "clases" ? data.clases : 
             viewManager === "grupos" ? data.grupos : 
             viewManager === "alumnos" ? data.alumnos :
+            viewManager === "docentes" ? data.docentes :
             data.noticias
           }
-          teachers={data.teachers} 
+          teacherList={data.docentes}
           instruments={data.instruments}
           classList={data.clases}
           studentList={data.alumnos}

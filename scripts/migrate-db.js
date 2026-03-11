@@ -49,7 +49,6 @@ async function cleanClassTeachers() {
   let count = 0;
 
   snapshot.forEach(doc => {
-    // Usamos FieldValue.delete() para asegurar que el atributo desaparezca del documento
     batch.update(doc.ref, {
       teacher_name: admin.firestore.FieldValue.delete(),
       teachers: admin.firestore.FieldValue.delete()
@@ -62,4 +61,75 @@ async function cleanClassTeachers() {
   console.log(`--- Limpieza completada: ${count} documentos actualizados en Firebase ---`);
 }
 
-cleanClassTeachers().catch(console.error);
+async function migrateTeachersFromSettings() {
+  console.log('--- Migrando nombres de docentes desde "settings/teachers" a la colección "docentes" ---');
+  
+  const settingsRef = db.collection('settings').doc('teachers');
+  const settingsDoc = await settingsRef.get();
+
+  if (!settingsDoc.exists) {
+    console.log('No se encontró el documento "settings/teachers".');
+    return;
+  }
+
+  const namesArray = settingsDoc.data().list || [];
+  if (namesArray.length === 0) {
+    console.log('La lista de nombres en "settings/teachers" está vacía.');
+    return;
+  }
+
+  // Obtener docentes existentes para evitar duplicados
+  const teachersRef = db.collection('docentes');
+  const teachersSnapshot = await teachersRef.get();
+  const existingNames = new Set(teachersSnapshot.docs.map(doc => (doc.data().name || "").toLowerCase().trim()));
+
+  const batch = db.batch();
+  let migratedCount = 0;
+  let skippedCount = 0;
+
+  for (const name of namesArray) {
+    const normalizedName = (name || "").toLowerCase().trim();
+    if (!normalizedName) continue;
+
+    if (existingNames.has(normalizedName)) {
+      console.log(`- Docente "${name}": Ya existe en la colección, saltando.`);
+      skippedCount++;
+      continue;
+    }
+
+    const newDocRef = teachersRef.doc();
+    batch.set(newDocRef, {
+      name: name,
+      instruments: [],
+      experience: "",
+      email: "",
+      phone: "",
+      is_active: true,
+      category: "docentes",
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+      last_updated: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    console.log(`- Docente "${name}": Agregado a la migración.`);
+    migratedCount++;
+    existingNames.add(normalizedName);
+  }
+
+  if (migratedCount > 0) {
+    await batch.commit();
+    console.log(`--- Migración completada: ${migratedCount} docentes creados. ${skippedCount} ya existían. ---`);
+  } else {
+    console.log('--- No se encontraron docentes nuevos para migrar. ---');
+  }
+}
+
+async function run() {
+  try {
+    await cleanClassTeachers();
+    await migrateTeachersFromSettings();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+run();

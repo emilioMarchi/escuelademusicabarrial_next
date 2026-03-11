@@ -234,6 +234,13 @@ export const upsertItemAdmin = async (collectionName: string, item: any) => {
       }
     }
 
+    if (collectionName === "docentes") {
+      delete (dataToSave as any).groups;
+      if (dataToSave.age) {
+        dataToSave.age = Number(dataToSave.age);
+      }
+    }
+
     let finalId = id;
 
     if (id) {
@@ -270,6 +277,25 @@ export const deleteItemAdmin = async (collectionName: string, id: string) => {
       const batch = adminDb.batch();
       grupos.forEach(doc => {
         batch.update(doc.ref, { class_id: "" });
+      });
+      await batch.commit();
+    }
+
+    if (collectionName === "docentes") {
+      // Limpiar el docente de todos los grupos donde estaba
+      const nameDoc = await adminDb.collection("docentes").doc(id).get();
+      const name = nameDoc.data()?.name;
+      
+      const grupos = await adminDb.collection("grupos").where("teachers", "array-contains", id).get();
+      const batch = adminDb.batch();
+      grupos.forEach(doc => {
+        const data = doc.data();
+        const newTeachers = (data.teachers || []).filter((tid: string) => tid !== id);
+        const newTeacherNames = (data.teacher_names || []).filter((tn: string) => tn !== name);
+        batch.update(doc.ref, { 
+          teachers: newTeachers,
+          teacher_names: newTeacherNames
+        });
       });
       await batch.commit();
     }
@@ -343,21 +369,31 @@ export const processEnrollmentAdmin = async (submissionId: string) => {
         }
       } 
       else if (role === "docente") {
-        // a) Actualizar lista global de docentes (lectura/escritura en transacción)
-        const teacherSettingsRef = adminDb.collection("settings").doc("teachers");
-        const teacherDoc = await transaction.get(teacherSettingsRef);
-        let currentTeachers = teacherDoc.exists ? (teacherDoc.data()?.list || []) : [];
+        // a) Crear perfil completo del Docente
+        const teacherRef = adminDb.collection("docentes").doc();
         
-        if (!currentTeachers.includes(fullname)) {
-          currentTeachers.push(fullname);
-          transaction.set(teacherSettingsRef, { list: currentTeachers }, { merge: true });
-        }
+        const newTeacher = {
+          name: fullname,
+          age: age ? Number(age) : null,
+          email: email || "",
+          phone: phone || "",
+          instruments: instrument ? [instrument] : [],
+          experience: subData.level_or_experience || "",
+          status: "activo",
+          is_active: true,
+          category: "docentes",
+          created_at: new Date(),
+          last_updated: new Date()
+        };
 
-        // b) Vincular al Grupo como docente
+        transaction.set(teacherRef, newTeacher);
+
+        // b) Vincular al Grupo por ID (y nombre para compatibilidad)
         if (group_id) {
           const groupRef = adminDb.collection("grupos").doc(group_id);
           transaction.update(groupRef, {
-            teacher_names: admin.firestore.FieldValue.arrayUnion(fullname)
+            teachers: admin.firestore.FieldValue.arrayUnion(teacherRef.id),
+            teacher_names: admin.firestore.FieldValue.arrayUnion(fullname) // Mantener sync temporal
           });
         }
       }

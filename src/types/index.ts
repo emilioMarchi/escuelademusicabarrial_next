@@ -62,12 +62,27 @@ export interface PageContent {
   has_form: boolean;
   last_updated: any;
 }
+export interface Teacher {
+  id: string;
+  name: string;
+  instruments: string[];
+  experience: string;
+  age?: number;
+  email: string;
+  phone: string;
+  is_active: boolean;
+  category: 'docentes';
+  created_at: any;
+  last_updated: any;
+}
+
 export interface Group {
   id: string;
   name: string;      
   class_id: string;  
   instruments: string[]; 
-  teacher_names: string[]; 
+  teacher_names: string[]; // Mantenemos por compatibilidad
+  teachers: string[];      // Lista de IDs de la colección 'docentes'
   schedule: string;   
   max_capacity: number; 
   students: string[]; // Lista de IDs de alumnos
