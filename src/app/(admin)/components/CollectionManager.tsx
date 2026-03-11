@@ -70,8 +70,8 @@ export default function CollectionManager({ type, items, teachers = [], instrume
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-50 w-full max-w-7xl h-[90vh] rounded-[3rem] overflow-hidden flex flex-col shadow-2xl">
+    <div className="fixed inset-0 bg-emerald-900/20 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-[#f4fcf7] w-full max-w-7xl h-[90vh] rounded-[3rem] overflow-hidden flex flex-col shadow-2xl border border-white">
         
         {/* Header */}
         <div className="p-8 bg-white border-b border-slate-200 flex justify-between items-center">

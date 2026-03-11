@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useDirtyState } from "@/context/DirtyStateContext";
 import { useAuth } from "@/context/AuthContext";
@@ -52,26 +53,29 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
 
   return (
     <>
-      <aside className="w-full bg-white border-r border-slate-100 flex flex-col h-full relative">
+      <aside className="w-full bg-emerald-100/80 border-r border-emerald-200 flex flex-col h-full relative">
         <div className="p-8 flex flex-col h-full overflow-y-auto">
           
           {/* Botón Cerrar (Solo Mobile) */}
-          <button onClick={onClose} className="lg:hidden absolute top-8 right-8 text-slate-300 hover:text-slate-900">
+          <button onClick={onClose} className="lg:hidden absolute top-8 right-8 text-emerald-600 hover:text-emerald-900">
             <X size={20} />
           </button>
 
-          <div className="flex items-center gap-3 mb-10 shrink-0">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
-              <span className="text-white font-black text-xl">E</span>
+          <div className="flex items-center gap-4 mb-12 shrink-0">
+            <div className="w-14 h-14 relative drop-shadow-md">
+              <Image src="/favicon.png" alt="Logo" fill className="object-contain" />
             </div>
-            <span className="font-black uppercase tracking-tighter text-xl text-slate-900">EMB Admin</span>
+            <div className="flex flex-col">
+              <span className="font-black uppercase tracking-tighter text-xl text-emerald-950">EMB Admin</span>
+              <span className="text-[9px] font-bold text-emerald-600/60 uppercase tracking-[0.2em] mt-0.5">Version 1.2.9</span>
+            </div>
           </div>
 
           <nav className="space-y-2 flex-1">
             <button 
               onClick={() => handleNavigation("/dashboard")}
               className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all
-                ${pathname === "/dashboard" ? "bg-slate-900 text-white shadow-xl" : "text-slate-400 hover:bg-slate-50"}`}
+                ${pathname === "/dashboard" ? "bg-emerald-900 text-white shadow-xl shadow-emerald-900/30" : "text-emerald-800/70 hover:bg-white/60 hover:text-emerald-950"}`}
             >
               <LayoutDashboard size={18} /> Dashboard
             </button>
@@ -79,7 +83,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             <button 
               onClick={() => handleNavigation("/dashboard/balances")}
               className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all
-                ${pathname === "/dashboard/balances" ? "bg-slate-900 text-white shadow-xl" : "text-slate-400 hover:bg-slate-50"}`}
+                ${pathname === "/dashboard/balances" ? "bg-emerald-900 text-white shadow-xl shadow-emerald-900/30" : "text-emerald-800/70 hover:bg-white/60 hover:text-emerald-950"}`}
             >
               <DollarSign size={18} /> Balances
             </button>
@@ -87,7 +91,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             <button 
               onClick={() => handleNavigation("/dashboard/galeria")}
               className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all
-                ${pathname === "/dashboard/galeria" ? "bg-slate-900 text-white shadow-xl" : "text-slate-400 hover:bg-slate-50"}`}
+                ${pathname === "/dashboard/galeria" ? "bg-emerald-900 text-white shadow-xl shadow-emerald-900/30" : "text-emerald-800/70 hover:bg-white/60 hover:text-emerald-950"}`}
             >
               <ImageIcon size={18} /> Galería
             </button>
@@ -95,7 +99,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             <div className="space-y-1">
               <button 
                 onClick={() => setPagesOpen(!pagesOpen)}
-                className="w-full flex items-center justify-between px-6 py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 rounded-2xl transition-all"
+                className="w-full flex items-center justify-between px-6 py-4 text-emerald-800/70 font-black uppercase text-[10px] tracking-widest hover:bg-white/60 hover:text-emerald-950 rounded-2xl transition-all"
               >
                 <div className="flex items-center gap-4">
                   <Layers size={18} /> Páginas
@@ -113,13 +117,13 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="pl-6 space-y-1 mt-1 border-l-2 border-slate-50 ml-7">
+                    <div className="pl-6 space-y-1 mt-1 border-l-2 border-emerald-300 ml-7">
                       {pages.map((page) => (
                         <button
                           key={page.path}
                           onClick={() => handleNavigation(page.path)}
                           className={`w-full text-left px-6 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all
-                            ${pathname === page.path ? "text-slate-900 bg-slate-50" : "text-slate-400 hover:text-slate-600"}`}
+                            ${pathname === page.path ? "text-emerald-950 bg-white/80 shadow-sm" : "text-emerald-700/60 hover:text-emerald-950"}`}
                         >
                           {page.name}
                         </button>
@@ -131,10 +135,10 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             </div>
           </nav>
 
-          <div className="pt-6 border-t border-slate-50 shrink-0">
+          <div className="pt-6 border-t border-emerald-200 shrink-0">
             <button 
               onClick={handleLogout}
-              className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-red-400 hover:bg-red-50 transition-all"
+              className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-red-600 hover:bg-red-50 transition-all"
             >
               <LogOut size={18} /> Cerrar Sesión
             </button>

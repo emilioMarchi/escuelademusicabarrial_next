@@ -12,15 +12,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #030712;
-    --foreground: #f9fafb;
-  }
-}
-html{
-  scroll-behavior: smooth !important;
-}
 /* Estilos base globales */
 body {
   scroll-behavior: smooth !important;
