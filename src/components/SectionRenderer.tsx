@@ -85,13 +85,16 @@ export default function SectionRenderer({
         };
       });
 
+      // LÓGICA DE DISEÑO: Home siempre slider, Página de Clases siempre grid
+      const effectiveLayout = isHome ? "slider" : (pageCategory === "clases" ? "grid" : (sectionData.settings?.layout as any || "grid"));
+
       return (
         <section id={id}>
           <DynamicSection 
             title={sectionData.content?.title || "Nuestras Clases"} 
             description={sectionData.content?.description}
             items={classesData} 
-            layout={(sectionData.settings?.layout as any) || (isHome ? "slider" : "grid")} 
+            layout={effectiveLayout} 
             basePath="/clases" 
           />
         </section>
@@ -99,7 +102,14 @@ export default function SectionRenderer({
     }
 
     case "noticias": {
-      const newsData: UniversalCardData[] = (rawItems as News[]).map(n => ({
+      // ORDENAMIENTO POR FECHA (Descendente: más reciente primero)
+      const sortedNews = [...(rawItems as News[])].sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      const newsData: UniversalCardData[] = sortedNews.map(n => ({
         id: n.id, 
         title: n.title, 
         description: (n as any).excerpt || n.description,

@@ -4,7 +4,8 @@ import {
   query, 
   where, 
   getDocs, 
-  limit 
+  limit,
+  orderBy
 } from "firebase/firestore";
 import { PageContent } from "@/types";
 import { unstable_cache } from "next/cache";
@@ -27,13 +28,38 @@ export const getPageConfig = async (slug: string): Promise<PageContent | null> =
  */
 export const getCollectionByCategory = unstable_cache(
   async <T>(collectionName: string, category: string): Promise<T[]> => {
-    const q = query(collection(db, collectionName), where("category", "==", category));
-    const querySnapshot = await getDocs(q);
+    // Intentamos ordenar por created_at o date según corresponda
+    const orderField = collectionName === "noticias" ? "date" : "created_at";
     
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as T));
+    try {
+      const q = query(
+        collection(db, collectionName), 
+        where("category", "==", category),
+        orderBy(orderField, "desc")
+      );
+      const querySnapshot = await getDocs(q);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as T));
+    } catch (error) {
+      console.warn(`Fallback: No se pudo ordenar ${collectionName} por ${orderField}. Quizás falte el índice o el campo.`);
+      const q = query(collection(db, collectionName), where("category", "==", category));
+      const querySnapshot = await getDocs(q);
+      
+      const results = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as T));
+
+      // Orden manual básico si el campo existe pero no hay índice de Firestore
+      return (results as any[]).sort((a, b) => {
+        const valA = a[orderField] || 0;
+        const valB = b[orderField] || 0;
+        return valB > valA ? 1 : -1;
+      });
+    }
   },
   ["collection-by-category"],
   { revalidate: 3600, tags: ["collections"] }

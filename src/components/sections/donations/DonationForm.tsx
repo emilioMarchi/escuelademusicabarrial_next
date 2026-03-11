@@ -21,7 +21,7 @@ export default function DonationForm({ title, description, initialAmount, backgr
   const [formData, setFormData] = useState({ 
     name: "", 
     email: "", 
-    amount: initialAmount || 1000 
+    amount: initialAmount || 3500 
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

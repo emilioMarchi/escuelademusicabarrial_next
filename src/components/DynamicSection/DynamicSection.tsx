@@ -1,6 +1,9 @@
 // src/components/sections/DynamicSection/DynamicSection.tsx
+"use client";
+import { useRef } from "react";
 import CardItem from "@/components/CardItem/CardItem";
 import { UniversalCardData } from "@/types";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Props {
   title: string;
@@ -11,6 +14,23 @@ interface Props {
 }
 
 export default function DynamicSection({ title, description, items, layout, basePath }: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const { scrollLeft, children } = scrollRef.current;
+      const firstCard = children[0] as HTMLElement;
+      if (!firstCard) return;
+
+      const cardWidth = firstCard.offsetWidth;
+      const gap = 24; // gap-6
+      const scrollAmount = cardWidth + gap;
+      
+      const scrollTo = direction === "left" ? scrollLeft - scrollAmount : scrollLeft + scrollAmount;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: "smooth" });
+    }
+  };
+
   // Detectamos el color predominante. Si no hay items, usamos slate por defecto.
   const rawColor = items.length > 0 ? items[0].color : "default";
   const sectionColor = (rawColor === "orange" || rawColor === "green") ? rawColor : "default";
@@ -22,21 +42,24 @@ export default function DynamicSection({ title, description, items, layout, base
       accent: "bg-orange-500 shadow-md shadow-orange-200",
       title: "text-slate-900",
       desc: "text-orange-900/60",
-      tag: "text-orange-600"
+      tag: "text-orange-600",
+      btn: "bg-white text-orange-600 hover:bg-orange-500 hover:text-white"
     },
     green: {
       section: "bg-green-50 border-green-100", // Color menta muy claro
       accent: "bg-green-600 shadow-md shadow-green-200",
       title: "text-slate-900",
       desc: "text-green-900/60",
-      tag: "text-green-600"
+      tag: "text-green-600",
+      btn: "bg-white text-green-600 hover:bg-green-600 hover:text-white"
     },
     default: {
       section: "bg-slate-50 border-slate-100",
       accent: "bg-slate-900",
       title: "text-slate-900",
       desc: "text-slate-500",
-      tag: "text-slate-400"
+      tag: "text-slate-400",
+      btn: "bg-white text-slate-900 hover:bg-slate-900 hover:text-white"
     }
   };
 
@@ -61,17 +84,36 @@ export default function DynamicSection({ title, description, items, layout, base
           </div>
           
           {layout === "slider" && (
-            <p className={`text-[9px] font-black uppercase tracking-[0.3em] ${current.tag}`}>
-              Desliza para explorar →
-            </p>
+            <div className="flex items-center gap-4">
+              <div className="hidden md:flex gap-2">
+                <button 
+                  onClick={() => scroll("left")} 
+                  className={`p-3 rounded-full border border-slate-200 transition-all shadow-sm ${current.btn}`}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button 
+                  onClick={() => scroll("right")} 
+                  className={`p-3 rounded-full border border-slate-200 transition-all shadow-sm ${current.btn}`}
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+              <p className={`text-[9px] font-black uppercase tracking-[0.3em] ${current.tag}`}>
+                Desliza para explorar →
+              </p>
+            </div>
           )}
         </div>
         
         {/* CONTENIDO */}
         {layout === "slider" ? (
-          <div className="flex overflow-x-auto gap-6 pb-6 snap-x snap-mandatory scrollbar-hide -mx-6 px-6">
+          <div 
+            ref={scrollRef}
+            className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory scroll-smooth -mx-6 px-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          >
             {items.map((item) => (
-              <div key={item.id} className="snap-start flex-shrink-0 w-[80vw] md:w-[320px]">
+              <div key={item.id} className="snap-center md:snap-start flex-shrink-0 w-[85vw] md:w-[calc((100%-3rem)/3)] transition-all duration-500 hover:scale-[1.02] active:scale-95">
                 <CardItem 
                   data={item} 
                   basePath={basePath} 

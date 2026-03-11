@@ -318,6 +318,15 @@ export default function AdminDashboard() {
 
             <div className="space-y-6">
               <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-slate-500 ml-5 flex items-center gap-2"><MapPin size={12}/> Dirección Física</label>
+                <input type="text" placeholder="Ej: Calle Falsa 123" value={data.settings.address || ""} onChange={(e) => setData({...data, settings: {...data.settings, address: e.target.value}})} className="w-full bg-slate-800 border-none rounded-2xl p-5 font-bold text-sm outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"/>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black uppercase text-slate-500 ml-5 flex items-center gap-2"><MapPin size={12}/> Link de Google Maps (Opcional)</label>
+                <input type="text" placeholder="https://goo.gl/maps/..." value={data.settings.google_maps_link || ""} onChange={(e) => setData({...data, settings: {...data.settings, google_maps_link: e.target.value}})} className="w-full bg-slate-800 border-none rounded-2xl p-5 font-bold text-sm outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"/>
+                <p className="text-[8px] font-bold text-slate-600 ml-5 uppercase italic tracking-widest">Si se provee un link, se usará para el mapa interactivo.</p>
+              </div>
+              <div className="space-y-2">
                 <label className="text-[9px] font-black uppercase text-slate-500 ml-5 flex items-center gap-2"><Phone size={12}/> Teléfono de la Escuela</label>
                 <input type="text" value={data.settings.phone || ""} onChange={(e) => setData({...data, settings: {...data.settings, phone: e.target.value}})} className="w-full bg-slate-800 border-none rounded-2xl p-5 font-bold text-sm outline-none focus:ring-2 focus:ring-white/20 transition-all text-white"/>
               </div>

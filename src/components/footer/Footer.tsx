@@ -42,10 +42,30 @@ export default function Footer({ data }: { data: FooterData }) {
   }, []);
 
   const apiKey = process.env.NEXT_PUBLIC_MAP_KEY;
-  const searchQuery = encodeURIComponent(`Escuela de Música Barrial, ${data?.address}, Santa Fe, Argentina`);
   
-  // URL Corregida de Google Maps Embed
-  const mapUrl = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${searchQuery}`;
+  // Limpiamos la dirección para que Google no se confunda con prefijos
+  const cleanAddress = data?.address ? `${data.address}, Santa Fe, Argentina` : "Santa Fe, Argentina";
+  const searchQuery = encodeURIComponent(cleanAddress);
+  
+  // Función para extraer el src si el usuario pega un iframe completo
+  const getMapSrc = () => {
+    const link = (data as any)?.google_maps_link;
+    if (!link) return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${searchQuery}`;
+    
+    // Si es un iframe completo, extraemos solo el contenido de 'src'
+    if (link.includes('<iframe')) {
+      const match = link.match(/src="([^"]+)"/);
+      return match ? match[1] : `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${searchQuery}`;
+    }
+    
+    // Si es un link de embed directo
+    if (link.includes('maps/embed')) return link;
+
+    // Fallback al buscador por dirección
+    return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${searchQuery}`;
+  };
+
+  const mapUrl = getMapSrc();
 
   if (!isMounted) {
     return <footer className="bg-slate-900 min-h-[400px]" />;
