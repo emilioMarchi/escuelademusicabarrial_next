@@ -391,7 +391,7 @@ export default function AdminDashboard() {
                         
                         if(!confirm(confirmMsg)) return;
                         
-                        const res = await processEnrollmentAdmin(selectedSub.id);
+                        const res = await processEnrollmentAdmin(selectedSub.id) as any;
                         if(res.success) {
                           showStatus('success', selectedSub.role === 'alumno' ? 'Alumno creado y vinculado' : 'Docente añadido y vinculado');
                           refreshData();
