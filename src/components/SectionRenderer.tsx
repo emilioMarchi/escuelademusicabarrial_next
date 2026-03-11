@@ -56,20 +56,16 @@ export default function SectionRenderer({
           />
         </section>
       );
-case "clases": {
-  const classesData: UniversalCardData[] = (rawItems as Class[]).map(c => ({
-    id: c.id, 
-    title: c.name, 
-    description: c.description,
-    label: "Clase", 
-    image_url: c.image_url, 
-    slug: (c as any).slug || slugify(c.name), 
-    color: "orange" as const
-  }));
-        // CORRECCIÓN: Mapeo de datos para que CardItem los vea
-        schedule: c.schedule,
-        teacher_name: c.teacher_name,
-        max_capacity: c.max_capacity
+
+    case "clases": {
+      const classesData: UniversalCardData[] = (rawItems as Class[]).map(c => ({
+        id: c.id, 
+        title: c.name, 
+        description: c.description,
+        label: "Clases", 
+        image_url: c.image_url, 
+        slug: (c as any).slug || slugify(c.name), 
+        color: "orange" as const
       }));
 
       return (

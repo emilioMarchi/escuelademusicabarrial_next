@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { Plus, Trash2, Image as ImageIcon, X, Edit3, Camera, Loader2, AlertCircle, Clock, Users, CheckCircle2, Circle, User as UserIcon, Search, ChevronRight, BookOpen } from "lucide-react";
+import { Plus, Trash2, Image as ImageIcon, X, Edit3, Camera, Loader2, AlertCircle, Clock, Users, CheckCircle2, Circle, User as UserIcon, Search, ChevronRight, BookOpen, Music as MusicIcon } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { uploadImageToStorage } from "@/lib/StoreUtils";
 import { getOptimizedImage } from "@/lib/image-utils";
@@ -26,7 +26,6 @@ export default function CollectionManager({ type, items, teachers = [], instrume
 
   const openModal = (item: any = null) => {
     if (item) {
-      // LIMPIEZA PREVENTIVA AL ABRIR: Filtramos referencias a objetos eliminados
       const cleanedItem = { ...item };
       if (type === 'clases' && item.groupIds) {
         cleanedItem.groupIds = item.groupIds.filter((gid: string) => groupList?.some(g => g.id === gid));
@@ -71,12 +70,12 @@ export default function CollectionManager({ type, items, teachers = [], instrume
 
   return (
     <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-xl z-[100] flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-50 w-full max-w-6xl h-[90vh] rounded-[3rem] overflow-hidden flex flex-col shadow-2xl">
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-50 w-full max-w-7xl h-[90vh] rounded-[3rem] overflow-hidden flex flex-col shadow-2xl">
         
         {/* Header */}
         <div className="p-8 bg-white border-b border-slate-200 flex justify-between items-center">
           <div>
-            <h2 className="text-3xl font-black uppercase text-slate-900 tracking-tighter">Gestionar {type === 'clases' ? 'Clases' : type === 'alumnos' ? 'Alumnos/as' : type === 'grupos' ? 'Grupos' : type}</h2>
+            <h2 className="text-3xl font-black uppercase text-slate-900 tracking-tighter">Gestionar {type === 'clases' ? 'Clases' : type === 'alumnos' ? 'Alumnos/as' : type === 'grupos' ? 'Grupos / Comisiones' : 'Novedades'}</h2>
             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Base de datos centralizada</p>
           </div>
           <div className="flex gap-4">
@@ -89,71 +88,117 @@ export default function CollectionManager({ type, items, teachers = [], instrume
           </div>
         </div>
 
-        {/* Listado */}
-        <div className="flex-1 overflow-y-auto p-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {items.map((it) => {
-            const associatedGroups = type === 'clases' ? groupList?.filter(g => g.class_id === it.id) : 
-                                   type === 'alumnos' ? groupList?.filter(g => g.students?.includes(it.id)) : [];
-            
-            const totalStudentsInClass = type === 'clases' ? associatedGroups?.reduce((acc, g) => acc + (g.students?.length || 0), 0) : 0;
-            const instrumentsDisplay = associatedGroups?.flatMap(g => g.instruments || []).filter((v, i, a) => a.indexOf(v) === i).join(' • ');
+        {/* Listado modo Tabla para TODO */}
+        <div className="flex-1 overflow-y-auto p-10">
+          <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                    {type === 'alumnos' ? 'Alumno/a' : type === 'clases' ? 'Clase' : type === 'grupos' ? 'Comisión' : 'Noticia'}
+                  </th>
+                  {type === 'alumnos' && <th className="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Edad</th>}
+                  {type === 'grupos' && <th className="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Clase Madre</th>}
+                  <th className="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                    {type === 'clases' ? 'Capacidad Total' : type === 'grupos' ? 'Instrumentos / Docentes' : type === 'noticias' ? 'Fecha de Publicación' : 'Instrumentos / Comisiones'}
+                  </th>
+                  {type === 'grupos' && <th className="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Horario</th>}
+                  <th className="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Estado</th>
+                  <th className="p-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {[...items]
+                  .sort((a, b) => {
+                    if (type === 'noticias') {
+                      return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+                    }
+                    const nameA = (a.name || a.title || "").toLowerCase();
+                    const nameB = (b.name || b.title || "").toLowerCase();
+                    return nameA.localeCompare(nameB);
+                  })
+                  .map((it) => {
+                  const associatedGroups = type === 'clases' ? groupList?.filter(g => g.class_id === it.id) : 
+                                         type === 'alumnos' ? groupList?.filter(g => g.students?.includes(it.id)) : [];
+                  const totalStudents = type === 'clases' ? associatedGroups?.reduce((acc, g) => acc + (g.students?.length || 0), 0) : 0;
+                  const parentClass = type === 'grupos' ? classList?.find(c => c.id === it.class_id) : null;
 
-            return (
-              <div key={it.id} className={`bg-white p-5 rounded-[2.5rem] border shadow-sm group relative flex flex-col transition-opacity ${!it.is_active ? 'opacity-60 border-slate-200' : 'border-slate-200'}`}>
-                {type === 'clases' || type === 'noticias' ? (
-                  <div className="aspect-square bg-slate-100 rounded-[2rem] overflow-hidden relative mb-5">
-                    {it.image_url ? (
-                      <img src={it.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 shadow-inner"/>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300"><ImageIcon size={40} /></div>
-                    )}
-                    {!it.is_active && <div className="absolute top-4 right-4 bg-slate-900/80 text-white text-[8px] font-black uppercase px-3 py-1 rounded-full backdrop-blur-md">Pausada</div>}
-                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3 backdrop-blur-sm">
-                      <button onClick={() => openModal(it)} className="p-4 bg-white text-slate-900 rounded-2xl hover:scale-110 transition-all shadow-xl"><Edit3 size={20}/></button>
-                      <button onClick={() => confirm("¿Eliminar permanentemente?") && onDelete(it.id, type)} className="p-4 bg-white text-red-500 rounded-2xl hover:scale-110 transition-all shadow-xl"><Trash2 size={20}/></button>
-                    </div>
-                  </div>
-                ) : type === 'grupos' ? (
-                  <div className="aspect-square bg-orange-50 rounded-[2rem] p-6 flex flex-col justify-center items-center relative mb-5 border border-orange-100">
-                    <Users size={48} className="text-orange-200 mb-4" />
-                    <p className="text-[8px] font-black uppercase text-orange-400 mb-1">Alumnos/as</p>
-                    <p className="text-3xl font-black text-orange-900">{it.students?.length || 0}</p>
-                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3 backdrop-blur-sm rounded-[2rem]">
-                      <button onClick={() => openModal(it)} className="p-4 bg-white text-slate-900 rounded-2xl hover:scale-110 transition-all shadow-xl"><Edit3 size={20}/></button>
-                      <button onClick={() => confirm("¿Eliminar permanentemente?") && onDelete(it.id, type)} className="p-4 bg-white text-red-500 rounded-2xl hover:scale-110 transition-all shadow-xl"><Trash2 size={20}/></button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="aspect-square bg-blue-50 rounded-[2rem] p-6 flex flex-col justify-center items-center relative mb-5 border border-blue-100">
-                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-blue-500 shadow-md mb-4 border-4 border-blue-100">
-                      <UserIcon size={32} />
-                    </div>
-                    <p className="text-[8px] font-black uppercase text-blue-400 mb-1">{instrumentsDisplay || 'Sin grupo'}</p>
-                    <p className="text-sm font-black text-blue-900 uppercase text-center leading-tight">{it.name}</p>
-                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3 backdrop-blur-sm rounded-[2rem]">
-                      <button onClick={() => openModal(it)} className="p-4 bg-white text-slate-900 rounded-2xl hover:scale-110 transition-all shadow-xl"><Edit3 size={20}/></button>
-                      <button onClick={() => confirm("¿Eliminar permanentemente?") && onDelete(it.id, type)} className="p-4 bg-white text-red-500 rounded-2xl hover:scale-110 transition-all shadow-xl"><Trash2 size={20}/></button>
-                    </div>
-                  </div>
-                )}
-                <h4 className="font-black text-slate-900 uppercase text-[11px] tracking-tight mb-1 truncate">{it.name || it.title}</h4>
-                <div className="mt-auto">
-                   <div className={`text-[9px] font-bold uppercase flex items-center gap-1 text-slate-400`}>
-                    {type === 'clases' ? (
-                      <div className="flex items-center gap-1">
-                        <span className="text-slate-900 font-black">{totalStudentsInClass}</span>
-                        <span>Alumnos/as</span>
-                        <span className="mx-1 opacity-30">•</span>
-                        <span>{associatedGroups?.length || 0} Comisiones</span>
-                      </div>
-                    ) : 
-                     type === 'grupos' ? `${it.instruments?.join(' • ') || 'Sin Instr.'} • ${it.teacher_names?.join(', ')}` : 
-                     type === 'alumnos' ? `${it.age ? `${it.age} años` : 'Edad no cargada'}` : it.date?.split('T')[0]}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+                  return (
+                    <tr key={it.id} className={`hover:bg-slate-50/50 transition-colors group ${!it.is_active ? 'opacity-60 bg-slate-50/30' : ''}`}>
+                      {/* COLUMNA PRINCIPAL */}
+                      <td className="p-5">
+                        <div className="flex items-center gap-4">
+                          {type === 'alumnos' ? (
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-500 shadow-sm shrink-0"><UserIcon size={18} /></div>
+                          ) : (type === 'clases' || type === 'noticias') ? (
+                            <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden shrink-0 border border-slate-200">
+                              {it.image_url ? <img src={it.image_url} className="w-full h-full object-cover"/> : <ImageIcon size={20} className="m-auto text-slate-300"/>}
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-orange-500 shrink-0"><Users size={18} /></div>
+                          )}
+                          <span className="font-black text-slate-900 uppercase text-xs tracking-tight">{it.name || it.title}</span>
+                        </div>
+                      </td>
+
+                      {/* COLUMNAS ESPECÍFICAS */}
+                      {type === 'alumnos' && <td className="p-5"><span className="text-xs font-bold text-slate-500">{it.age ? `${it.age} años` : '—'}</span></td>}
+                      {type === 'grupos' && <td className="p-5"><span className="text-[10px] font-black text-slate-400 uppercase">{parentClass?.name || 'Desvinculada'}</span></td>}
+
+                      {/* DATOS DINÁMICOS */}
+                      <td className="p-5">
+                        {type === 'clases' ? (
+                          <div className="flex flex-col">
+                            <span className="text-[11px] font-black text-slate-900 uppercase">{totalStudents} Alumnos/as</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">{associatedGroups?.length || 0} Comisiones</span>
+                          </div>
+                        ) : type === 'grupos' ? (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex flex-wrap gap-1">
+                              {it.instruments?.map((ins: string) => <span key={ins} className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[8px] font-black uppercase">{ins}</span>)}
+                            </div>
+                            <span className="text-[9px] font-bold text-orange-500 uppercase">{it.teacher_names?.join(', ')}</span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase">{it.students?.length || 0} / {it.max_capacity} Cupos</span>
+                          </div>
+                        ) : type === 'noticias' ? (
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">
+                            {it.date 
+                              ? new Date(it.date + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })
+                              : 'Sin fecha'}
+                          </span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {associatedGroups.length > 0 ? (
+                              associatedGroups.map((g: any) => (
+                                <span key={g.id} className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase border border-blue-100 shadow-sm">
+                                  {g.name} ({g.instruments?.[0] || 'Gral'})
+                                </span>
+                              ))
+                            ) : <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Sin asignar</span>}
+                          </div>
+                        )}
+                      </td>
+
+                      {type === 'grupos' && <td className="p-5"><span className="text-[10px] font-bold text-slate-600 uppercase">{it.schedule || 'S/H'}</span></td>}
+
+                      <td className="p-5">
+                        <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${it.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
+                          {it.is_active ? 'Activo' : 'Pausado'}
+                        </span>
+                      </td>
+
+                      <td className="p-5 text-right">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => openModal(it)} className="p-2.5 bg-slate-100 text-slate-900 rounded-xl hover:bg-slate-900 hover:text-white transition-all"><Edit3 size={16}/></button>
+                          <button onClick={() => confirm("¿Eliminar permanentemente?") && onDelete(it.id, type)} className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16}/></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </motion.div>
 
@@ -165,7 +210,7 @@ export default function CollectionManager({ type, items, teachers = [], instrume
               <button onClick={() => setEditingItem(null)} className="absolute top-8 right-8 p-2 bg-slate-100 rounded-full text-slate-500"><X size={18}/></button>
               <div className="flex justify-between items-start mb-8">
                 <h3 className="text-2xl font-black uppercase text-slate-900 tracking-tighter">
-                  {editingItem.id ? 'Editar' : 'Crear'} {type === 'grupos' ? 'Grupo' : type === 'alumnos' ? 'Alumno/a' : 'Clase'}
+                  {editingItem.id ? 'Editar' : 'Crear'} {type === 'grupos' ? 'Grupo' : type === 'alumnos' ? 'Alumno/a' : type === 'noticias' ? 'Noticia' : 'Clase'}
                 </h3>
                 <button onClick={() => setEditingItem({...editingItem, is_active: !editingItem.is_active})} className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${editingItem.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                   {editingItem.is_active ? <CheckCircle2 size={14}/> : <Circle size={14}/>}
@@ -193,10 +238,28 @@ export default function CollectionManager({ type, items, teachers = [], instrume
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className={type === 'noticias' ? 'col-span-2' : ''}>
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Nombre completo</label>
-                    <input type="text" value={type === 'noticias' ? editingItem.title : editingItem.name} onChange={(e) => setEditingItem({ ...editingItem, [type === 'noticias' ? 'title' : 'name']: e.target.value })} className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-slate-900 border-none ring-2 ring-slate-100 focus:ring-green-500 transition-all outline-none" />
+                  <div className={type === 'noticias' ? 'col-span-1' : ''}>
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">
+                      {type === 'noticias' ? 'Título de la Noticia' : 'Nombre completo'}
+                    </label>
+                    <input 
+                      type="text" 
+                      value={type === 'noticias' ? editingItem.title : editingItem.name} 
+                      onChange={(e) => setEditingItem({ ...editingItem, [type === 'noticias' ? 'title' : 'name']: e.target.value })} 
+                      className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-slate-900 border-none ring-2 ring-slate-100 focus:ring-green-500 transition-all outline-none" 
+                    />
                   </div>
+                  {type === 'noticias' && (
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Fecha de Publicación</label>
+                      <input 
+                        type="date" 
+                        value={editingItem.date || ""} 
+                        onChange={(e) => setEditingItem({ ...editingItem, date: e.target.value })} 
+                        className="w-full p-4 bg-slate-50 rounded-2xl font-bold text-slate-900 border-none ring-2 ring-slate-100 focus:ring-green-500 transition-all outline-none" 
+                      />
+                    </div>
+                  )}
                   {type === 'alumnos' && (
                     <div>
                       <label className="text-[10px] font-black uppercase text-slate-400 ml-2 mb-2 block">Edad</label>
