@@ -23,6 +23,7 @@ export default function CollectionManager({ type, items, teachers = [], instrume
   const [editingItem, setEditingItem] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearch] = useState("");
+  const [listSearch, setListSearch] = useState(""); // Filtro para la lista principal
 
   const openModal = (item: any = null) => {
     if (item) {
@@ -90,6 +91,49 @@ export default function CollectionManager({ type, items, teachers = [], instrume
 
         {/* Listado modo Tabla para TODO */}
         <div className="flex-1 overflow-y-auto p-10">
+          {(type === 'alumnos' || type === 'grupos' || type === 'clases') && (
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                <input 
+                  type="text" 
+                  placeholder={
+                    type === 'alumnos' ? "Buscar alumno por nombre..." : 
+                    type === 'grupos' ? "Buscar por nombre, instrumento o docente..." :
+                    "Buscar por nombre de clase, grupo o docente..."
+                  } 
+                  value={listSearch}
+                  onChange={(e) => setListSearch(e.target.value)}
+                  className={`w-full pl-12 pr-4 py-3 bg-white rounded-2xl text-sm font-bold text-slate-900 outline-none border border-slate-200 focus:ring-4 transition-all shadow-sm ${
+                    type === 'alumnos' ? 'focus:border-blue-500 focus:ring-blue-50' : 
+                    type === 'grupos' ? 'focus:border-orange-500 focus:ring-orange-50' :
+                    'focus:border-green-500 focus:ring-green-50'
+                  }`}
+                />
+              </div>
+              <div className={`
+                ${type === 'alumnos' ? 'bg-blue-50 border-blue-100 text-blue-900' : 
+                  type === 'grupos' ? 'bg-orange-50 border-orange-100 text-orange-900' : 
+                  'bg-green-50 border-green-100 text-green-900'} 
+                px-6 py-3 rounded-2xl border flex items-center gap-3`}
+              >
+                {type === 'alumnos' ? <Users size={20} className="text-blue-500" /> : 
+                 type === 'grupos' ? <BookOpen size={20} className="text-orange-500" /> :
+                 <MusicIcon size={20} className="text-green-500" />}
+                <div className="flex flex-col">
+                  <span className={`text-[10px] font-black uppercase ${
+                    type === 'alumnos' ? 'text-blue-400' : 
+                    type === 'grupos' ? 'text-orange-400' : 
+                    'text-green-400'} leading-none`}
+                  >
+                    Total {type === 'alumnos' ? 'Alumnos/as' : type === 'grupos' ? 'Comisiones' : 'Clases'}
+                  </span>
+                  <span className="text-lg font-black leading-none">{items.length}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -109,6 +153,51 @@ export default function CollectionManager({ type, items, teachers = [], instrume
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {[...items]
+                  .filter(it => {
+                    if (!listSearch) return true;
+                    
+                    // Función para normalizar texto (quitar tildes y pasar a lowercase)
+                    const normalize = (text: string) => 
+                      (text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    
+                    const search = normalize(listSearch);
+                    
+                    if (type === 'alumnos') {
+                      return normalize(it.name).includes(search);
+                    }
+                    
+                    if (type === 'grupos') {
+                      const matchName = normalize(it.name).includes(search);
+                      const matchInstruments = it.instruments?.some((ins: string) => normalize(ins).includes(search));
+                      const matchTeachers = it.teacher_names?.some((t: string) => normalize(t).includes(search));
+                      return matchName || matchInstruments || matchTeachers;
+                    }
+
+                    if (type === 'clases') {
+                      const matchName = normalize(it.name).includes(search);
+                      const classGroups = groupList?.filter(g => g.class_id === it.id) || [];
+                      
+                      // Buscar en grupos asociados
+                      const matchSubGroup = classGroups.some(g => normalize(g.name).includes(search));
+                      
+                      // Buscar en docentes de esos grupos
+                      const matchSubTeacher = classGroups.some(g => 
+                        g.teacher_names?.some((t: string) => normalize(t).includes(search))
+                      );
+
+                      // NUEVO: Buscar en alumnos de esos grupos
+                      const matchStudent = classGroups.some(g => 
+                        g.students?.some((sid: string) => {
+                          const student = studentList?.find(s => s.id === sid);
+                          return student && normalize(student.name).includes(search);
+                        })
+                      );
+
+                      return matchName || matchSubGroup || matchSubTeacher || matchStudent;
+                    }
+
+                    return true;
+                  })
                   .sort((a, b) => {
                     if (type === 'noticias') {
                       return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
