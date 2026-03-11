@@ -5,6 +5,7 @@ import { Class, News, SectionData, Group } from "@/types";
 import SectionRenderer from "@/components/SectionRenderer";
 import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -51,14 +52,16 @@ export default async function DynamicRouterPage({ params, searchParams }: Props)
   if (slug === "gracias") {
     return (
       <main>
-        <SectionRenderer 
-          sectionData={{
-            id: "success-payment-static",
-            type: "donacion-exitosa",
-            content: {},
-            settings: {}
-          } as SectionData} 
-        />
+        <Suspense fallback={<div className="min-h-screen bg-white" />}>
+          <SectionRenderer 
+            sectionData={{
+              id: "success-payment-static",
+              type: "donacion-exitosa",
+              content: {},
+              settings: {}
+            } as SectionData} 
+          />
+        </Suspense>
       </main>
     );
   }
@@ -76,23 +79,25 @@ export default async function DynamicRouterPage({ params, searchParams }: Props)
 
     return (
       <main>
-        {pageData.renderedSections.map((section: SectionData, index: number) => {
-          let itemsToPass: any[] = [];
-          if (section.type === "clases") itemsToPass = dbClasses;
-          if (section.type === "noticias") itemsToPass = dbNews;
+        <Suspense fallback={<div className="min-h-screen bg-white" />}>
+          {pageData.renderedSections.map((section: SectionData, index: number) => {
+            let itemsToPass: any[] = [];
+            if (section.type === "clases") itemsToPass = dbClasses;
+            if (section.type === "noticias") itemsToPass = dbNews;
 
-          return (
-            <SectionRenderer 
-              key={section.id || index} 
-              sectionData={section} 
-              pageCategory={pageData.category}
-              rawItems={itemsToPass}
-              id={section.content?.anchor_id}
-              urlFormMode={sParams.form as string} 
-              allGroups={groups}
-            />
-          );
-        })}
+            return (
+              <SectionRenderer 
+                key={section.id || index} 
+                sectionData={section} 
+                pageCategory={pageData.category}
+                rawItems={itemsToPass}
+                id={section.content?.anchor_id}
+                urlFormMode={sParams.form as string} 
+                allGroups={groups}
+              />
+            );
+          })}
+        </Suspense>
       </main>
     );
   }

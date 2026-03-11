@@ -5,6 +5,7 @@ import { Class, News, SectionData, Group } from "@/types";
 import SectionRenderer from "@/components/SectionRenderer";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 export async function generateMetadata(): Promise<Metadata> {
   const pageData = await getPageBySlug("inicio");
@@ -32,21 +33,23 @@ export default async function HomePage() {
 
   return (
     <main>
-      {pageData.renderedSections.map((section: SectionData, index: number) => {
-        let itemsToPass: any[] = [];
-        if (section.type === "clases") itemsToPass = dbClasses;
-        if (section.type === "noticias") itemsToPass = dbNews;
+      <Suspense fallback={<div className="min-h-screen bg-white" />}>
+        {pageData.renderedSections.map((section: SectionData, index: number) => {
+          let itemsToPass: any[] = [];
+          if (section.type === "clases") itemsToPass = dbClasses;
+          if (section.type === "noticias") itemsToPass = dbNews;
 
-        return (
-          <SectionRenderer 
-            key={section.id || index} 
-            sectionData={section} 
-            pageCategory={pageData.category}
-            rawItems={itemsToPass}
-            allGroups={groups}
-          />
-        );
-      })}
+          return (
+            <SectionRenderer 
+              key={section.id || index} 
+              sectionData={section} 
+              pageCategory={pageData.category}
+              rawItems={itemsToPass}
+              allGroups={groups}
+            />
+          );
+        })}
+      </Suspense>
     </main>
   );
 }
