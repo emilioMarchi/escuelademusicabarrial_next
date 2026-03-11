@@ -46,6 +46,7 @@ npm run build    # Generar build de producción
 npm run lint     # Correr linter
 ```
 
+
 ---
 
 ## 📂 Estructura de Archivos Clave
