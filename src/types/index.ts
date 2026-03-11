@@ -62,24 +62,36 @@ export interface PageContent {
   has_form: boolean;
   last_updated: any;
 }
-
+export interface Group {
+  id: string;
+  name: string;      
+  class_id: string;  
+  instruments: string[]; 
+  teacher_names: string[]; 
+  schedule: string;   
+  max_capacity: number; 
+  students: string[]; // Lista de IDs de alumnos
+  is_active: boolean;
+  category: 'grupos';
+}
 
 export interface Class {
   id: string;
   name: string;
-  teacher_name: string;
-  teachers?: string[]; // Added for multi-teacher support
-  group?: string;      // Added for age range or other group classifications
-  schedule: string;
   description: string;
-  instrument: string;
   image_url: string;
   image_alt: string;
-  max_capacity: number;
   is_active: boolean;
   category: 'clases';
 }
 
+export interface Student {
+  id: string;
+  name: string;
+  age?: number;
+  is_active: boolean;
+  category: 'alumnos';
+}
 export interface News {
   id: string;
   title: string;

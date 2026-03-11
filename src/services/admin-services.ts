@@ -1,6 +1,7 @@
 // src/services/admin-services.ts
 "use server";
 
+import admin from "firebase-admin";
 import { adminDb, adminStorage, adminAuth, STORAGE_BUCKET } from "@/lib/firebase-admin";
 import { PageContent, Donation, GalleryImage, GalleryVideo, SectionData } from "@/types";
 import { revalidatePath } from "next/cache";
@@ -203,17 +204,51 @@ export const upsertItemAdmin = async (collectionName: string, item: any) => {
       last_updated: new Date() 
     };
 
+    let finalId = id;
+
     if (id) {
+      // --- LÓGICA DE SINCRONIZACIÓN PRE-GUARDADO (PARA EDICIÓN) ---
+      if (collectionName === "grupos") {
+        const oldGroupDoc = await adminDb.collection("grupos").doc(id).get();
+        const oldData = oldGroupDoc.data();
+        // Si cambió de clase, lo quitamos de la clase vieja
+        if (oldData && oldData.class_id && oldData.class_id !== rest.class_id) {
+          await adminDb.collection("clases").doc(oldData.class_id).update({
+            groupIds: admin.firestore.FieldValue.arrayRemove(id)
+          });
+        }
+      }
+
       await adminDb.collection(collectionName).doc(id).set(dataToSave, { merge: true });
     } else {
-      await adminDb.collection(collectionName).add(dataToSave);
+      const docRef = await adminDb.collection(collectionName).add(dataToSave);
+      finalId = docRef.id;
+    }
+
+    // --- LÓGICA DE SINCRONIZACIÓN POST-GUARDADO (BIDIRECCIONAL) ---
+    
+    if (collectionName === "grupos" && rest.class_id) {
+      // 1. Asegurar que la clase vinculada tenga el ID de este grupo
+      await adminDb.collection("clases").doc(rest.class_id).update({
+        groupIds: admin.firestore.FieldValue.arrayUnion(finalId)
+      });
+    }
+
+    if (collectionName === "clases" && rest.groupIds) {
+      // 1. Asegurar que todos los grupos en la lista apunten a ESTA clase
+      const batch = adminDb.batch();
+      for (const gid of rest.groupIds) {
+        batch.update(adminDb.collection("grupos").doc(gid), { class_id: finalId });
+      }
+      await batch.commit();
     }
     
     revalidatePath("/");
     revalidatePath("/clases");
     revalidatePath("/novedades");
-    return { success: true };
+    return { success: true, id: finalId };
   } catch (error) {
+    console.error("Error en upsertItemAdmin:", error);
     return { success: false, error: String(error) };
   }
 };
@@ -221,12 +256,68 @@ export const upsertItemAdmin = async (collectionName: string, item: any) => {
 export const deleteItemAdmin = async (collectionName: string, id: string) => {
   try {
     await verifyAdminAccess();
+    
+    // --- LÓGICA DE LIMPIEZA EN CASCADA (MÁS ROBUSTA) ---
+    
+    if (collectionName === "alumnos") {
+      // Limpiar el ID del alumno de cualquier grupo
+      const grupos = await adminDb.collection("grupos").get();
+      const batch = adminDb.batch();
+      let updated = false;
+      grupos.forEach(doc => {
+        const data = doc.data();
+        if (data.students && Array.isArray(data.students) && data.students.includes(id)) {
+          batch.update(doc.ref, {
+            students: admin.firestore.FieldValue.arrayRemove(id)
+          });
+          updated = true;
+        }
+      });
+      if (updated) await batch.commit();
+    }
+
+    if (collectionName === "grupos") {
+      // 1. Limpiar el ID del grupo de las clases
+      const clases = await adminDb.collection("clases").get();
+      const batchClases = adminDb.batch();
+      let updatedC = false;
+      clases.forEach(doc => {
+        const data = doc.data();
+        if (data.groupIds && Array.isArray(data.groupIds) && data.groupIds.includes(id)) {
+          batchClases.update(doc.ref, {
+            groupIds: admin.firestore.FieldValue.arrayRemove(id)
+          });
+          updatedC = true;
+        }
+      });
+      if (updatedC) await batchClases.commit();
+
+      // 2. Limpiar el grupo del perfil de los alumnos
+      const alumnos = await adminDb.collection("alumnos").get();
+      const batchAlumnos = adminDb.batch();
+      let updatedA = false;
+      alumnos.forEach(doc => {
+        const data = doc.data();
+        if (data.groups && Array.isArray(data.groups)) {
+          const newGroups = data.groups.filter((g: any) => g.id !== id);
+          if (newGroups.length !== data.groups.length) {
+            batchAlumnos.update(doc.ref, { groups: newGroups });
+            updatedA = true;
+          }
+        }
+      });
+      if (updatedA) await batchAlumnos.commit();
+    }
+
+    // Finalmente, eliminar el documento principal
     await adminDb.collection(collectionName).doc(id).delete();
+    
     revalidatePath("/");
     revalidatePath("/clases");
     revalidatePath("/novedades");
     return { success: true };
   } catch (error) {
+    console.error("Error en deleteItemAdmin:", error);
     return { success: false, error: String(error) };
   }
 };

@@ -22,8 +22,9 @@ import { AnimatePresence, motion } from "framer-motion";
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
-  const [viewManager, setViewManager] = useState<"clases" | "noticias" | null>(null);
+  const [viewManager, setViewManager] = useState<"clases" | "noticias" | "grupos" | "alumnos" | null>(null);
   const [viewList, setViewList] = useState<"teachers" | "instruments" | "admins" | null>(null);
+  const [showClassOptions, setShowClassOptions] = useState(false);
   const [selectedSub, setSelectedSub] = useState<any | null>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
@@ -34,6 +35,8 @@ export default function AdminDashboard() {
   const [data, setData] = useState({
     clases: [] as Class[],
     noticias: [] as News[],
+    grupos: [] as any[],
+    alumnos: [] as any[],
     submissions: [] as any[],
     teachers: [] as string[],
     instruments: [] as string[],
@@ -48,9 +51,11 @@ export default function AdminDashboard() {
 
   const refreshData = async () => {
     setLoading(true);
-    const [resC, resN, resS, resI, resT, resG, resA] = await Promise.all([
+    const [resC, resN, resG_items, resAl, resS, resI, resT, resG, resA] = await Promise.all([
       getCollectionAdmin("clases"),
       getCollectionAdmin("noticias"),
+      getCollectionAdmin("grupos"),
+      getCollectionAdmin("alumnos"),
       getSubmissionsAdmin(),
       getInstrumentsAdmin(),
       getTeachersAdmin(),
@@ -61,6 +66,8 @@ export default function AdminDashboard() {
     setData({
       clases: (resC.data || []) as Class[],
       noticias: (resN.data || []) as News[],
+      grupos: (resG_items.data || []),
+      alumnos: (resAl.data || []),
       submissions: resS.data || [],
       instruments: resI.data || [],
       teachers: resT.data || [],
@@ -126,34 +133,94 @@ export default function AdminDashboard() {
         </button>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* COLUMNA IZQUIERDA: CONTENIDOS Y CONSULTAS */}
-        <div className="lg:col-span-2 space-y-10">
-          
-          {/* SECCIÓN 1: GRANDES BOTONES DE CONTENIDO */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <button onClick={() => setViewManager("clases")} className="group p-10 bg-white rounded-[3.5rem] border-2 border-slate-100 hover:border-slate-900 transition-all text-left space-y-6 shadow-sm hover:shadow-2xl shadow-slate-200">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-                <Music size={32} />
-              </div>
-              <div>
-                <h3 className="font-black uppercase text-2xl tracking-tighter text-slate-900 leading-none">Clases y Grupos</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{data.clases.length} Publicaciones activas</p>
-              </div>
-            </button>
+      {/* FILA 1: Clases y Grupos / Novedades */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="relative group">
+          <button 
+            onClick={() => setShowClassOptions(!showClassOptions)} 
+            className={`w-full p-10 bg-white rounded-[3.5rem] border-2 transition-all text-left space-y-6 shadow-sm hover:shadow-2xl shadow-slate-200 ${showClassOptions ? 'border-slate-900 ring-4 ring-slate-100' : 'border-slate-100 hover:border-slate-900'}`}
+          >
+            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+              <Music size={32} />
+            </div>
+            <div>
+              <h3 className="font-black uppercase text-2xl tracking-tighter text-slate-900 leading-none">Clases y Grupos</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{data.clases.length} Clases • {data.grupos.length} Comisiones</p>
+            </div>
+          </button>
 
-            <button onClick={() => setViewManager("noticias")} className="group p-10 bg-white rounded-[3.5rem] border-2 border-slate-100 hover:border-slate-900 transition-all text-left space-y-6 shadow-sm hover:shadow-2xl shadow-slate-200">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-colors">
-                <Newspaper size={32} />
-              </div>
-              <div>
-                <h3 className="font-black uppercase text-2xl tracking-tighter text-slate-900 leading-none">Novedades y Eventos</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{data.noticias.length} Entradas en el blog</p>
-              </div>
-            </button>
+          <AnimatePresence>
+            {showClassOptions && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute top-full left-0 right-0 mt-4 bg-white rounded-[2rem] border-2 border-slate-900 shadow-2xl z-50 overflow-hidden"
+              >
+                <button 
+                  onClick={() => { setViewManager("clases"); setShowClassOptions(false); }}
+                  className="w-full p-6 text-left hover:bg-slate-50 flex items-center justify-between group/opt border-b border-slate-100"
+                >
+                  <div>
+                    <p className="font-black uppercase text-sm text-slate-900">Gestionar Clases</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">Configuración general de la clase</p>
+                  </div>
+                  <ChevronRight size={18} className="text-slate-300 group-hover/opt:translate-x-1 transition-transform" />
+                </button>
+                <button 
+                  onClick={() => { setViewManager("grupos"); setShowClassOptions(false); }}
+                  className="w-full p-6 text-left hover:bg-slate-50 flex items-center justify-between group/opt"
+                >
+                  <div>
+                    <p className="font-black uppercase text-sm text-slate-900">Gestionar Comisiones</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">Horarios, docentes y alumnos</p>
+                  </div>
+                  <ChevronRight size={18} className="text-slate-300 group-hover/opt:translate-x-1 transition-transform" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <button onClick={() => setViewManager("noticias")} className="group p-10 bg-white rounded-[3.5rem] border-2 border-slate-100 hover:border-slate-900 transition-all text-left space-y-6 shadow-sm hover:shadow-2xl shadow-slate-200">
+          <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+            <Newspaper size={32} />
           </div>
+          <div>
+            <h3 className="font-black uppercase text-2xl tracking-tighter text-slate-900 leading-none">Novedades y Eventos</h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{data.noticias.length} Entradas en el blog</p>
+          </div>
+        </button>
+      </div>
 
-          {/* SECCIÓN 2: BANDEJA DE CONSULTAS OPTIMIZADA */}
+      {/* FILA 2: BASES DE GESTIÓN (Docentes, Alumnos, Instrumentos, Admins) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <button onClick={() => setViewList("teachers")} className="flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-4 group shadow-sm">
+          <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors"><Users size={32} className="text-slate-900 group-hover:text-white" /></div>
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 text-center">Base de Docentes</span>
+        </button>
+
+        <button onClick={() => setViewManager("alumnos")} className="flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-4 group shadow-sm">
+          <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors"><GraduationCap size={32} className="text-slate-900 group-hover:text-white" /></div>
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 text-center">Base de Alumnos/as</span>
+        </button>
+
+        <button onClick={() => setViewList("instruments")} className="flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-4 group shadow-sm">
+          <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors"><Music size={32} className="text-slate-900 group-hover:text-white" /></div>
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 text-center">Lista de Instrumentos</span>
+        </button>
+
+        <button onClick={() => setViewList("admins")} className="flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-4 group shadow-sm">
+          <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors"><ShieldCheck size={32} className="text-slate-900 group-hover:text-white" /></div>
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 text-center">Control de Admins</span>
+        </button>
+      </div>
+
+      {/* FILA 3: MENSAJES Y CONFIGURACIÓN */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* COLUMNA IZQUIERDA: MENSAJES */}
+        <div className="lg:col-span-2 space-y-10">
           <section className="bg-white rounded-[4rem] p-10 md:p-12 border-2 border-slate-100 shadow-sm space-y-10">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-6 bg-slate-900 rounded-[2.5rem] text-white shadow-xl shadow-slate-200">
@@ -220,6 +287,10 @@ export default function AdminDashboard() {
                                     </span>
                                     <span className="w-1 h-1 bg-slate-200 rounded-full" />
                                     <span className="text-[9px] font-bold text-slate-400 italic">{sub.instrument || sub.email}</span>
+                                    <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                                        {sub.created_at?.toDate ? new Date(sub.created_at.toDate()).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : 'S/F'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -233,9 +304,8 @@ export default function AdminDashboard() {
           </section>
         </div>
 
-        {/* COLUMNA DERECHA: CONFIGURACIÓN GENERAL Y LISTAS */}
+        {/* COLUMNA DERECHA: CONFIGURACIÓN */}
         <div className="space-y-8">
-          {/* CONFIGURACIÓN CON ALTO CONTRASTE Y REDES */}
           <section className="bg-slate-900 text-white rounded-[4rem] p-10 md:p-12 space-y-10 shadow-2xl shadow-slate-300">
             <div className="flex items-center gap-4">
               <Settings2 size={28} />
@@ -269,28 +339,10 @@ export default function AdminDashboard() {
               </button>
             </div>
           </section>
-
-          {/* LISTAS DE GESTIÓN */}
-          <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => setViewList("teachers")} className="flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-4 group shadow-sm">
-              <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors"><Users size={32} className="text-slate-900 group-hover:text-white" /></div>
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 text-center">Base de Docentes</span>
-            </button>
-
-            <button onClick={() => setViewList("instruments")} className="flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-4 group shadow-sm">
-              <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors"><Music size={32} className="text-slate-900 group-hover:text-white" /></div>
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900 text-center">Lista de Instrumentos</span>
-            </button>
-
-            <button onClick={() => setViewList("admins")} className="col-span-2 flex flex-col items-center justify-center p-8 bg-white rounded-[3rem] border-2 border-slate-100 hover:border-slate-900 transition-all gap-4 group shadow-sm">
-              <div className="p-5 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors"><ShieldCheck size={32} className="text-slate-900 group-hover:text-white" /></div>
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-slate-900">Control de Administradores</span>
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* MODAL DETALLE DE CONSULTA */}
+      {/* MODALES Y COMPONENTES DE GESTIÓN */}
       <AnimatePresence>
         {selectedSub && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
@@ -303,50 +355,33 @@ export default function AdminDashboard() {
                         <span className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${selectedSub.type === 'clases' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
                             {selectedSub.type === 'clases' ? selectedSub.role : 'Consulta Web'}
                         </span>
-                        <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">{selectedSub.created_at?.toDate ? new Date(selectedSub.created_at.toDate()).toLocaleString() : ''}</span>
+                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                            {selectedSub.created_at?.toDate ? new Date(selectedSub.created_at.toDate()).toLocaleString('es-AR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
                     </div>
                     <h2 className="text-5xl font-black uppercase tracking-tighter text-slate-900 leading-[0.9]">{selectedSub.fullname}</h2>
                   </div>
                   <button onClick={() => setSelectedSub(null)} className="p-5 bg-slate-50 rounded-full text-slate-900 hover:bg-slate-100 transition-all"><X size={24}/></button>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 flex flex-col justify-center">
-                    <p className="text-[9px] font-black uppercase text-slate-400 mb-2">Canal de Correo</p>
+                    <p className="text-[9px] font-black uppercase text-slate-400 mb-2">Email</p>
                     <p className="font-bold text-slate-900 text-sm break-all">{selectedSub.email}</p>
                   </div>
                   <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 flex flex-col justify-center">
-                    <p className="text-[9px] font-black uppercase text-slate-400 mb-2">Contacto Directo</p>
+                    <p className="text-[9px] font-black uppercase text-slate-400 mb-2">Teléfono</p>
                     <p className="font-bold text-slate-900 text-sm">{selectedSub.phone || "---"}</p>
                   </div>
                 </div>
-
-                {selectedSub.type === 'clases' ? (
-                  <div className="p-10 bg-orange-50/50 rounded-[3rem] border border-orange-100 grid grid-cols-2 gap-8">
-                    <div>
-                        <p className="text-[9px] font-black uppercase text-orange-400 mb-2">Instrumento</p>
-                        <p className="font-black text-orange-900 text-xl tracking-tight leading-none">{selectedSub.instrument}</p>
-                    </div>
-                    <div>
-                        <p className="text-[9px] font-black uppercase text-orange-400 mb-2">Experiencia</p>
-                        <p className="font-black text-orange-900 text-xl tracking-tight leading-none">{selectedSub.level_or_experience}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-10 bg-blue-50/30 rounded-[3rem] border border-blue-100">
-                    <p className="text-[9px] font-black uppercase text-blue-400 mb-3">Contenido del Mensaje</p>
-                    <p className="font-medium text-slate-700 leading-relaxed text-base italic">"{selectedSub.message}"</p>
-                  </div>
-                )}
-
+                <div className="p-10 bg-slate-50 rounded-[3rem] border border-slate-100">
+                    <p className="text-[9px] font-black uppercase text-slate-400 mb-3">{selectedSub.type === 'clases' ? 'Instrumento / Experiencia' : 'Mensaje'}</p>
+                    <p className="font-medium text-slate-700 leading-relaxed text-base italic">{selectedSub.message || `${selectedSub.instrument} - ${selectedSub.level_or_experience}`}</p>
+                </div>
                 <div className="flex flex-col md:flex-row gap-5 pt-6">
-                  <button onClick={() => updateSubStatus(selectedSub)}
-                    className={`flex-1 py-6 rounded-[2.2rem] font-black uppercase text-[11px] tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl ${selectedSub.status === 'gestionado' ? 'bg-slate-200 text-slate-500' : 'bg-slate-900 text-white hover:bg-green-600'}`}>
+                  <button onClick={() => updateSubStatus(selectedSub)} className={`flex-1 py-6 rounded-[2.2rem] font-black uppercase text-[11px] tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl ${selectedSub.status === 'gestionado' ? 'bg-slate-200 text-slate-500' : 'bg-slate-900 text-white hover:bg-green-600'}`}>
                     <CheckCircle size={20}/> {selectedSub.status === 'gestionado' ? "Marcar como Pendiente" : "Completar Gestión"}
                   </button>
-                  <button onClick={() => deleteSubmission(selectedSub.id)} className="p-6 bg-red-50 text-red-500 rounded-[2.2rem] hover:bg-red-500 hover:text-white transition-all shadow-xl">
-                    <Trash2 size={24} />
-                  </button>
+                  <button onClick={() => deleteSubmission(selectedSub.id)} className="p-6 bg-red-50 text-red-500 rounded-[2.2rem] hover:bg-red-500 hover:text-white transition-all shadow-xl"><Trash2 size={24} /></button>
                 </div>
               </div>
             </motion.div>
@@ -354,7 +389,6 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      {/* POPUP DE NOTIFICACIÓN */}
       <AnimatePresence>
         {status && (
           <motion.div initial={{ opacity: 0, y: 50, x: "-50%" }} animate={{ opacity: 1, y: 0, x: "-50%" }} exit={{ opacity: 0, y: 50, x: "-50%" }}
@@ -365,18 +399,27 @@ export default function AdminDashboard() {
         )}
       </AnimatePresence>
 
-      {/* COMPONENTES DE GESTIÓN */}
       {viewManager && (
         <CollectionManager 
-          type={viewManager} items={viewManager === "clases" ? data.clases : data.noticias}
-          teachers={data.teachers} instruments={data.instruments}
+          type={viewManager} 
+          items={
+            viewManager === "clases" ? data.clases : 
+            viewManager === "grupos" ? data.grupos : 
+            viewManager === "alumnos" ? data.alumnos :
+            data.noticias
+          }
+          teachers={data.teachers} 
+          instruments={data.instruments}
+          classList={data.clases}
+          studentList={data.alumnos}
+          groupList={data.grupos}
           onClose={() => setViewManager(null)}
-          onUpsert={async (item) => { 
-            const res = await upsertItemAdmin(viewManager!, item); 
+          onUpsert={async (item, collectionOverride) => { 
+            const res = await upsertItemAdmin(collectionOverride || viewManager!, item); 
             if (res.success) { showStatus('success', 'Cambios guardados con éxito'); refreshData(); } 
           }}
-          onDelete={async (id) => { 
-            const res = await deleteItemAdmin(viewManager!, id); 
+          onDelete={async (id, collectionOverride) => { 
+            const res = await deleteItemAdmin(collectionOverride || viewManager!, id); 
             if (res.success) { showStatus('success', 'Eliminado correctamente'); refreshData(); }
           }}
         />
